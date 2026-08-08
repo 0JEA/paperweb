@@ -1,0 +1,3 @@
+{ "cockle": {"enabled": true, "amplitude_um": 14.0, "wavelength_mm": 32.0, "anisotropy": 2.0, "irregularity": 0.95},
+  "formation": {"enabled": true, "amplitude": 0.014}, "fade": {"enabled": true, "amount": 0.7},
+  "light": {"relief_exaggerate": 6.0, "specular": true, "spec_intensity": 0.4} }

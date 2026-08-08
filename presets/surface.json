@@ -1,0 +1,9 @@
+{
+  "cockle": {"enabled": true, "amplitude_um": 30.0, "wavelength_mm": 26.0},
+  "formation": {"enabled": true, "amplitude": 0.03, "gsm_amount": 0.8, "skew": -0.4},
+  "fade": {"enabled": true, "amount": 0.75},
+  "cavity": {"enabled": true, "radius_mm": 0.8, "lambda": 0.8},
+  "folds": {"enabled": true, "count": 3, "depth": 0.5, "sharpness": 0.5},
+  "scratches": {"enabled": true, "density": 0.06, "lightness": 0.2},
+  "tone": {"duotone": 0.6}
+}

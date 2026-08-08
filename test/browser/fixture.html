@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>paperweb test fixture</title>
+<style>
+  html, body { margin: 0; background: #202024; }
+  .surface {
+    width: 480px; height: 320px;
+    margin: 80px;
+    font: 16px/1.5 Georgia, serif;
+    padding: 32px;
+    box-sizing: border-box;
+    color: #222;
+  }
+</style>
+</head>
+<body>
+  <div id="a" class="surface"><h1 id="head">Heading</h1><p id="body">Some paper text that should stay selectable.</p></div>
+  <script type="module">
+    import * as PW from '/src/index.js';
+    // The tests drive everything through this handle rather than through the
+    // module namespace, so a rename in the library shows up as a test failure
+    // rather than as an undefined that quietly passes.
+    window.PW = PW;
+    window.ready = true;
+  </script>
+</body>
+</html>

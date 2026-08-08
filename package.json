@@ -1,0 +1,28 @@
+{
+  "name": "paperweb",
+  "version": "0.1.0",
+  "description": "paperlab's paper-rendering pipeline, applied to DOM elements. WebGL2, no dependencies, no build step.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./react": "./src/react.js",
+    "./params": "./src/params.js",
+    "./presets": "./src/presets.js"
+  },
+  "files": ["src", "presets", "README.md"],
+  "scripts": {
+    "test": "node --test 'test/unit/*.test.js'",
+    "test:browser": "node test/browser/run.mjs",
+    "test:all": "npm test && npm run test:browser",
+    "demo": "node tools/serve.mjs"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true }
+  },
+  "keywords": ["paper", "texture", "webgl", "shader", "cockle", "kubelka-munk"],
+  "license": "MIT"
+}

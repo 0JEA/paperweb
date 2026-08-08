@@ -1,0 +1,128 @@
+{
+  "cavity": {
+    "enabled": true,
+    "lambda": 0.7300000190734863,
+    "radius_mm": 3.0
+  },
+  "cockle": {
+    "amplitude_um": 1.0,
+    "anisotropy": 6.0,
+    "enabled": true,
+    "irregularity": 1.0,
+    "md_angle_deg": -90.0,
+    "wavelength_mm": 5.0
+  },
+  "crumple": {
+    "amplitude_um": 3.0,
+    "crease": 0.009999999776482582,
+    "enabled": true,
+    "scale_mm": 8.5,
+    "seed": 1.0
+  },
+  "edge": {
+    "curl": 0.0,
+    "deckle_px": 0.0,
+    "enabled": true,
+    "wobble_px": 7.0
+  },
+  "fade": {
+    "amount": 0.5099999904632568,
+    "enabled": true,
+    "scale_mm": 85.0
+  },
+  "folds": {
+    "count": 2,
+    "depth": 0.07999999821186066,
+    "enabled": true,
+    "seed": 3.0,
+    "sharpness": 0.4000000059604645
+  },
+  "formation": {
+    "amplitude": 0.024000000208616257,
+    "bandwidth": 1.5,
+    "beta": 1.25,
+    "enabled": true,
+    "gsm_amount": 0.5400000214576721,
+    "scale_mm": 2.4000000953674316,
+    "skew": 1.0,
+    "source": 1
+  },
+  "ink": {
+    "color": [
+      0.05999999865889549,
+      0.05999999865889549,
+      0.05999999865889549
+    ],
+    "gate_hi": 1.0,
+    "gate_lo": 0.0,
+    "granulation": 0.8199999928474426,
+    "ink_over_black": [
+      0.017999999225139618,
+      0.017999999225139618,
+      0.023000000044703484
+    ],
+    "ink_over_white": [
+      0.04500000178813934,
+      0.04399999976158142,
+      0.05299999937415123
+    ],
+    "kubelka_munk": false,
+    "thickness": 0.7099999785423279
+  },
+  "light": {
+    "altitude_deg": 65.0,
+    "azimuth_deg": 130.0,
+    "relief_exaggerate": 6.0,
+    "spec_intensity": 1.340000033378601,
+    "spec_power": 35.0,
+    "specular": true
+  },
+  "page": {
+    "dpi": 150.0,
+    "height_pt": 792.0,
+    "margin_mm": 16.0,
+    "view_distance_mm": 500.0,
+    "width_pt": 612.0
+  },
+  "scratches": {
+    "density": 0.08699999749660492,
+    "enabled": true,
+    "lightness": 0.1599999964237213,
+    "scale_mm": 8.0,
+    "seed": 5.0
+  },
+  "shadow": {
+    "blur_px": 25.0,
+    "contact": 1.0,
+    "darkness": 0.6600000262260437,
+    "enabled": true,
+    "offset_px": 17.0
+  },
+  "tone": {
+    "duotone": 0.3499999940395355,
+    "highlight": [
+      1.0199999809265137,
+      1.0,
+      0.9599999785423279
+    ],
+    "paper": [
+      1.0,
+      0.953000009059906,
+      0.8709999918937683
+    ],
+    "shadow": [
+      0.0,
+      0.07612477988004684,
+      0.30449825525283813
+    ]
+  },
+  "view": {
+    "buffer": 0,
+    "false_color": true,
+    "pan": [
+      261.77032470703125,
+      -16.31525421142578
+    ],
+    "zoom": 0.3565673530101776
+  }
+}

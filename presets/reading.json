@@ -1,0 +1,14 @@
+{
+  "cockle":    {"enabled": true, "amplitude_um": 26.0, "wavelength_mm": 28.0, "anisotropy": 2.1, "irregularity": 0.9},
+  "formation": {"enabled": true, "amplitude": 0.028, "gsm_amount": 0.75, "skew": -0.3, "source": 0},
+  "fade":      {"enabled": true, "scale_mm": 62.0, "amount": 0.6},
+  "cavity":    {"enabled": true, "radius_mm": 0.75, "lambda": 0.6},
+  "crumple":   {"enabled": false},
+  "folds":     {"enabled": false},
+  "scratches": {"enabled": false},
+  "shadow":    {"enabled": true, "offset_px": 10.0, "blur_px": 16.0, "darkness": 0.66, "contact": 0.72},
+  "edge":      {"enabled": true, "wobble_px": 5.0, "deckle_px": 0.0},
+  "light":     {"azimuth_deg": 116.0, "altitude_deg": 50.0, "relief_exaggerate": 8.0, "specular": true, "spec_intensity": 0.5, "spec_power": 40.0},
+  "tone":      {"duotone": 0.5},
+  "ink":       {"kubelka_munk": true, "ink_over_white": [0.045, 0.044, 0.053], "ink_over_black": [0.018, 0.018, 0.023], "thickness": 1.1, "granulation": 0.0}
+}

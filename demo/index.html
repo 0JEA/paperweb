@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paperweb</title>
+<style>
+  :root {
+    --ink: #14110d;
+    --ink-soft: #564e43;
+    --ground: #17161a;
+    --ground-2: #1f1e23;
+    --rule: #34323a;
+    --accent: #c8a06a;
+    --measure: 68ch;
+  }
+  * { box-sizing: border-box; }
+  /* The default 'grow' overhang lets the cast shadow fall outside each element,
+     which contributes to the root scroller's overflow. overflow-x: clip is the
+     one-line fix: unlike hidden it creates no scroll container and does not
+     break position: sticky. Sites that cannot do this can use
+     overhang: 'inset' or 'clip' per surface instead. */
+  html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: #e8e4dc;
+    font: 400 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: clamp(24px, 5vw, 72px) clamp(16px, 5vw, 64px) 120px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 72px; max-width: var(--measure); }
+  h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.1; margin: 0 0 12px; letter-spacing: -0.02em; font-weight: 600; }
+  header p { color: #a8a29a; margin: 0 0 8px; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.88em; background: var(--ground-2); padding: 2px 6px; border-radius: 4px; color: var(--accent); }
+
+  h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: #8d8880; font-weight: 600;
+    margin: 72px 0 6px; padding-bottom: 10px; border-bottom: 1px solid var(--rule);
+  }
+  h2 + p { color: #8d8880; font-size: 14px; margin: 10px 0 32px; max-width: var(--measure); }
+
+  .grid { display: grid; gap: clamp(28px, 4vw, 52px); grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+
+  /* Every paper surface below is a plain element. The only thing that makes it
+     paper is the data-paper attribute; none of these rules touch the effect. */
+  .sheet {
+    color: var(--ink);
+    padding: 30px 32px;
+    min-height: 210px;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  .sheet h3 { margin: 0 0 10px; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+  .sheet p { margin: 0 0 12px; font-size: 15px; line-height: 1.62; color: var(--ink-soft); }
+  .sheet p:last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-family: ui-monospace, Menlo, monospace; font-size: 11px;
+    letter-spacing: 0.06em; color: #8a7f6d; margin-bottom: 14px; text-transform: uppercase;
+  }
+
+  .hero { min-height: 340px; display: flex; flex-direction: column; justify-content: center; padding: 56px clamp(32px, 6vw, 72px); }
+  .hero h3 { font-size: clamp(26px, 4vw, 38px); line-height: 1.15; margin-bottom: 16px; }
+  .hero p { font-size: 17px; max-width: 46ch; }
+
+  /* A tinted action button, not a solid fill. */
+  .btn {
+    /* align-self keeps it from stretching inside .hero's flex column. */
+    display: inline-block; align-self: flex-start; margin-top: 18px; padding: 9px 18px;
+    font: 500 14px/1 ui-sans-serif, system-ui, sans-serif;
+    color: #4a3a22; background: rgba(160, 120, 60, 0.13);
+    border: 1px solid rgba(120, 90, 45, 0.3); border-radius: 6px;
+    text-decoration: none; cursor: pointer;
+  }
+  .btn:hover { background: rgba(160, 120, 60, 0.2); }
+
+  .quote { font-size: 20px; line-height: 1.5; font-style: italic; }
+  .quote .tag { display: block; font-style: normal; }
+  .quote footer { margin-top: 18px; font-size: 13px; font-style: normal; color: #8a7f6d; letter-spacing: 0.04em; }
+
+  .prices { display: grid; grid-template-columns: 1fr auto; gap: 10px 20px; font-size: 15px; align-items: baseline; }
+  .prices dt { color: var(--ink-soft); }
+  .prices dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .prices .rule { grid-column: 1 / -1; border-top: 1px solid rgba(60, 45, 25, 0.18); }
+
+  .note { font-size: 13px; color: #6d675f; margin-top: 14px; }
+  .fail { color: #e0876a; }
+
+  #status {
+    position: fixed; right: 14px; bottom: 14px; z-index: 20;
+    font: 12px/1.5 ui-monospace, Menlo, monospace;
+    background: rgba(12, 11, 14, 0.9); border: 1px solid var(--rule);
+    padding: 8px 12px; border-radius: 7px; color: #9a948c; max-width: 46ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>paperweb</h1>
+    <p>Every effect from <code>paperlab</code>, applied to ordinary DOM elements. Cockle relief, Gaussian-scale-mixture formation, cavity shading, contact-hardened cast shadow, fibrous deckle edge, warm/cool duotone, and Kubelka-Munk ink over paper.</p>
+    <p>Nothing on this page is an image. Each sheet is a <code>&lt;div&gt;</code> with a <code>data-paper</code> attribute; the text stays real, selectable DOM.</p>
+  </header>
+
+  <h2>Presets</h2>
+  <p>The nine presets shipped with paperlab, loaded unchanged. Text sits on top of the surface, so it is selectable and reaches assistive technology normally.</p>
+  <div class="grid" id="presetGrid"></div>
+
+  <h2>Scale</h2>
+  <p>The relief is denominated in millimetres at a nominal DPI, so the same preset at a different <code>dpi</code> gives physically larger or smaller cockle rather than a scaled bitmap.</p>
+  <div class="grid">
+    <div class="sheet" data-paper="paper" data-paper-dpi="48">
+      <span class="tag">dpi 48 / coarse relief</span>
+      <h3>Low nominal DPI</h3>
+      <p>A 30&nbsp;mm cockle wavelength occupies fewer pixels, so the buckling reads large and slow across the sheet.</p>
+    </div>
+    <div class="sheet" data-paper="paper" data-paper-dpi="96">
+      <span class="tag">dpi 96 / default</span>
+      <h3>CSS nominal DPI</h3>
+      <p>One CSS pixel per 1/96&nbsp;in. This is the default, and it puts paperlab's sourced millimetre values at sensible on-screen sizes.</p>
+    </div>
+    <div class="sheet" data-paper="paper" data-paper-dpi="200">
+      <span class="tag">dpi 200 / fine relief</span>
+      <h3>High nominal DPI</h3>
+      <p>The same physical sheet seen closer up: more cockle periods across the element, finer formation grain.</p>
+    </div>
+  </div>
+
+  <h2>Real page furniture</h2>
+  <p>The surface binds to whatever box you give it, including ones with their own layout, borders and interactive children.</p>
+
+  <div style="margin-bottom: 44px">
+    <div class="sheet hero" data-paper="reading">
+      <span class="tag">hero / preset "reading"</span>
+      <h3>Paper is an object, not a texture</h3>
+      <p>The silhouette, the cast shadow and the way light rakes across the buckling do more work than any amount of grain. Turn the grain down and the object cues up.</p>
+      <a class="btn" href="#" onclick="return false">A real link, above the canvas</a>
+    </div>
+  </div>
+
+  <div class="grid">
+    <blockquote class="sheet quote" data-paper="worn" style="margin:0">
+      <span class="tag">blockquote / preset "worn"</span>
+      Matching paper's power spectrum was the wrong goal for anything with an edge, and exactly the right one for formation.
+      <footer>the finding that reorganised the project</footer>
+    </blockquote>
+
+    <div class="sheet" data-paper="subtle">
+      <span class="tag">definition list / preset "subtle"</span>
+      <h3>Statement</h3>
+      <dl class="prices">
+        <dt>Deposit</dt><dd>$120.00</dd>
+        <dt>Session, 4 h</dt><dd>$640.00</dd>
+        <dt>Materials</dt><dd>$38.00</dd>
+        <div class="rule"></div>
+        <dt>Total</dt><dd>$798.00</dd>
+      </dl>
+    </div>
+
+    <div class="sheet" data-paper="textured" data-paper-light="pointer">
+      <span class="tag">interactive / light follows the pointer</span>
+      <h3>Move your cursor</h3>
+      <p>Only the shade and composite passes re-run, two draws out of twelve. The relief, formation and mask are already on the GPU and are not recomputed.</p>
+      <p class="note">Disabled automatically under <code>prefers-reduced-motion</code>.</p>
+    </div>
+  </div>
+
+  <h2>Ink in the sheet</h2>
+  <p>The default mode puts the paper behind live DOM. <code>content:"rasterize"</code> instead snapshots the element and feeds it through Kubelka-Munk, so the text is optically inside the sheet: thin antialiased edges let the lit, textured paper show through, and with granulation on, pigment pools in the relief valleys. Compare the two.</p>
+  <div class="grid">
+    <div class="sheet" data-paper="paper">
+      <span class="tag">content: behind (default)</span>
+      <h3>Text on top</h3>
+      <p>Real DOM. Selectable, searchable, and unaffected by the surface underneath it. The paper is lit and textured but the ink is flat.</p>
+    </div>
+    <div class="sheet" id="rasterDemo">
+      <span class="tag">content: rasterize</span>
+      <h3>Text inside</h3>
+      <p>Rasterised and composited through Kubelka-Munk with granulation. The ink takes the paper's shading and the sheet shows through the letterforms.</p>
+      <p class="note" id="rasterNote"></p>
+    </div>
+  </div>
+
+  <h2>Layout modes</h2>
+  <p>The cast shadow needs void to fall on. <code>overhang</code> decides where that room comes from, which matters because a canvas that sticks out past its element contributes to the page's horizontal scroll.</p>
+  <div class="grid" id="overhangGrid"></div>
+
+  <h2>Every effect, isolated</h2>
+  <p>One effect at a time over a flat sheet, so each contribution is visible on its own.</p>
+  <div class="grid" id="isolationGrid"></div>
+
+</div>
+
+<div id="status">initialising…</div>
+
+<script type="module">
+import { Paper, scan, presetNames, capabilities } from '../src/index.js';
+
+const status = document.getElementById('status');
+const caps = capabilities();
+if (!caps.ok) {
+  status.innerHTML = `<span class="fail">no WebGL2: ${caps.reason}</span><br>surfaces degrade to a flat sheet colour.`;
+}
+
+// --- preset gallery ---------------------------------------------------------
+const blurb = {
+  paper: 'The clean reading default: subtle cockle, GSM formation, non-stationary fade, contact-hardened shadow.',
+  reading: 'Tuned for long-form text. Slightly stronger cockle, quieter distress.',
+  textured: 'Art paper. Gabor band-limited formation gives a spectral peak instead of fbm’s scale-free 1/f, plus a fibrous deckle edge.',
+  worn: 'Aged: Worley crumple, pressed folds, fibre-lift scratches, a strong non-stationary fade and a torn deckle silhouette.',
+  subtle: 'Barely there. For UI surfaces that should read as stock, not as a statement.',
+  pronounced: 'Relief pushed well past the physical values, for when the buckling is the point.',
+  surface: 'Surface character without the object cues.',
+  paperlab: 'The lab’s own working state.',
+  Interesting: 'A saved exploration from the lab.',
+};
+
+const grid = document.getElementById('presetGrid');
+for (const name of presetNames) {
+  const el = document.createElement('div');
+  el.className = 'sheet';
+  el.dataset.paper = name;
+  el.innerHTML =
+    `<span class="tag">preset "${name}"</span>` +
+    `<h3>${name}</h3>` +
+    `<p>${blurb[name] || 'A paperlab preset, loaded unchanged.'}</p>`;
+  grid.appendChild(el);
+}
+
+// --- isolation gallery ------------------------------------------------------
+// Each card turns everything off, then turns exactly one thing back on.
+const OFF = {
+  cockle: { enabled: false }, folds: { enabled: false }, crumple: { enabled: false },
+  formation: { enabled: false }, fade: { enabled: false },
+  scratches: { enabled: false }, imperfect: { enabled: false },
+  cavity: { enabled: false }, edge: { enabled: false, wobble_px: 0 },
+  shadow: { enabled: false }, tone: { duotone: 0 }, light: { specular: false },
+};
+const ISOLATED = [
+  ['flat sheet', 'Tone only. Everything else off. This is the baseline the other cards add to.', {}],
+  ['cockle', 'Land 2004: 16–34&nbsp;mm buckling, crests along the machine direction, visible above 25&nbsp;µm peak-to-valley.', { cockle: { enabled: true, amplitude_um: 34 } }],
+  ['formation (fbm)', 'Mid-scale mass clumping as a Gaussian scale mixture, so local contrast itself fluctuates.', { formation: { enabled: true, amplitude: 0.05, source: 0 } }],
+  ['formation (Gabor)', 'Band-limited: a spectral peak at 1/scale_mm rather than fbm’s broadband 1/f. Reads toothy.', { formation: { enabled: true, amplitude: 0.05, source: 1, scale_mm: 1.8, bandwidth: 1.1 } }],
+  ['cavity shading', 'blur(h) − h is the discrete Laplacian, so it is the mean curvature. The one term that escapes the emboss.', { cockle: { enabled: true, amplitude_um: 34 }, cavity: { enabled: true, lambda: 1.4 } }],
+  ['specular', 'Cockle’s real signal is gloss off the crests, not diffuse shading.', { cockle: { enabled: true, amplitude_um: 34 }, light: { specular: true, spec_intensity: 1.1 } }],
+  ['non-stationary fade', 'A big-scale cubed mask. Its absence is the single biggest “this is procedural” tell.', { formation: { enabled: true, amplitude: 0.07 }, fade: { enabled: true, amount: 1 } }],
+  ['scratches', 'Sparse, and mostly LIGHT: fibre lift reads bright. A fraction read dark.', { scratches: { enabled: true, density: 0.12, lightness: 0.25 } }],
+  ['imperfections', 'Pits and rarer, larger blotches, each randomising its own size and strength.', { imperfect: { enabled: true, pit_density: 0.25, mark_density: 0.2 } }],
+  ['crumple', 'Worley 1996. fbm(F1) gives the lumpy facets; F2−F1 gives the sharp Voronoi crease network.', { crumple: { enabled: true, amplitude_um: 70 }, cavity: { enabled: true } }],
+  ['folds', 'A few deliberate pressed creases, each a signed ridge across the sheet.', { folds: { enabled: true, count: 3, depth: 0.6 }, cavity: { enabled: true } }],
+  ['deckle edge', 'A clustered low-frequency envelope times a fine along-edge carrier, feathering the silhouette into fibre tufts.', { edge: { enabled: true, wobble_px: 4, deckle_px: 12 } }],
+  ['cast shadow', 'Tight core at contact, soft halo where the sheet lifts. A uniform offset blur is what makes a fake shadow read fake.', { edge: { enabled: true, wobble_px: 5 }, shadow: { enabled: true, darkness: 0.85, blur_px: 18 } }],
+  ['duotone', 'A scalar shade times a beige tint cannot hue-shift. Warm highlights, cool shadows: the painter’s rule.', { cockle: { enabled: true, amplitude_um: 40 }, tone: { duotone: 1 } }],
+];
+
+const iso = document.getElementById('isolationGrid');
+const merge = (a, b) => {
+  const out = { ...a };
+  for (const k in b) out[k] = (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k]))
+    ? { ...(a[k] || {}), ...b[k] } : b[k];
+  return out;
+};
+for (const [name, desc, patch] of ISOLATED) {
+  const el = document.createElement('div');
+  el.className = 'sheet';
+  el.innerHTML = `<span class="tag">${name}</span><p>${desc}</p>`;
+  iso.appendChild(el);
+  new Paper(el, { params: merge(OFF, patch) });
+}
+
+// --- overhang modes ---------------------------------------------------------
+const OVERHANG = [
+  ['grow (default)', 'The canvas extends past the element, so the shadow falls outside it. Best rendering. Pair with <code>html { overflow-x: clip }</code>.'],
+  ['inset', 'The canvas matches the element and the sheet shrinks inside it, with matching padding added so the content stays on the paper. No page overflow.'],
+  ['clip', 'The canvas matches the element and the sheet fills it. No page overflow and no cast shadow, since there is no void for one to fall on.'],
+];
+const ogrid = document.getElementById('overhangGrid');
+for (const [mode, desc] of OVERHANG) {
+  const el = document.createElement('div');
+  el.className = 'sheet';
+  el.innerHTML = `<span class="tag">overhang: ${mode.split(' ')[0]}</span><h3>${mode}</h3><p>${desc}</p>`;
+  ogrid.appendChild(el);
+  new Paper(el, { preset: 'paper', overhang: mode.split(' ')[0] });
+}
+
+// --- rasterize comparison ---------------------------------------------------
+const rasterEl = document.getElementById('rasterDemo');
+const note = document.getElementById('rasterNote');
+new Paper(rasterEl, {
+  preset: 'paper',
+  content: 'rasterize',
+  params: { ink: { granulation: 0.7, thickness: 1.15 }, cavity: { enabled: true } },
+  onError: (m) => { note.className = 'note fail'; note.textContent = m; },
+});
+
+// --- everything declared with data-paper ------------------------------------
+const bound = scan();
+status.textContent = caps.ok
+  ? `${bound.length + ISOLATED.length + 1} surfaces · WebGL2 · ${caps.floatRender ? 'R32F' : 'R16F'} targets`
+  : status.textContent;
+</script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+# paperweb
+
+Every paper-rendering effect from [paperlab](https://github.com/0JEA/paperlab),
+applied to DOM elements. WebGL2, no dependencies, no build step.
+
+```js
+import { Paper } from './src/index.js';
+new Paper(document.querySelector('.card'), { preset: 'paper' });
+```
+
+or with no per-element JavaScript at all:
+
+```html
+<div data-paper="worn">…</div>
+<script type="module">
+  import { scan } from './src/index.js'; scan();
+</script>
+```
+
+Open `demo/index.html` (`npm run demo`) to see all nine presets, every effect in
+isolation, and both ink modes.
+
+## What it renders
+
+The same twelve-draw pass graph as paperlab, with the same research-grounded
+defaults:
+
+```
+height  ->  heightblur  ->  cavity
+height  ->  normal      ->  shade  (+ cavity)
+albedo
+mask    ->  shadowT (tight blur)
+        ->  shadowW (wide blur)
+composite(content, shade, albedo, mask, shadowT, shadowW, cavity)
+```
+
+| effect | what it is | source |
+|---|---|---|
+| cockle | organic 16-34 mm buckling, crests along the machine direction | Land 2004 |
+| formation | mid-scale mass clumping as a Gaussian scale mixture | CSF peak 1-3 mm |
+| Gabor formation | band-limited alternative with a spectral peak, not 1/f | Lagae et al. 2009 |
+| RPN tile | a random-phase bake of a real scan | Galerne 2011 |
+| cavity shading | `blur(h) - h`, the discrete Laplacian: the one term that escapes the emboss | Luft et al. 2006 |
+| specular | cockle's real signal is gloss off the crests | |
+| non-stationary fade | big-scale cubed mask; its absence is the biggest "procedural" tell | |
+| crumple | all-over facet/crease network | Worley 1996 |
+| folds | a few deliberate pressed creases | |
+| scratches | sparse, mostly LIGHT (fibre lift), a fraction dark | |
+| imperfections | pits and rarer larger blotches, each randomising its own size | |
+| deckle edge | clustered envelope x along-edge carrier, feathered into fibre tufts | Portilla & Simoncelli, Group C |
+| cast shadow | contact-hardened: tight core, soft halo | |
+| duotone | warm highlights, cool shadows, because a scalar cannot hue-shift | |
+| Kubelka-Munk ink | ink as an absorbing layer OVER the lit paper, not painted on it | Curtis et al. 1997 |
+| granulation | pigment pools in the relief valleys | Curtis et al. 1997 |
+
+## Content modes
+
+The one thing the web cannot do is sample live DOM in a shader. There are three
+answers, and you pick per element.
+
+**`content: 'behind'` (default)** puts the canvas behind untouched, selectable,
+accessible DOM text. You get every effect except ink coupling. This is the mode
+for anything a user reads or interacts with.
+
+**`content: 'rasterize'`** snapshots the element through an SVG `foreignObject`
+and feeds it in as the content texture, so text is optically *inside* the sheet:
+thin antialiased edges let the lit, textured paper show through, and granulation
+pools pigment in the relief valleys. Opt-in, because DOM rasterisation is
+genuinely unreliable: styles have to be inlined, external fonts and images must
+already be data URIs, any cross-origin image taints the canvas, and Safari has a
+long history of dropping webfonts in `foreignObject`. So the snapshot is
+validated (loads, readable, not uniformly blank) and **falls back to `'behind'`
+on any failure**, restoring the element's own content. It never leaves a blank
+element.
+
+**`content: <img|canvas|url>`** uploads a source directly. Full ink coupling,
+none of the rasterisation risk. The reliable way to get Kubelka-Munk.
+
+## API
+
+```js
+const p = new Paper(el, {
+  preset: 'paper',     // any of presetNames; omit for defaults
+  params: {},          // deep-merged over the preset
+  content: 'behind',   // 'behind' | 'rasterize' | HTMLImageElement | HTMLCanvasElement | url
+  overhang: 'grow',    // 'grow' | 'inset' | 'clip'  (see Layout below)
+  dpi: 96,             // nominal CSS px per inch; drives every mm value
+  maxDpr: 2,           // cap on devicePixelRatio
+  light: 'static',     // or 'pointer'
+  watch: false,        // re-snapshot rasterized content on resize
+  lazy: true,          // defer first render until near the viewport
+  retain: false,       // keep GPU targets alive between renders
+  onError: (msg) => {},
+});
+
+p.set({ light: { azimuth_deg: 60 } });  // re-runs only the affected passes
+p.render();
+p.setContent(imgElement);
+p.buffer('Height');                     // ImageData of any pass; needs retain: true
+p.floats('Shade');                      // raw Float32Array; needs retain: true
+p.destroy();                            // fully restores the DOM
+```
+
+`scan(root?, defaults?)` binds every `[data-paper]` element. Any `data-paper-*`
+attribute becomes an option, JSON-parsed when it looks like JSON.
+
+React, from a separate entry so the core stays dependency-free:
+
+```jsx
+import { PaperSurface, usePaper } from './src/react.js';
+<PaperSurface preset="paper" className="card">…</PaperSurface>
+```
+
+## How it differs from paperlab
+
+Five intentional divergences, all of them because a web page is not a desktop
+inspector.
+
+**The height buffer is in micrometres, not millimetres.** On the half-float
+fallback path, mm-scale values (about ±0.011) quantise at roughly 0.05% relative,
+and `normal` takes a central difference of two of them, which destroys the slope.
+In µm the values are about ±11 and the difference survives.
+
+**Passes are dirty-flagged.** paperlab re-renders all twelve draws every frame to
+drive its ImGui panel. Here a surface usually renders exactly once, with no
+`requestAnimationFrame` loop. Moving the light re-runs 2 passes out of 12.
+
+**The mask runs at full resolution.** paperlab keeps every field at half res,
+which is fine when the sheet is 1275 px wide. A 300 px card has only 150 px of
+half-res silhouette, and the deckle fringe aliases into a hard comb against the
+page background.
+
+**Edge frequencies are per millimetre, not per pixel.** paperlab ties the deckle
+carrier and the silhouette wobble to the render resolution, so the same sheet at
+another DPI grows or shrinks its fibres. The constants here are paperlab's own,
+converted at its native 150 DPI, so the look is preserved and only the coupling
+to resolution is removed.
+
+**There is an alpha channel.** paperlab always paints an opaque void because it
+is a desktop inspector. On a page the void has to be transparent so the sheet
+composites over whatever is behind it, so the cast shadow writes alpha rather
+than darkening a void colour, and the output is premultiplied.
+
+Everything else is the same arithmetic, including the comments that record why
+each term exists.
+
+## Scale model
+
+`page.dpi` (default 96) is the nominal resolution, so `px_per_mm = dpi / 25.4`.
+paperlab's millimetre defaults then land at sensible CSS sizes, and changing
+`dpi` changes the *physical* size of the relief rather than scaling a bitmap.
+The element's border box is the sheet; when the cast shadow is on, the canvas is
+grown beyond it by `offset_px + 2 * blur_px` (capped at `page.margin_mm`) so the
+shadow has void to fall on.
+
+## Performance
+
+One shared WebGL2 context for the whole page, because browsers cap live contexts
+at around 16. Each surface renders through it and copies the result to its own 2D
+canvas, so instances hold pixels rather than GPU contexts. Static surfaces hand
+their render targets back to a pool immediately, so a page of thirty sheets holds
+one sheet's worth of VRAM. `IntersectionObserver` defers the first render until
+an element is near the viewport.
+
+The Gabor formation source is a 27-iteration inner loop per pixel and is the one
+genuinely expensive pass. It is off by default; only the `textured` preset uses
+it.
+
+## Fallbacks
+
+- No `EXT_color_buffer_float` but half-float present: R16F targets.
+- No WebGL2 at all: the surface no-ops and the element gets a flat `tone.paper`
+  background colour.
+- `prefers-reduced-motion`: `light: 'pointer'` is forced to `'static'`.
+- Rasterisation failure: falls back to `content: 'behind'` and reports via
+  `onError`.
+
+## Tests
+
+```
+npm test              # 15 unit tests, node:test
+npm run test:browser  # 52 invariant tests in headless chromium (SwiftShader)
+```
+
+The browser tests read the intermediate float buffers back and assert properties
+that follow from the physics, not from whatever the shaders happen to output: a
+flat sheet has a shade of exactly 1.0 and a height of exactly 0; the composite
+centre equals `tone.paper` within 1/255; cockle relief scales linearly with
+`amplitude_um`; the cavity is a signed, near-zero-mean Laplacian; flipping the
+light 180 degrees produces an equal and opposite shading deviation; an
+incremental re-render matches a fresh one exactly.
+
+They also cover the parts that are not physics: that `content: 'behind'` leaves
+the text visible and out of the accessibility tree's way, that a failing content
+source degrades to `'behind'` rather than blanking the element, that `destroy()`
+fully restores the DOM, that every preset renders, and that the three `overhang`
+modes really do or do not stick out past their element.
+
+**Not established:** pixel parity with the C++ renderer. paperlab is not built on
+this machine, so any claim of visual equivalence is by construction (the same
+shader maths) rather than measured.
+
+## Layout
+
+The cast shadow needs void to fall on, and how it gets that room is the one
+place paperweb has to negotiate with your page. An absolutely-positioned box
+that sticks out past its element contributes to the **root scroller's** overflow,
+so a full-width surface makes the page scroll sideways. Three modes:
+
+| `overhang` | canvas | shadow | page overflow |
+|---|---|---|---|
+| `'grow'` (default) | extends past the element by `offset_px + 2·blur_px`, capped at `page.margin_mm` | full | yes, unless you clip |
+| `'inset'` | exactly the element | full | none |
+| `'clip'` | exactly the element | none | none |
+
+With the default, add one line:
+
+```css
+html { overflow-x: clip; }
+```
+
+`clip`, not `hidden`: it creates no scroll container and does not break
+`position: sticky`.
+
+`'inset'` keeps the canvas inside the element and shrinks the sheet instead,
+adding matching padding to the element so its content stays on the paper. The
+padding is restored on `destroy()`. `'clip'` fills the element with sheet, so
+there is no void and no cast shadow, though the wobbly silhouette still cuts a
+thin band at the edge rather than leaving a hard rectangle.
+
+A parent with `overflow: hidden` clips the `'grow'` shadow; use `'inset'` there.

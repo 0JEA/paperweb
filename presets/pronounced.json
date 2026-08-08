@@ -1,0 +1,4 @@
+{ "cockle": {"enabled": true, "amplitude_um": 45.0, "wavelength_mm": 24.0, "anisotropy": 3.0, "irregularity": 0.8},
+  "formation": {"enabled": true, "amplitude": 0.03}, "fade": {"enabled": true, "amount": 0.55},
+  "folds": {"enabled": true, "count": 2, "depth": 0.4},
+  "light": {"relief_exaggerate": 10.0, "specular": true, "spec_intensity": 0.7, "spec_power": 30.0} }
