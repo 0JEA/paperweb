@@ -606,6 +606,58 @@ console.log('\nthe noise field does not tile');
     res.y.r < 0.35, `peak r=${res.y.r} at lag ${res.y.lag}px (half-res)`);
 }
 
+// --- invariant 12f: formation.skew actually skews ----------------------------
+// Real paper's albedo histogram has a longer DARK tail: fibre flocs read darker
+// than the gaps between them read light. paperlab's skew term is
+//     f += skew * (f * abs(f) - 0.15)
+// and f * abs(f) is an ODD function, so with a negative coefficient it shrinks
+// both tails equally. That is contrast compression, not skew: measured histogram
+// skew was 0.0102 at skew=0 and 0.0103 at skew=-1.0 while sd collapsed from
+// 9.58e-3 to 8.18e-3. The knob only ever removed contrast.
+console.log('\nformation.skew produces an actually skewed histogram');
+{
+  const res = await page.evaluate(async () => {
+    const measure = async (skew) => {
+      const el = document.createElement('div');
+      el.style.cssText = 'width:800px;height:600px;position:relative';
+      document.body.appendChild(el);
+      const pp = new window.PW.Paper(el, {
+        retain: true, lazy: false, seed: 0,
+        params: {
+          cockle: { enabled: false }, folds: { enabled: false }, crumple: { enabled: false },
+          fade: { enabled: false }, scratches: { enabled: false }, imperfect: { enabled: false },
+          formation: { enabled: true, amplitude: 0.05, scale_mm: 2.5, skew, source: 0 },
+        },
+      });
+      await pp.render();
+      const { data, w, h } = pp.floats('Albedo');
+      const st = data.length / (w * h);
+      const n = w * h;
+      let sum = 0;
+      for (let i = 0; i < n; i++) sum += data[i * st];
+      const mu = sum / n;
+      let m2 = 0, m3 = 0;
+      for (let i = 0; i < n; i++) { const d = data[i * st] - mu; m2 += d * d; m3 += d * d * d; }
+      m2 /= n; m3 /= n;
+      pp.destroy(); el.remove();
+      return { skewness: m3 / Math.pow(m2, 1.5), sd: Math.sqrt(m2) };
+    };
+    return { zero: await measure(0), neg: await measure(-0.3), strong: await measure(-1.0) };
+  });
+
+  check('with skew 0 the histogram is symmetric',
+    Math.abs(res.zero.skewness) < 0.1, `skewness=${res.zero.skewness.toFixed(4)}`);
+  check('the default skew of -0.3 produces a real dark tail',
+    res.neg.skewness < -0.25, `skewness=${res.neg.skewness.toFixed(4)} (was 0.0102 when broken)`);
+  check('a stronger negative skew produces a longer dark tail',
+    res.strong.skewness < res.neg.skewness - 0.3,
+    `-1.0 gave ${res.strong.skewness.toFixed(4)}, -0.3 gave ${res.neg.skewness.toFixed(4)}`);
+  // The old term's real effect was to eat contrast. The fix must not do that.
+  check('skewing does not collapse contrast the way the odd term did',
+    res.neg.sd > res.zero.sd * 0.95,
+    `sd ${(res.neg.sd * 1e3).toFixed(2)}e-3 vs ${(res.zero.sd * 1e3).toFixed(2)}e-3 at skew 0`);
+}
+
 // --- invariant 13: teardown restores the DOM ---------------------------------
 console.log('\ndestroy() restores the element');
 {

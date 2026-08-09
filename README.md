@@ -114,7 +114,7 @@ import { PaperSurface, usePaper } from './src/react.js';
 
 ## How it differs from paperlab
 
-Five intentional divergences, all of them because a web page is not a desktop
+Seven intentional divergences, all of them because a web page is not a desktop
 inspector.
 
 **The height buffer is in micrometres, not millimetres.** On the half-float
@@ -141,6 +141,18 @@ to resolution is removed.
 is a desktop inspector. On a page the void has to be transparent so the sheet
 composites over whatever is behind it, so the cast shadow writes alpha rather
 than darkening a void colour, and the output is premultiplied.
+
+**The noise hash is an integer bit-mixer.** paperlab's float hash is exactly
+periodic on the integer lattice (123.34 x 50 and 345.45 x 20 are both whole
+numbers, so it repeats identically every 50 steps in x and 20 in y), which tiled
+every noise field at 472 x 189 canvas px. Replaced with PCG's output hash.
+
+**formation.skew was fixed.** paperlab applies `skew * (f * abs(f) - 0.15)`, and
+`f * abs(f)` is an odd function, so a negative coefficient shrinks both tails
+equally: contrast compression, not skew. Measured histogram skew was 0.0102 at
+skew 0 and 0.0103 at skew -1.0 while sd collapsed. Now uses an even function of
+f, normalised so it stays comparable to f at any amplitude. Real formation has a
+longer dark tail, because fibre flocs read darker than the gaps read light.
 
 Everything else is the same arithmetic, including the comments that record why
 each term exists.
