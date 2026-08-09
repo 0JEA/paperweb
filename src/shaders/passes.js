@@ -38,6 +38,11 @@ out vec4 frag_out;
 
 uniform vec2  u_res;
 uniform float u_px_per_mm;
+// Per-surface offset into the (infinite) noise fields, in mm. paperlab renders
+// one sheet, so its seeds are constants; a page renders many, and constants make
+// every card the same piece of paper. Sliding the sample position decorrelates
+// every position-based layer at once.
+uniform vec2  u_seed_mm;
 
 uniform int   u_cockle_on;
 uniform float u_cockle_wavelength_mm;
@@ -60,7 +65,13 @@ uniform float u_crumple_seed;
 
 void main() {
     vec2 px = uv * u_res;
-    vec2 mm = px / u_px_per_mm;
+    // Folds are placed in SHEET-RELATIVE coordinates (p0 below is a fraction of
+    // the sheet), so they must keep the un-offset position: sliding mm by the
+    // seed would push every crease line off the sheet entirely. Their variation
+    // comes through u_fold_seed instead. Cockle and crumple are pure fields and
+    // take the offset.
+    vec2 mm_sheet = px / u_px_per_mm;
+    vec2 mm = mm_sheet + u_seed_mm;
     float h_um = 0.0;
 
     if (u_cockle_on == 1) {
@@ -94,7 +105,7 @@ void main() {
             vec2 dir = vec2(cos(ang), sin(ang));
             vec2 nrm = vec2(-dir.y, dir.x);
             vec2 p0 = r1.y * sheet_mm + 0.2 * sheet_mm;
-            float d = dot(mm - p0, nrm);
+            float d = dot(mm_sheet - p0, nrm);
             float sgn = (r2.x < 0.5) ? -1.0 : 1.0;
             float profile = exp(-(d * d) / (width_mm * width_mm));
             h_um += sgn * u_fold_depth * 150.0 * profile;   // 0.15mm max -> 150um
@@ -257,6 +268,7 @@ out vec4 frag_out;
 
 uniform vec2  u_res;
 uniform float u_px_per_mm;
+uniform vec2  u_seed_mm;   // per-surface offset into the noise fields
 
 uniform int   u_form_on;
 uniform float u_form_scale_mm;
@@ -289,7 +301,9 @@ uniform float u_mark_scale_mm;
 uniform float u_imp_seed;
 
 void main() {
-    vec2 mm = (uv * u_res) / u_px_per_mm;
+    // Everything in this pass is a pure function of position, so one offset
+    // decorrelates formation, fade, scratches and imperfections together.
+    vec2 mm = (uv * u_res) / u_px_per_mm + u_seed_mm;
     float albedo = 1.0;
 
     // --- non-stationary fade (cubed big-scale mask) ---
@@ -384,6 +398,7 @@ out vec4 frag_out;
 uniform vec2  u_res;
 uniform vec4  u_page_rect;   // x0,y0,x1,y1 in canvas px (top-left origin)
 uniform float u_px_per_mm;
+uniform vec2  u_seed_mm;   // per-surface offset into the edge noise
 uniform float u_wobble_px;
 uniform float u_curl;
 uniform float u_deckle_px;
@@ -409,7 +424,10 @@ float deckle(float t_mm, float seed) {
 
 void main() {
     vec2 p = vec2(uv.x, 1.0 - uv.y) * u_res;
-    vec2 mm = p / max(u_px_per_mm, 1e-3);
+    // The seed offsets only where the edge noise is SAMPLED. Variable p stays in
+    // real canvas pixels because the rectangle test and the corner curl are
+    // geometry, not noise: offsetting those would move the sheet off the element.
+    vec2 mm = p / max(u_px_per_mm, 1e-3) + u_seed_mm;
     vec2 lo = u_page_rect.xy, hi = u_page_rect.zw;
 
     // Low-frequency silhouette wobble, also per mm: 0.01/px at 2.95 px/mm is

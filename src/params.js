@@ -21,6 +21,13 @@ export function defaults() {
       // defaults (cockle 30mm, formation 2.5mm) at sensible on-screen sizes.
       dpi: 96,
       margin_mm: 16,            // void around the sheet, for the cast shadow
+      // Which sheet of paper this is. paperlab renders one sheet, so all of its
+      // seeds are constants; a page renders many, and constants make every card
+      // the identical piece of paper. The seed offsets the sample position into
+      // the noise fields and perturbs each layer's own seed, so every surface
+      // gets its own cockle, formation, creases and torn edge. Paper assigns one
+      // per instance automatically; pin it to reproduce a specific sheet.
+      seed: 0,
     },
 
     tone: {
@@ -227,6 +234,32 @@ export function resolve(patch) {
 /** Canvas pixels per millimetre at this tree's nominal DPI. */
 export function pxPerMm(p) {
   return p.page.dpi / 25.4;
+}
+
+/**
+ * Turn a seed into an offset in millimetres into the noise fields.
+ *
+ * Consecutive seeds must land far apart, or surfaces 3 and 4 on a page would be
+ * near-identical crops of the same field. A sine hash scatters them. The range
+ * is capped at 400 mm because float32 in the shader has to resolve sub-0.1 mm
+ * formation detail on top of the offset, and precision there degrades with
+ * magnitude.
+ */
+export function seedOffsetMm(seed) {
+  const h = (n) => {
+    const x = Math.sin(n * 127.1 + 311.7) * 43758.5453123;
+    return x - Math.floor(x);
+  };
+  return [h(seed + 1.3) * 400, h(seed + 57.9) * 400];
+}
+
+/**
+ * Per-layer seed for a given surface. Keeps each layer's own authored seed
+ * meaningful (so a preset's `folds.seed` still distinguishes it from another
+ * preset) while separating surfaces from each other.
+ */
+export function layerSeed(base, seed) {
+  return base + seed * 17.31;
 }
 
 /** Canvas pixels per point (1 pt = 1/72 in). */

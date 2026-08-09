@@ -69,11 +69,16 @@ if (!caps.ok) {
 
 // --- helper: build a retained surface with a given param patch --------------
 await page.evaluate(() => {
+  // seed is pinned here on purpose. Every surface now gets its own sheet of
+  // paper, so two instances differ by design; the tests below compare fields
+  // ACROSS instances (incremental vs fresh render, amplitude scaling), and
+  // without a fixed seed they would be comparing two different sheets. Seed
+  // variation itself is covered by its own test.
   window.mk = async (patch, opts = {}) => {
     const el = document.getElementById('a');
     if (window.p) window.p.destroy();
     window.p = new window.PW.Paper(el, {
-      params: patch, retain: true, lazy: false,
+      params: patch, retain: true, lazy: false, seed: 0,
       onError: (m) => { (window.errs ||= []).push(m); },
       ...opts,
     });
@@ -461,6 +466,81 @@ console.log('\noverhang modes');
     `clip=${JSON.stringify(res.clip)} grow=${JSON.stringify(res.grow)}`);
   check("overhang 'clip' leaves the middle of the sheet solid",
     res.clip.centre > 0.99, JSON.stringify(res.clip));
+}
+
+// --- invariant 12d: surfaces do not all look the same ------------------------
+// paperlab is a single-sheet inspector, so every stochastic layer carries a
+// hard-coded constant seed. Rendering many sheets from those constants gives a
+// page where every card is the same piece of paper. Two ways it showed:
+//
+//   - folds are positioned in SHEET-RELATIVE coordinates (p0 is a fraction of
+//     the sheet), so the identical crease layout landed on every sheet at every
+//     size: measured ridge at height fraction 0.50 / 0.52 / 0.50 / 0.56 across
+//     four different sizes, and four presets all shipped folds.seed = 3.
+//   - every other layer is positioned in absolute mm, so any two sheets of the
+//     same size were pixel-identical.
+//
+// Each surface now gets its own seed, which must be deterministic (so a reload
+// or a re-render reproduces the same sheet) but distinct per instance.
+console.log('\nevery surface is its own piece of paper');
+{
+  const res = await page.evaluate(async () => {
+    const sig = async (opts, w, h) => {
+      const el = document.createElement('div');
+      el.style.cssText = `width:${w}px;height:${h}px;position:relative`;
+      document.body.appendChild(el);
+      const pp = new window.PW.Paper(el, { retain: true, lazy: false, ...opts });
+      await pp.render();
+      const { data, w: bw, h: bh } = pp.floats('Height');
+      const stride = data.length / (bw * bh);
+      const out = [];
+      for (let i = 0; i < 96; i++) {
+        out.push(Math.round(data[Math.floor((i / 96) * bw * bh) * stride] * 100) / 100);
+      }
+      pp.destroy(); el.remove();
+      return out.join(',');
+    };
+    const auto1 = await sig({ preset: 'worn' }, 320, 220);
+    const auto2 = await sig({ preset: 'worn' }, 320, 220);
+    const pin1 = await sig({ preset: 'worn', seed: 41 }, 320, 220);
+    const pin2 = await sig({ preset: 'worn', seed: 41 }, 320, 220);
+    const pin3 = await sig({ preset: 'worn', seed: 42 }, 320, 220);
+    // Folds specifically: where does the ridge sit down the left edge?
+    const ridge = async (seed) => {
+      const el = document.createElement('div');
+      el.style.cssText = 'width:420px;height:300px;position:relative';
+      document.body.appendChild(el);
+      const pp = new window.PW.Paper(el, {
+        retain: true, lazy: false, seed,
+        params: { cockle: { enabled: false }, crumple: { enabled: false },
+                  folds: { enabled: true, count: 3, depth: 0.45, sharpness: 0.6, seed: 3 } },
+      });
+      await pp.render();
+      const { data, w: bw, h: bh } = pp.floats('Height');
+      const stride = data.length / (bw * bh);
+      let best = -1, bestV = 8;
+      for (let y = 1; y < bh - 1; y++) {
+        const v = data[(y * bw + 4) * stride];
+        if (v > bestV) { bestV = v; best = y / bh; }
+      }
+      pp.destroy(); el.remove();
+      return best < 0 ? null : +best.toFixed(3);
+    };
+    return {
+      auto1, auto2, pin1, pin2, pin3,
+      ridges: [await ridge(0), await ridge(1), await ridge(2), await ridge(3)],
+    };
+  });
+
+  check('two surfaces with the same preset and size are NOT identical',
+    res.auto1 !== res.auto2, 'both instances produced the same height field');
+  check('an explicitly pinned seed is reproducible',
+    res.pin1 === res.pin2, 'seed 41 gave two different fields');
+  check('a different pinned seed gives a different sheet',
+    res.pin1 !== res.pin3, 'seeds 41 and 42 gave the same field');
+  const uniq = new Set(res.ridges.filter((r) => r !== null));
+  check('the fold layout differs between surfaces instead of landing mid-sheet every time',
+    uniq.size >= 3, `ridge height fractions across four seeds: ${JSON.stringify(res.ridges)}`);
 }
 
 // --- invariant 13: teardown restores the DOM ---------------------------------

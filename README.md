@@ -83,6 +83,7 @@ const p = new Paper(el, {
   preset: 'paper',     // any of presetNames; omit for defaults
   params: {},          // deep-merged over the preset
   content: 'behind',   // 'behind' | 'rasterize' | HTMLImageElement | HTMLCanvasElement | url
+  seed: null,          // which sheet of paper; auto-assigned per instance
   overhang: 'grow',    // 'grow' | 'inset' | 'clip'  (see Layout below)
   dpi: 96,             // nominal CSS px per inch; drives every mm value
   maxDpr: 2,           // cap on devicePixelRatio
@@ -143,6 +144,32 @@ than darkening a void colour, and the output is premultiplied.
 
 Everything else is the same arithmetic, including the comments that record why
 each term exists.
+
+## Every surface is its own sheet
+
+paperlab renders one sheet, so all of its seeds are constants. Rendering many
+sheets from those constants gives a page where every card is the same piece of
+paper, and the fold layer is the loudest tell: its creases are placed in
+*sheet-relative* coordinates, so before this was fixed the identical crease ran
+across the middle of every sheet at every size (measured ridge at height
+fraction 0.50 / 0.52 / 0.50 / 0.56 across four sizes), and four presets shipped
+the same `folds.seed`.
+
+Each `Paper` now takes a `seed`, assigned per instance, that offsets the sample
+position into the noise fields and perturbs each layer's own seed. Cockle,
+formation, fade, scratches, imperfections, crumple, fold angles and the torn
+edge all differ between surfaces.
+
+The seed is a **counter, not a random number**, so a surface looks the same on
+every reload. Pin it to reproduce a specific sheet:
+
+```js
+new Paper(el, { preset: 'worn', seed: 41 });   // same sheet every time
+```
+
+Folds are the one layer the offset cannot vary, because sliding the sample
+position would push every crease off the sheet; their variation comes through
+the fold seed instead.
 
 ## Scale model
 

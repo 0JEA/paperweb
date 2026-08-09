@@ -11,7 +11,7 @@ await p.screenshot({ path: `${dir}/demo-full.png`, fullPage: true });
 for (const [name, sel] of [['presets','#presetGrid'],['hero','.hero'],['isolation','#isolationGrid'],['ink','#rasterDemo']]) {
   const el = await p.$(sel); if (el) await el.screenshot({ path: `${dir}/${name}.png` });
 }
-console.log('status:', await p.textContent('#status'));
+console.log('status:', await p.textContent('#picknote'));
 console.log('note:', await p.textContent('#rasterNote'));
 console.log('errors:', errs.length ? errs.join('\n') : 'none');
 await b.close(); server.close();

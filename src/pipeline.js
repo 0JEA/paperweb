@@ -22,7 +22,7 @@
 import { gl, ensureSize } from './gl/context.js';
 import { Program, drawFullscreen } from './gl/program.js';
 import { acquire, release } from './gl/fbo.js';
-import { pxPerMm } from './params.js';
+import { pxPerMm, seedOffsetMm, layerSeed } from './params.js';
 import { kmConstants } from './km.js';
 import {
   QUAD_VERT, HEIGHT_FRAG, BLUR_FRAG, CAVITY_FRAG, NORMAL_FRAG,
@@ -88,7 +88,7 @@ export function whiteTexture() {
 const sig = (...parts) => JSON.stringify(parts);
 
 function signatures(p, geom) {
-  const g = [geom.fxW, geom.fxH, geom.canvasW, geom.canvasH, geom.pageRect, p.page.dpi];
+  const g = [geom.fxW, geom.fxH, geom.canvasW, geom.canvasH, geom.pageRect, p.page.dpi, p.page.seed];
   const height = sig(g, p.cockle, p.folds, p.crumple);
   const cavity = sig(height, p.cavity.radius_mm);
   const normal = sig(height, p.light.relief_exaggerate);
@@ -170,6 +170,8 @@ export class Pipeline {
     const dirty = (k) => this.last[k] !== s[k];
 
     const pxmm = pxPerMm(p);
+    const seed = p.page.seed || 0;
+    const seedMm = seedOffsetMm(seed);
     // effect scale: the fields run at half res, so px/mm is halved there too.
     const fxs = fxW / canvasW;
     const pxmmFx = pxmm * fxs;
@@ -184,6 +186,7 @@ export class Pipeline {
       pr.height.use().set({
         u_res: FX,
         u_px_per_mm: pxmmFx,
+        u_seed_mm: seedMm,
         u_cockle_on: { i: p.cockle.enabled ? 1 : 0 },
         u_cockle_wavelength_mm: p.cockle.wavelength_mm,
         u_cockle_amp_um: p.cockle.amplitude_um,
@@ -194,12 +197,12 @@ export class Pipeline {
         u_fold_count: p.folds.count,
         u_fold_depth: p.folds.depth,
         u_fold_sharpness: p.folds.sharpness,
-        u_fold_seed: p.folds.seed,
+        u_fold_seed: layerSeed(p.folds.seed, seed),
         u_crumple_on: { i: p.crumple.enabled ? 1 : 0 },
         u_crumple_scale_mm: p.crumple.scale_mm,
         u_crumple_amp_um: p.crumple.amplitude_um,
         u_crumple_crease: p.crumple.crease,
-        u_crumple_seed: p.crumple.seed,
+        u_crumple_seed: layerSeed(p.crumple.seed, seed),
       });
       drawFullscreen();
     }
@@ -253,6 +256,7 @@ export class Pipeline {
       pr.albedo.use().tex('u_form_tile', p._formTile || whiteTexture()).set({
         u_res: FX,
         u_px_per_mm: pxmmFx,
+        u_seed_mm: seedMm,
         u_form_on: { i: p.formation.enabled ? 1 : 0 },
         u_form_scale_mm: p.formation.scale_mm,
         u_form_amp: p.formation.amplitude,
@@ -269,7 +273,7 @@ export class Pipeline {
         u_scr_lightness: p.scratches.lightness,
         u_scr_scale_mm: p.scratches.scale_mm,
         u_scr_dark_frac: p.scratches.dark_frac,
-        u_scr_seed: p.scratches.seed,
+        u_scr_seed: layerSeed(p.scratches.seed, seed),
         u_imp_on: { i: p.imperfect.enabled ? 1 : 0 },
         u_pit_density: p.imperfect.pit_density,
         u_pit_depth: p.imperfect.pit_depth,
@@ -277,7 +281,7 @@ export class Pipeline {
         u_mark_density: p.imperfect.mark_density,
         u_mark_strength: p.imperfect.mark_strength,
         u_mark_scale_mm: p.imperfect.mark_scale_mm,
-        u_imp_seed: p.imperfect.seed,
+        u_imp_seed: layerSeed(p.imperfect.seed, seed),
       });
       drawFullscreen();
     }
@@ -293,6 +297,7 @@ export class Pipeline {
         u_res: [canvasW, canvasH],
         u_page_rect: [px0, py0, px1, py1],
         u_px_per_mm: pxmm,
+        u_seed_mm: seedMm,
         u_wobble_px: p.edge.enabled ? p.edge.wobble_px : 0,
         u_curl: p.edge.enabled ? p.edge.curl : 0,
         u_deckle_px: p.edge.enabled ? p.edge.deckle_px : 0,

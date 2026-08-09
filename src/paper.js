@@ -17,6 +17,9 @@ const DEFAULTS = {
   preset: null,
   params: null,
   content: 'behind',
+  // Which sheet of paper this is. Left unset, each instance gets the next one in
+  // sequence. Pin it to reproduce a specific sheet.
+  seed: null,
   // How the cast shadow gets room to fall.
   //
   //   'grow'  (default) the canvas extends past the element by the shadow
@@ -46,6 +49,17 @@ const DEFAULTS = {
 /** Every live instance, so a page-wide teardown is possible. */
 const live = new Set();
 
+// Sheet counter. Deliberately a counter rather than Math.random(): a surface
+// must look the same on every reload, or a screenshot test, a cached render and
+// a server-rendered page would each disagree with the last. Binding order is
+// stable for a given page, so the sequence is too. Anything that needs a
+// guaranteed-stable identity across page edits should pass `seed` explicitly.
+let seedCounter = 0;
+function nextSeed() { return seedCounter++; }
+
+/** Reset the sheet counter. Tests only. */
+export function _resetSeedsForTests() { seedCounter = 0; }
+
 export class Paper {
   /**
    * @param {HTMLElement} el
@@ -59,6 +73,16 @@ export class Paper {
     let base = this.opts.preset ? lookupPreset(this.opts.preset) : {};
     if (this.opts.params) base = merge(base, this.opts.params);
     if (this.opts.dpi != null) base = merge(base, { page: { dpi: this.opts.dpi } });
+    // Every surface gets its own sheet of paper. Without this, paperlab's
+    // constant seeds make every card on a page the identical piece of paper,
+    // and the fold layer is the loudest tell because its creases are placed in
+    // sheet-relative coordinates: the same crease lands across the middle of
+    // every sheet at every size.
+    if (this.opts.seed == null && base?.page?.seed == null) {
+      base = merge(base, { page: { seed: nextSeed() } });
+    } else if (this.opts.seed != null) {
+      base = merge(base, { page: { seed: Number(this.opts.seed) } });
+    }
     this.params = resolve(base);
 
     this.caps = capabilities();

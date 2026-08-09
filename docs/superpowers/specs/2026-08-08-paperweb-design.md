@@ -245,6 +245,19 @@ opaque void; on a page the void has to be transparent or the sheet cannot sit
 over the site's own background. The cast shadow now writes alpha instead of
 darkening a void colour, and the output is premultiplied.
 
+**A per-surface seed was added.** The design carried paperlab's seeds over as
+constants without asking what happens when there are 35 sheets instead of one.
+Answer: every sheet is the same piece of paper. Two mechanisms, both measured:
+folds are placed in sheet-RELATIVE coordinates so the identical crease landed at
+height fraction 0.50 / 0.52 / 0.50 / 0.56 across four different sizes, and four
+presets shipped `folds.seed = 3`; everything else is placed in absolute mm, so
+two sheets of the same size were byte-identical. Fixed with a `page.seed` that
+offsets the sample position into the noise fields (decorrelating every
+position-based layer at once) and perturbs each layer's own seed (so fold angles
+differ too, since an offset alone would slide the creases off the sheet). The
+seed is a counter rather than a random number so a surface survives a reload
+unchanged.
+
 **`overhang` was added.** The design assumed the canvas would always grow past
 the element to give the shadow void to fall on. Measured at a 390 px viewport,
 that made the page scroll sideways by exactly the margin (41 px), because an

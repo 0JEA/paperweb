@@ -26,6 +26,6 @@ const overflow = await p.evaluate(() => {
 console.log('viewport 390@2x  content extent:', overflow.scrollW, 'vs viewport', overflow.clientW);
 console.log('viewport 390@2x  actually scrolls sideways:',
   overflow.scrolledTo > 0 ? `YES (${overflow.scrolledTo}px) -- FAIL` : 'no -- OK');
-console.log('status:', await p.textContent('#status'));
+console.log('status:', await p.textContent('#picknote'));
 console.log('errors:', errs.length ? errs.join('\n') : 'none');
 await b.close(); server.close();
