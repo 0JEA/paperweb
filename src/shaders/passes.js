@@ -32,7 +32,7 @@ void main() {
 // Cockle is the dominant, best-sourced height layer (Land 2004). Formation is
 // NOT here: paper's mass variation is a reflectance change, not relief, so it
 // lives in the albedo pass.
-export const HEIGHT_FRAG = frag(/* glsl */ `
+export const HEIGHT_FRAG = (legacy = false) => frag(/* glsl */ `
 in vec2 uv;
 out vec4 frag_out;
 
@@ -50,6 +50,8 @@ uniform float u_cockle_amp_um;
 uniform float u_cockle_aniso;
 uniform float u_cockle_md_deg;
 uniform float u_cockle_irregularity;
+uniform float u_cockle_facet;
+uniform float u_cockle_facet_scale;
 
 uniform int   u_folds_on;
 uniform float u_fold_count;
@@ -90,6 +92,34 @@ void main() {
         float wave = 0.5 * sin(t.y * 6.2831853 / max(u_cockle_wavelength_mm, 1.0) + warp * 1.5);
 
         float field = mix(wave, organic * 1.6, clamp(u_cockle_irregularity, 0.0, 1.0));
+
+        // FACETING. Real buckled paper does not curve smoothly: it collapses
+        // into flat panels meeting along creases, which is why crumpled paper
+        // reads as a polygon network and not as a wavy sheet.
+        //
+        // This was discovered by accident. paperlab's float hash, compiled
+        // UNBRANCHED by NVIDIA's shader compiler, quantises into discrete levels
+        // and turns the cockle field into exactly that panel network: measured
+        // on an RTX 4070, 14% of the shade buffer carries a sharp gradient
+        // against 0.01% for the smooth version. Wrapping the SAME formula in an
+        // if() destroys it, so it is a shader-codegen artifact and cannot be
+        // relied on. SwiftShader never produced it at all, which is why several
+        // rounds of measurement here missed it completely.
+        //
+        // So quantise on purpose. Rounding the field to a set of levels makes
+        // flat panels whose boundaries the normal pass turns into creases, on
+        // every GPU, with a knob on it.
+        if (u_cockle_facet > 0.001) {
+            float levels = mix(40.0, 5.0, clamp(u_cockle_facet, 0.0, 1.0));
+            // Warp the level boundaries so the creases are not iso-contours of a
+            // smooth field, which would read as a topographic map. A little
+            // high-frequency jitter breaks them into straight-ish panel edges.
+            float j = (fbm(t / max(u_cockle_facet_scale, 0.5), 3, 0.5, 2.0) - 0.5);
+            float q = field + j * (1.2 / levels);
+            float stepped = floor(q * levels + 0.5) / levels;
+            field = mix(field, stepped, clamp(u_cockle_facet, 0.0, 1.0));
+        }
+
         h_um += field * u_cockle_amp_um;   // field ~ +/-0.5, amp = peak-to-valley
     }
 
@@ -136,7 +166,7 @@ void main() {
         // organically, and unlike a broken hash it is controllable, and it does
         // not depend on how a particular driver rounds sin() with a 2^18
         // multiplier.
-        if (u_legacy_noise == 0 && u_crumple_irregularity > 0.001) {
+        if (u_legacy_noise != 1 && u_crumple_irregularity > 0.001) {
             vec2 wp = cp * 0.45;
             vec2 warp = vec2(fbm(wp + vec2(3.1, 7.7), 3, 0.5, 2.0),
                              fbm(wp + vec2(9.3, 1.9), 3, 0.5, 2.0)) - 0.5;
@@ -156,7 +186,7 @@ void main() {
 
     frag_out = vec4(h_um, 0.0, 0.0, 1.0);
 }
-`, { common: true });
+`, { common: true, legacy });
 
 // --- separable Gaussian blur ------------------------------------------------
 // Run twice (u_dir = (1,0) then (0,1)). Fixed loop bound with early break; the
@@ -287,7 +317,7 @@ void main() {
 // case that reads as procedural. Modulated by a big-scale non-stationary FADE,
 // plus sparse LIGHT scratches (fibre lift reads bright, not dark) and varied
 // imperfections.
-export const ALBEDO_FRAG = frag(/* glsl */ `
+export const ALBEDO_FRAG = (legacy = false) => frag(/* glsl */ `
 in vec2 uv;
 out vec4 frag_out;
 
@@ -482,13 +512,13 @@ void main() {
 
     frag_out = vec4(albedo, 0.0, 0.0, 1.0);
 }
-`, { common: true });
+`, { common: true, legacy });
 
 // --- mask (sheet silhouette) ------------------------------------------------
 // A real sheet's edge is not a perfect line, and the silhouette is a strong
 // "physical object" cue: the curled corner displaces the outline far more than
 // any surface texture can.
-export const MASK_FRAG = frag(/* glsl */ `
+export const MASK_FRAG = (legacy = false) => frag(/* glsl */ `
 in vec2 uv;
 out vec4 frag_out;
 
@@ -567,7 +597,7 @@ void main() {
 
     frag_out = vec4(inside, 0.0, 0.0, 1.0);
 }
-`, { common: true });
+`, { common: true, legacy });
 
 // --- composite --------------------------------------------------------------
 // Final image: void -> contact-hardened cast shadow -> sheet. The sheet occupies

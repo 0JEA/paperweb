@@ -32,29 +32,36 @@ import {
 // --- shared programs --------------------------------------------------------
 // Compiled once per page, not per element.
 
-let P = null;
+// Two compiled program sets. The legacy set exists only so the height and mask
+// passes can use the unbranched float hash, whose codegen artifact is the panel
+// texture; see the note in common.js. Compiled lazily, so a page that never asks
+// for it never pays for it.
+const P = { std: null, legacy: null };
 
-function programs() {
-  if (P) return P;
-  P = {
-    height: new Program(QUAD_VERT, HEIGHT_FRAG, 'height'),
+function programs(legacy = false) {
+  const key = legacy ? 'legacy' : 'std';
+  if (P[key]) return P[key];
+  P[key] = {
+    height: new Program(QUAD_VERT, HEIGHT_FRAG(legacy), 'height'),
     blur: new Program(QUAD_VERT, BLUR_FRAG, 'blur'),
     cavity: new Program(QUAD_VERT, CAVITY_FRAG, 'cavity'),
     normal: new Program(QUAD_VERT, NORMAL_FRAG, 'normal'),
     shade: new Program(QUAD_VERT, SHADE_FRAG, 'shade'),
-    albedo: new Program(QUAD_VERT, ALBEDO_FRAG, 'albedo'),
-    mask: new Program(QUAD_VERT, MASK_FRAG, 'mask'),
+    albedo: new Program(QUAD_VERT, ALBEDO_FRAG(legacy), 'albedo'),
+    mask: new Program(QUAD_VERT, MASK_FRAG(legacy), 'mask'),
     composite: new Program(QUAD_VERT, COMPOSITE_FRAG, 'composite'),
     present: new Program(QUAD_VERT, PRESENT_FRAG, 'present'),
   };
-  return P;
+  return P[key];
 }
 
 /** Free the shared programs. Teardown and tests only. */
 export function destroyPrograms() {
-  if (!P) return;
-  for (const k in P) P[k].destroy();
-  P = null;
+  for (const key of ['std', 'legacy']) {
+    if (!P[key]) continue;
+    for (const k in P[key]) P[key][k].destroy();
+    P[key] = null;
+  }
 }
 
 // --- a 1x1 white content texture --------------------------------------------
@@ -157,8 +164,6 @@ export class Pipeline {
    */
   render(p, geom, contentTex, contentHasAlpha = false) {
     const g = gl();
-    const pr = programs();
-
     const canvasW = Math.max(1, Math.round(geom.canvasW));
     const canvasH = Math.max(1, Math.round(geom.canvasH));
     const fxW = Math.max(8, canvasW >> 1);
@@ -170,9 +175,41 @@ export class Pipeline {
     const dirty = (k) => this.last[k] !== s[k];
 
     const pxmm = pxPerMm(p);
-    const seed = p.page.legacy ? 0 : (p.page.seed || 0);
-    const legacy = { i: p.page.legacy ? 1 : 0 };
-    const seedMm = seedOffsetMm(seed);
+    const seed = p.page.legacy === 1 ? 0 : (p.page.seed || 0);
+    // Per-PASS hash choice, which is the whole trick.
+    //
+    // The crease network that reads as crumpled paper comes from the cockle
+    // height field: paperlab's float hash quantises on real GPU hardware into
+    // flat facets, and facet boundaries are creases. (Measured on an RTX 4070;
+    // SwiftShader does not do it, which is why every earlier measurement here
+    // missed it entirely.)
+    //
+    // The tiling that had to go came from the same hash in the ALBEDO pass: at
+    // the 2.5 mm formation grain its 50 x 20 cell period is 472 x 189 px, which
+    // repeats several times across a hero.
+    //
+    // Cockle's grain is 15.4 mm, so its period is 20 x 15.4 = 308 mm = 1164 px
+    // vertically and over 6000 px horizontally after the anisotropic stretch.
+    // Nothing on a page is that big. So the height pass can keep the float hash
+    // and its facets while the albedo pass takes the aperiodic one, and both
+    // problems are solved at once.
+    //
+    // page.legacy overrides this for A/B: 1 = float hash everywhere (original),
+    // 0 = uniform everywhere, 2 = the split above.
+    const mode = p.page.legacy;
+    // mode 1 = legacy everywhere, 2 = legacy relief + aperiodic albedo, 0 = none
+    const pr = programs(mode === 1 || mode === 2);   // relief + mask
+    const prA = programs(mode === 1);                // albedo
+    const heightHash = { i: mode === 1 ? 1 : mode === 2 ? 1 : 0 };
+    const albedoHash = { i: mode === 1 ? 1 : 0 };
+    const legacy = heightHash;
+    // How far to slide into the noise field per surface. Small on the height
+    // pass: the float hash's facet character is a precision effect, so pushing
+    // the coordinates out to hundreds of millimetres changes the regime and the
+    // facets dissolve. The albedo pass has no such constraint and takes the full
+    // range, which it needs because its grain is 6x finer.
+    const seedMm = seedOffsetMm(seed, 400);
+    const seedMmHeight = seedOffsetMm(seed, p.page.legacy === 0 ? 400 : 24);
     // effect scale: the fields run at half res, so px/mm is halved there too.
     const fxs = fxW / canvasW;
     const pxmmFx = pxmm * fxs;
@@ -187,14 +224,16 @@ export class Pipeline {
       pr.height.use().set({
         u_res: FX,
         u_px_per_mm: pxmmFx,
-        u_seed_mm: seedMm,
-        u_legacy_noise: legacy,
+        u_seed_mm: seedMmHeight,
+        u_legacy_noise: heightHash,
         u_cockle_on: { i: p.cockle.enabled ? 1 : 0 },
         u_cockle_wavelength_mm: p.cockle.wavelength_mm,
         u_cockle_amp_um: p.cockle.amplitude_um,
         u_cockle_aniso: p.cockle.anisotropy,
         u_cockle_md_deg: p.cockle.md_angle_deg,
         u_cockle_irregularity: p.cockle.irregularity,
+        u_cockle_facet: p.cockle.facet,
+        u_cockle_facet_scale: p.cockle.facet_scale_mm,
         u_folds_on: { i: p.folds.enabled ? 1 : 0 },
         u_fold_count: p.folds.count,
         u_fold_depth: p.folds.depth,
@@ -256,11 +295,11 @@ export class Pipeline {
     // --- albedo ---
     if (dirty('albedo')) {
       t.albedo.bind();
-      pr.albedo.use().tex('u_form_tile', p._formTile || whiteTexture()).set({
+      prA.albedo.use().tex('u_form_tile', p._formTile || whiteTexture()).set({
         u_res: FX,
         u_px_per_mm: pxmmFx,
         u_seed_mm: seedMm,
-        u_legacy_noise: legacy,
+        u_legacy_noise: albedoHash,
         u_form_on: { i: p.formation.enabled ? 1 : 0 },
         u_form_scale_mm: p.formation.scale_mm,
         u_form_amp: p.formation.amplitude,
@@ -309,7 +348,7 @@ export class Pipeline {
         u_page_rect: [px0, py0, px1, py1],
         u_px_per_mm: pxmm,
         u_seed_mm: seedMm,
-        u_legacy_noise: legacy,
+        u_legacy_noise: heightHash,
         u_wobble_px: p.edge.enabled ? p.edge.wobble_px : 0,
         u_curl: p.edge.enabled ? p.edge.curl : 0,
         u_deckle_px: p.edge.enabled ? p.edge.deckle_px : 0,

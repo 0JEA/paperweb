@@ -1,3 +1,4 @@
 node_modules/
 demo/selections.json
+demo/atlas*/
 demo/tmp/

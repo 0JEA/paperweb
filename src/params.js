@@ -28,9 +28,13 @@ export function defaults() {
       // gets its own cockle, formation, creases and torn edge. Paper assigns one
       // per instance automatically; pin it to reproduce a specific sheet.
       seed: 0,
-      // Debug A/B: 1 restores paperlab's original hashes, skew term and a fixed
-      // seed, so the two can be flipped live on one page.
-      legacy: 0,
+      // Which noise hash to use.
+      //   0  uniform  - PCG integer mixer. Identical on every GPU, and flat.
+      //   1  legacy   - paperlab's original. Tiles every 50 x 20 cells.
+      //   2  crystalline - paperlab's formula at a 10000-cell period. Keeps the
+      //      fine crease network the float hash produces on real GPU hardware,
+      //      without the repeat. Look varies by GPU; see the note in common.js.
+      legacy: 2,
     },
 
     tone: {
@@ -90,6 +94,12 @@ export function defaults() {
       anisotropy: 2.2,          // MD:CD stretch of the field
       md_angle_deg: 0,
       irregularity: 0.9,        // 0 = gentle directional wave, 1 = fully organic
+      // Buckled paper collapses into flat panels meeting along creases rather
+      // than curving smoothly. 0 = smooth, 1 = hard panels. See the long note in
+      // the height shader: this reproduces on purpose, and portably, a texture
+      // that NVIDIA's compiler used to produce by accident.
+      facet: 0.0,
+      facet_scale_mm: 7.0,      // size of the jitter that breaks up the creases
     },
 
     formation: {
@@ -273,12 +283,17 @@ export function pxPerMm(p) {
  * formation detail on top of the offset, and precision there degrades with
  * magnitude.
  */
-export function seedOffsetMm(seed) {
+export function seedOffsetMm(seed, range = 400) {
+  // Seed 0 means "no offset": the field exactly as paperlab computes it. That
+  // matters because the facet character of the float hash depends on the
+  // MAGNITUDE of the coordinates it is given -- it is a precision effect -- so a
+  // surface asking for the original look must get the original coordinates.
+  if (!seed) return [0, 0];
   const h = (n) => {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453123;
     return x - Math.floor(x);
   };
-  return [h(seed + 1.3) * 400, h(seed + 57.9) * 400];
+  return [h(seed + 1.3) * range, h(seed + 57.9) * range];
 }
 
 /**

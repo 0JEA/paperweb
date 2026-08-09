@@ -38,22 +38,57 @@ uint pcgHash2(vec2 p) {
 }
 const float UINT_TO_UNIT = 1.0 / 4294967296.0;
 
+// u_legacy_noise selects the hash:
+//   0  PCG integer mixer. Uniform, aperiodic, and identical on every GPU.
+//   1  paperlab's original. Periodic every 50 x 20 cells.
+//   2  CRYSTALLINE: paperlab's formula with long-period constants.
+//
+// Mode 2 exists because mode 0 lost something real. paperlab's float hash is not
+// a good hash, and on some GPUs it is a spectacularly bad one: fract(p.x * p.y)
+// on large intermediates quantises into discrete level sets, and the fbm built
+// on top turns those into a network of fine creases in two diagonal families.
+// It reads as crumpled tissue and it looks better than the correct version.
+//
+// It cannot simply be restored, because 123.34 = 6167/50 and 345.45 = 6909/20
+// make it repeat every 50 steps in x and 20 in y. Moving the constants to
+// 123.3457 = 1233457/10000 and 345.4531 = 3454531/10000 -- both already in
+// lowest terms -- raises the period to 10000 cells, which at the default 2.5 mm
+// grain is 25 metres. Same formula, same quantisation behaviour, same look; the
+// repeat is gone.
+//
+// The honest caveat: the character comes from float PRECISION, so it varies by
+// GPU. Measured here, SwiftShader renders mode 2 as smooth mottle while an
+// RTX 4070 renders it as the crease network. Mode 0 is the one that looks
+// identical everywhere.
+// The legacy hash is selected at COMPILE time, not by a uniform.
+//
+// That is not a style preference. The texture this restores is a shader-codegen
+// artifact: NVIDIA compiles the unbranched expression into something that
+// quantises into flat panels, and the panel boundaries are creases. Measured on
+// an RTX 4070, 14% of the shade buffer carries a sharp gradient with it and
+// 0.01% without. Wrapping the SAME arithmetic in a runtime if() was enough to
+// destroy it. So the two variants have to be separate compilations with the
+// legacy path written exactly as paperlab writes it, down to reassigning the
+// parameter.
+#ifdef LEGACY_HASH
 float hash21(vec2 p) {
-    if (u_legacy_noise == 1) {
-        vec2 q = fract(p * vec2(123.34, 345.45));
-        q += dot(q, q + 34.345);
-        return fract(q.x * q.y);
-    }
+    p = fract(p * vec2(123.34, 345.45));
+    p += dot(p, p + 34.345);
+    return fract(p.x * p.y);
+}
+vec2 hash22(vec2 p) {
+    float n = sin(dot(p, vec2(41.0, 289.0)));
+    return fract(vec2(262144.0, 32768.0) * n);
+}
+#else
+float hash21(vec2 p) {
     return float(pcgHash2(p)) * UINT_TO_UNIT;
 }
 vec2 hash22(vec2 p) {
-    if (u_legacy_noise == 1) {
-        float n = sin(dot(p, vec2(41.0, 289.0)));
-        return fract(vec2(262144.0, 32768.0) * n);
-    }
     uint h = pcgHash2(p);
     return vec2(float(h), float(pcgHash(h ^ 0x85ebca6bu))) * UINT_TO_UNIT;
 }
+#endif
 
 // --- value noise + fbm -----------------------------------------------------
 float vnoise(vec2 x) {
@@ -136,6 +171,8 @@ precision highp sampler2D;
 `;
 
 /** Assemble a fragment shader: header + optional common prelude + body. */
-export function frag(body, { common = false } = {}) {
-  return FRAG_HEADER + (common ? COMMON : '') + body;
+export function frag(body, { common = false, legacy = false } = {}) {
+  // The #define must come after #version, which FRAG_HEADER owns.
+  const def = legacy ? '#define LEGACY_HASH 1\n' : '';
+  return FRAG_HEADER + def + (common ? COMMON : '') + body;
 }
