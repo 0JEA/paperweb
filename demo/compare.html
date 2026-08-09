@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paperweb · why the noise hash changed</title>
+<style>
+  :root {
+    --ground: #17161a; --ground-2: #1f1e23; --rule: #34323a;
+    --text: #e8e4dc; --dim: #8d8880; --dimmer: #6f6a63;
+    --bad: #e0876a; --ok: #9fd6a8; --mid: #d9c07d;
+  }
+  * { box-sizing: border-box; }
+  html { overflow-x: clip; }
+  body {
+    margin: 0; background: var(--ground); color: var(--text);
+    font: 400 15px/1.65 ui-sans-serif, system-ui, -apple-system, sans-serif;
+    padding: clamp(24px, 5vw, 64px) clamp(16px, 5vw, 56px) 100px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  a { color: var(--mid); }
+
+  h1 { font-size: clamp(26px, 4vw, 38px); line-height: 1.12; margin: 0 0 12px; font-weight: 600; letter-spacing: -0.02em; }
+  .lede { color: var(--dim); max-width: 70ch; margin: 0 0 10px; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: 0.87em; background: var(--ground-2); padding: 2px 6px; border-radius: 4px; color: var(--mid); }
+  pre { background: var(--ground-2); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 18px; overflow-x: auto; font: 12px/1.6 ui-monospace, Menlo, monospace; color: #cfcac2; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim);
+       margin: 64px 0 6px; padding-bottom: 10px; border-bottom: 1px solid var(--rule); font-weight: 600; }
+  h2 + p { color: var(--dim); font-size: 14px; margin: 12px 0 28px; max-width: 70ch; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); gap: 34px 32px; }
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; height: auto; border-radius: 3px; background: #f7efdd; }
+  figcaption { margin-top: 13px; }
+  .n { display: block; font: 600 12px/1.4 ui-monospace, Menlo, monospace;
+       letter-spacing: 0.09em; text-transform: uppercase; color: var(--text); }
+  .d { color: var(--dimmer); font-size: 13.5px; margin-top: 7px; }
+  .v { font: 12px/1.6 ui-monospace, Menlo, monospace; margin-top: 8px; }
+  .v.bad { color: var(--bad); } .v.ok { color: var(--ok); } .v.mid { color: var(--mid); }
+
+  table { border-collapse: collapse; width: 100%; font: 12.5px/1.6 ui-monospace, Menlo, monospace; margin-top: 4px; }
+  th, td { text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  th { color: var(--dim); font-weight: 600; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  td.bad { color: var(--bad); } td.ok { color: var(--ok); }
+  .scroller { overflow-x: auto; }
+
+  .note { border-left: 2px solid var(--rule); padding-left: 16px; color: var(--dimmer); font-size: 13.5px; max-width: 70ch; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Why the noise hash changed</h1>
+  <p class="lede">Four approaches to the repeating pattern, rendered on the same 520&times;360 element with formation amplitude raised to 0.07 so the grain itself is legible. Everything else is switched off.</p>
+  <p class="lede"><a href="./">&larr; back to the demo</a></p>
+
+  <h2>The four panels</h2>
+  <p>A is paperlab as it ships. B is the halfway state. C is the enlarge-the-scale approach. D is where it landed.</p>
+
+  <div class="grid">
+    <figure>
+      <img src="compare/A-original.png" alt="Formation grain rendered with paperlab's original periodic hash and a single fixed seed.">
+      <figcaption>
+        <span class="n">A &middot; original (paperlab as shipped)</span>
+        <p class="d">Periodic float hash, one fixed seed for every surface. Grain at the research value of 2.5&nbsp;mm.</p>
+        <div class="v bad">tiles every 472&times;189&nbsp;px &middot; autocorrelation r=0.69 &middot; every card on the page identical</div>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <img src="compare/B-seed.png" alt="The same grain with a per-surface offset into the noise field.">
+      <figcaption>
+        <span class="n">B &middot; middle (per-surface seed only)</span>
+        <p class="d">Same periodic hash, but each surface offsets x and y into the field. Grain 2.5&nbsp;mm.</p>
+        <div class="v mid">cards now differ from each other &middot; but each one still tiles internally</div>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <img src="compare/C-bigscale.png" alt="The periodic hash kept, with the grain enlarged so one tile exceeds the element.">
+      <figcaption>
+        <span class="n">C &middot; enlarge the scale, offset per page</span>
+        <p class="d">Periodic hash kept. Grain enlarged to 5.0&nbsp;mm so one tile (50&times;20 cells) is bigger than this element, plus the same per-surface offset.</p>
+        <div class="v ok">no visible repeat at this size</div>
+        <div class="v bad">grain is 2&times; coarser than the 1&ndash;3&nbsp;mm the eye peaks at &middot; and it returns on a taller element</div>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <img src="compare/D-final.png" alt="Aperiodic integer hash with a per-surface seed and a working dark skew.">
+      <figcaption>
+        <span class="n">D &middot; final (integer hash + seed + skew fix)</span>
+        <p class="d">Aperiodic PCG hash, per-surface seed, working dark-skew. Grain back at 2.5&nbsp;mm.</p>
+        <div class="v ok">no repeat at any lag, at any element size &middot; grain at the correct physical scale</div>
+      </figcaption>
+    </figure>
+  </div>
+
+  <h2>Why it repeated</h2>
+  <p>paperlab hashes noise lattice points with a float trick that is exactly periodic on the integer lattice.</p>
+  <pre>p = fract(p * vec2(123.34, 345.45));
+p += dot(p, p + 34.345);
+return fract(p.x * p.y);</pre>
+  <p class="note">123.34 &times; 50 = 6167 and 345.45 &times; 20 = 6909 are both whole numbers, so the first <code>fract()</code> returns to the same value every 50 steps in x and every 20 in y. Checked directly: identical at <strong>100% of lattice points</strong> for offsets (50,0), (100,0), (0,20) and (0,40), and 0% for controls like (20,50) and (7,13).</p>
+
+  <h2>Measured on the rendered field</h2>
+  <p>Autocorrelation of the albedo buffer at 96&nbsp;dpi, where one noise cell is 4.724 half-res pixels.</p>
+  <div class="scroller">
+  <table>
+    <tr><th>axis</th><th>predicted period</th><th>measured peak</th></tr>
+    <tr><td>X</td><td>50 cells &times; 4.724 = 236.2&nbsp;px</td><td class="bad">r = 0.692 at lag 236</td></tr>
+    <tr><td>Y</td><td>20 cells &times; 4.724 = 94.5&nbsp;px</td><td class="bad">r = 0.665 at lag 94, again at 189</td></tr>
+  </table>
+  </div>
+  <p class="note" style="margin-top:18px">Comparing the sheet against itself shifted by exactly one period gave a mean |diff| of 6.33e-3 against 1.03e-2 for a deliberately wrong shift: 39% more similar than chance. Partial rather than total only because fbm rotates each octave, so the lattice period lines up for the dominant octave and not the rest. After the fix the one-period shift is indistinguishable from a wrong one (1.04e-2 vs 1.05e-2), and autocorrelation decays monotonically with no peak at any lag.</p>
+
+  <h2>Why enlarging the scale is not enough</h2>
+  <p>Doubling the grain doubles the tile. It moves the repeat rather than removing it, and the grain has to keep growing with the element.</p>
+  <div class="scroller">
+  <table>
+    <tr><th>element height</th><th>grain needed</th><th>at 2.5&nbsp;mm (research)</th><th>at 5.0&nbsp;mm</th></tr>
+    <tr><td>200&nbsp;px</td><td>2.65&nbsp;mm</td><td class="ok">r=0.318 @lag 128</td><td class="ok">r=0.111 @lag 40</td></tr>
+    <tr><td>360&nbsp;px</td><td>4.76&nbsp;mm</td><td class="bad">r=0.547 @lag 95</td><td class="bad">r=0.501 @lag 191</td></tr>
+    <tr><td>600&nbsp;px</td><td>7.94&nbsp;mm</td><td class="bad">r=0.608 @lag 95</td><td class="bad">r=0.595 @lag 189</td></tr>
+    <tr><td>800&nbsp;px</td><td>10.58&nbsp;mm</td><td class="bad">r=0.597 @lag 95</td><td class="bad">r=0.604 @lag 189</td></tr>
+  </table>
+  </div>
+  <p class="note" style="margin-top:18px">The tile has to exceed the element <em>including</em> the shadow margin, so an 800&nbsp;px hero needs about 11.6&nbsp;mm grain against a research value of 1&ndash;3&nbsp;mm. The approach works at a size you fix in advance, and fails silently the day an element gets taller. The Y period being only <strong>20 cells</strong> is what makes it impractical: at 50 in both axes it would have been viable at the research grain size.</p>
+
+  <h2>The skew fix</h2>
+  <p>Found while checking whether the hash swap had cost any paper character. It had not, but this turned up in the same measurements.</p>
+  <pre>// paperlab: f * abs(f) is an ODD function, so a negative coefficient
+// shrinks BOTH tails equally. Contrast compression, not skew.
+f += skew * (f * abs(f) - 0.15);</pre>
+  <div class="scroller">
+  <table>
+    <tr><th>formation.skew</th><th>before &middot; histogram skew</th><th>after &middot; histogram skew</th></tr>
+    <tr><td>0</td><td>0.0102 &nbsp; sd 9.58e-3</td><td>0.0102 &nbsp; sd 9.58e-3</td></tr>
+    <tr><td>&minus;0.3 (default)</td><td class="bad">0.0102 &nbsp; sd 9.16e-3</td><td class="ok">&minus;0.5672 &nbsp; sd 9.69e-3</td></tr>
+    <tr><td>&minus;1.0</td><td class="bad">0.0103 &nbsp; sd 8.18e-3</td><td class="ok">&minus;1.6097 &nbsp; sd 10.7e-3</td></tr>
+    <tr><td>&minus;3.0</td><td class="bad">0.0124 &nbsp; sd 5.58e-3</td><td class="ok">&minus;2.3964 &nbsp; sd 17.1e-3</td></tr>
+  </table>
+  </div>
+  <p class="note" style="margin-top:18px">The knob never skewed anything, it only ate contrast. Real formation has a longer dark tail, because fibre flocs read darker than the gaps between them read light. Breaking symmetry needs an even function of f. This is a paperlab bug inherited by the port, not a regression, so the C++ lab has never had a working skew knob either.</p>
+
+</div>
+</body>
+</html>

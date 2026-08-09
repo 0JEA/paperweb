@@ -1,0 +1,14 @@
+import { chromium } from 'playwright-core';
+const url = 'http://127.0.0.1:8231';
+const b = await chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader'] });
+const p = await b.newPage({ viewport: { width: 1300, height: 1000 } });
+const errs = []; p.on('pageerror', e => errs.push(e.message));
+p.on('console', m => { if (m.type() === 'error') errs.push(`${m.text()} <- ${m.location()?.url}`); });
+await p.goto(`${url}/demo/compare.html`, { waitUntil: 'networkidle' });
+const imgs = await p.evaluate(() => [...document.images].map(i => ({ src: i.src.split('/').pop(), ok: i.complete && i.naturalWidth > 0 })));
+console.log('images:', imgs.map(i => `${i.src} ${i.ok ? 'OK' : 'BROKEN'}`).join('  '));
+const of = await p.evaluate(() => { const e = document.scrollingElement; const b0 = e.scrollLeft; e.scrollLeft = 9999; const a = e.scrollLeft; e.scrollLeft = b0; return a; });
+console.log('scrolls sideways:', of > 0 ? `YES ${of}px` : 'no');
+console.log('errors:', errs.length ? errs.join('\n') : 'none');
+await p.screenshot({ path: '/home/john/screenshots/2026-08-08-paperweb/compare-page.png', fullPage: true });
+await b.close();

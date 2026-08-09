@@ -1,4 +1,4 @@
-// Render one comparison panel to demo/tmp/<name>.png
+// Render one comparison panel to demo/compare/<name>.png
 import { chromium } from 'playwright-core';
 import { serve } from './serve.mjs';
 const [name, json] = process.argv.slice(2);
@@ -20,6 +20,6 @@ await p.evaluate(async ([spec]) => {
   await pp.render();
 }, [spec]);
 await p.waitForTimeout(2500);
-await (await p.$('#panel')).screenshot({ path: `demo/tmp/${name}.png` });
+await (await p.$('#panel')).screenshot({ path: `demo/compare/${name}.png` });
 console.log('  panel', name);
 await b.close(); server.close();
