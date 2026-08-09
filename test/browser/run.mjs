@@ -543,6 +543,69 @@ console.log('\nevery surface is its own piece of paper');
     uniq.size >= 3, `ridge height fractions across four seeds: ${JSON.stringify(res.ridges)}`);
 }
 
+// --- invariant 12e: the noise must not tile ----------------------------------
+// paperlab's float hash,
+//     p = fract(p * vec2(123.34, 345.45)); ... fract(p.x * p.y)
+// is EXACTLY periodic on the integer lattice: 123.34 x 50 and 345.45 x 20 are
+// both whole numbers, so hash21(x, y) == hash21(x+50, y) == hash21(x, y+20) at
+// 100% of lattice points. Every value-noise field therefore repeats, and at the
+// default formation scale of 2.5 mm that is a visible 472 x 189 canvas-pixel
+// tile. A per-surface seed cannot fix this: offsetting inside a periodic field
+// just picks a different phase of the same tile.
+//
+// This asserts the rendered field, not the hash, because the hash is an
+// implementation detail and the tiling is what anyone actually sees.
+console.log('\nthe noise field does not tile');
+{
+  const res = await page.evaluate(async () => {
+    const el = document.createElement('div');
+    el.style.cssText = 'width:1200px;height:800px;position:relative';
+    document.body.appendChild(el);
+    const pp = new window.PW.Paper(el, {
+      retain: true, lazy: false, seed: 0,
+      params: {
+        cockle: { enabled: false }, folds: { enabled: false }, crumple: { enabled: false },
+        fade: { enabled: false }, scratches: { enabled: false }, imperfect: { enabled: false },
+        formation: { enabled: true, amplitude: 0.05, scale_mm: 2.5, source: 0 },
+      },
+    });
+    await pp.render();
+    const { data, w, h } = pp.floats('Albedo');
+    const stride = data.length / (w * h);
+    const at = (x, y) => data[(y * w + x) * stride] - 1;
+    // Normalised autocorrelation. Lags below 16 px are ignored: a smooth field
+    // is legitimately self-similar at short range, and that is not tiling.
+    const worst = (axis, maxLag) => {
+      let bestLag = 0, best = -1;
+      for (let lag = 16; lag <= maxLag; lag++) {
+        let sxy = 0, sxx = 0, syy = 0;
+        if (axis === 'x') {
+          for (let y = 8; y < h - 8; y += 4) for (let x = 4; x + lag < w - 4; x += 3) {
+            const a = at(x, y), c = at(x + lag, y); sxy += a * c; sxx += a * a; syy += c * c;
+          }
+        } else {
+          for (let x = 8; x < w - 8; x += 4) for (let y = 4; y + lag < h - 4; y += 3) {
+            const a = at(x, y), c = at(x, y + lag); sxy += a * c; sxx += a * a; syy += c * c;
+          }
+        }
+        const r = sxy / Math.sqrt(sxx * syy);
+        if (r > best) { best = r; bestLag = lag; }
+      }
+      return { lag: bestLag, r: +best.toFixed(3) };
+    };
+    const out = { x: worst('x', Math.min(560, w - 12)), y: worst('y', Math.min(360, h - 12)) };
+    pp.destroy(); el.remove();
+    return out;
+  });
+  // A non-repeating field decorrelates: beyond a few cells there should be no
+  // strong self-similarity at any lag. 0.35 is well clear of the ~0.67 the
+  // periodic hash produced and well above the noise floor of an aperiodic one.
+  check('no strong horizontal repeat at any lag',
+    res.x.r < 0.35, `peak r=${res.x.r} at lag ${res.x.lag}px (half-res)`);
+  check('no strong vertical repeat at any lag',
+    res.y.r < 0.35, `peak r=${res.y.r} at lag ${res.y.lag}px (half-res)`);
+}
+
 // --- invariant 13: teardown restores the DOM ---------------------------------
 console.log('\ndestroy() restores the element');
 {
