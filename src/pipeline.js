@@ -88,7 +88,7 @@ export function whiteTexture() {
 const sig = (...parts) => JSON.stringify(parts);
 
 function signatures(p, geom) {
-  const g = [geom.fxW, geom.fxH, geom.canvasW, geom.canvasH, geom.pageRect, p.page.dpi, p.page.seed];
+  const g = [geom.fxW, geom.fxH, geom.canvasW, geom.canvasH, geom.pageRect, p.page.dpi, p.page.seed, p.page.legacy];
   const height = sig(g, p.cockle, p.folds, p.crumple);
   const cavity = sig(height, p.cavity.radius_mm);
   const normal = sig(height, p.light.relief_exaggerate);
@@ -170,7 +170,8 @@ export class Pipeline {
     const dirty = (k) => this.last[k] !== s[k];
 
     const pxmm = pxPerMm(p);
-    const seed = p.page.seed || 0;
+    const seed = p.page.legacy ? 0 : (p.page.seed || 0);
+    const legacy = { i: p.page.legacy ? 1 : 0 };
     const seedMm = seedOffsetMm(seed);
     // effect scale: the fields run at half res, so px/mm is halved there too.
     const fxs = fxW / canvasW;
@@ -187,6 +188,7 @@ export class Pipeline {
         u_res: FX,
         u_px_per_mm: pxmmFx,
         u_seed_mm: seedMm,
+        u_legacy_noise: legacy,
         u_cockle_on: { i: p.cockle.enabled ? 1 : 0 },
         u_cockle_wavelength_mm: p.cockle.wavelength_mm,
         u_cockle_amp_um: p.cockle.amplitude_um,
@@ -202,6 +204,7 @@ export class Pipeline {
         u_crumple_scale_mm: p.crumple.scale_mm,
         u_crumple_amp_um: p.crumple.amplitude_um,
         u_crumple_crease: p.crumple.crease,
+        u_crumple_irregularity: p.crumple.irregularity,
         u_crumple_seed: layerSeed(p.crumple.seed, seed),
       });
       drawFullscreen();
@@ -257,6 +260,7 @@ export class Pipeline {
         u_res: FX,
         u_px_per_mm: pxmmFx,
         u_seed_mm: seedMm,
+        u_legacy_noise: legacy,
         u_form_on: { i: p.formation.enabled ? 1 : 0 },
         u_form_scale_mm: p.formation.scale_mm,
         u_form_amp: p.formation.amplitude,
@@ -298,6 +302,7 @@ export class Pipeline {
         u_page_rect: [px0, py0, px1, py1],
         u_px_per_mm: pxmm,
         u_seed_mm: seedMm,
+        u_legacy_noise: legacy,
         u_wobble_px: p.edge.enabled ? p.edge.wobble_px : 0,
         u_curl: p.edge.enabled ? p.edge.curl : 0,
         u_deckle_px: p.edge.enabled ? p.edge.deckle_px : 0,

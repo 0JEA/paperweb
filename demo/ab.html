@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paperweb · live A/B</title>
+<style>
+  *{box-sizing:border-box} html{overflow-x:clip}
+  body{margin:0;background:#17161a;color:#e8e4dc;padding:30px clamp(16px,4vw,44px) 120px;
+       font:15px/1.6 ui-sans-serif,system-ui,-apple-system,sans-serif}
+  .wrap{max-width:1320px;margin:0 auto}
+  h1{font-size:clamp(23px,3.2vw,32px);margin:0 0 10px;font-weight:600;letter-spacing:-.02em}
+  p.lede{color:#8d8880;max-width:76ch;margin:0 0 8px}
+  a{color:#c8a06a}
+  kbd{font:600 11px/1 ui-monospace,Menlo,monospace;background:#2a2830;border:1px solid #45424d;
+      border-bottom-width:2px;border-radius:4px;padding:4px 7px;color:#e8e4dc}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:34px 26px;margin-top:30px}
+  .sheet{color:#14110d;padding:26px 28px;min-height:220px;
+         font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+  .sheet h3{margin:0 0 8px;font-size:17px;font-weight:600}
+  .sheet p{margin:0;font-size:14px;line-height:1.6;color:#564e43}
+  .tag{display:block;font:11px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.07em;
+       text-transform:uppercase;color:#8a7f6d;margin-bottom:12px}
+  #bar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;gap:14px;align-items:center;
+       flex-wrap:wrap;padding:13px clamp(12px,4vw,26px);background:rgba(12,11,14,.95);
+       border-top:1px solid #34323a;backdrop-filter:blur(8px);
+       font:12px/1.4 ui-monospace,Menlo,monospace;color:#a8a29a}
+  #state{font-weight:600;font-size:15px;min-width:22ch}
+  #state.legacy{color:#e0876a} #state.current{color:#9fd6a8}
+  button{font:600 13px/1 ui-sans-serif,system-ui,sans-serif;padding:11px 20px;border-radius:7px;
+         cursor:pointer;color:#e5c79a;background:rgba(200,160,106,.16);
+         border:1px solid rgba(200,160,106,.42)}
+  button:hover{background:rgba(200,160,106,.26)}
+  button:focus-visible{outline:2px solid #c8a06a;outline-offset:2px}
+  .hint{color:#7d776f}
+</style>
+</head>
+<body><div class="wrap">
+  <h1>Live A/B: paperlab's original noise vs the current noise</h1>
+  <p class="lede">Every surface below re-renders in place when you flip. Nothing else changes: same presets, same seeds, same sizes, same everything. <strong>Press <kbd>Space</kbd></strong> or use the button, and tell me what disappears.</p>
+  <p class="lede">The switch covers all three changes together: the noise hash (both <code>hash21</code> and <code>hash22</code>), the formation skew term, and the per-surface seed.</p>
+  <p class="lede"><a href="./">&larr; the demo</a></p>
+  <div class="grid" id="grid"></div>
+</div>
+<div id="bar">
+  <span id="state"></span>
+  <button id="flip" type="button">Flip &nbsp;(Space)</button>
+  <span class="hint" id="hint"></span>
+</div>
+<script type="module">
+import { Paper, presetNames, capabilities } from '../src/index.js';
+
+const caps = capabilities();
+const PRESETS = ['paper', 'reading', 'textured', 'worn', 'Interesting', 'surface', 'pronounced', 'subtle'];
+const grid = document.getElementById('grid');
+const papers = [];
+
+for (const name of PRESETS) {
+  const el = document.createElement('div');
+  el.className = 'sheet';
+  el.innerHTML = `<span class="tag">preset "${name}"</span><h3>${name}</h3>` +
+    `<p>Flip the switch and watch this sheet. Same preset, same seed, same size.</p>`;
+  grid.appendChild(el);
+  // Seed pinned per card so the ONLY thing the flip changes is the noise itself.
+  papers.push(new Paper(el, { preset: name, seed: PRESETS.indexOf(name) * 7 + 3, lazy: false }));
+}
+
+let legacy = true;
+const state = document.getElementById('state');
+const hint = document.getElementById('hint');
+
+function apply() {
+  for (const p of papers) p.set({ page: { legacy: legacy ? 1 : 0 } });
+  state.textContent = legacy ? 'A · paperlab original' : 'B · current';
+  state.className = legacy ? 'legacy' : 'current';
+  hint.textContent = legacy
+    ? 'periodic hash21 · degenerate hash22 · inert skew · one seed for every surface'
+    : 'PCG hash21 + hash22 · working dark-skew · per-surface seed';
+}
+apply();
+
+const flip = () => { legacy = !legacy; apply(); };
+document.getElementById('flip').addEventListener('click', flip);
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); flip(); }
+});
+if (!caps.ok) hint.textContent = `no WebGL2: ${caps.reason}`;
+</script>
+</body>
+</html>

@@ -61,6 +61,7 @@ uniform int   u_crumple_on;
 uniform float u_crumple_scale_mm;
 uniform float u_crumple_amp_um;
 uniform float u_crumple_crease;
+uniform float u_crumple_irregularity;
 uniform float u_crumple_seed;
 
 void main() {
@@ -117,6 +118,30 @@ void main() {
         //  fbm(F1): smooth lumpy facets = Worley's own "crumpled paper" bump.
         //  F2-F1:   sharp ridge lines along the Voronoi boundaries.
         vec2 cp = (mm + vec2(u_crumple_seed * 13.7)) / max(u_crumple_scale_mm, 0.5);
+
+        // Domain warp before the Worley lookup.
+        //
+        // This exists because of what a CORRECT hash costs here. Worley places
+        // one feature point per cell at hash22(cell), and paperlab's hash22
+        // derives both components from a single sin(), so the points land on a
+        // curve rather than filling the cell: measured, they occupy 25% of the
+        // available positions and clump 118x more than uniform scatter. That
+        // degeneracy aligned and clustered the points, which is what produced
+        // irregular stretched cells -- crazing that reads as crumpled paper.
+        // An honest uniform hash scatters the points evenly and the cells come
+        // out regular and hexagon-ish, which reads as bubble wrap.
+        //
+        // So the irregularity has to come from somewhere deliberate. Warping the
+        // sample position with a low-frequency fbm stretches and bends the cells
+        // organically, and unlike a broken hash it is controllable, and it does
+        // not depend on how a particular driver rounds sin() with a 2^18
+        // multiplier.
+        if (u_legacy_noise == 0 && u_crumple_irregularity > 0.001) {
+            vec2 wp = cp * 0.45;
+            vec2 warp = vec2(fbm(wp + vec2(3.1, 7.7), 3, 0.5, 2.0),
+                             fbm(wp + vec2(9.3, 1.9), 3, 0.5, 2.0)) - 0.5;
+            cp += warp * u_crumple_irregularity * 2.2;
+        }
         float lump = 0.0, amp = 1.0, fr = 1.0, tot = 0.0;
         for (int i = 0; i < 4; ++i) {
             lump += amp * worleyF1F2(cp * fr).x;
@@ -332,21 +357,18 @@ void main() {
         float ls = 0.4 + u_form_gsm * fbm(mm / max(u_form_scale_mm * 5.0, 0.5), 3, 0.5, 2.0);
         f *= ls;
         // Marginal skew. Real formation has a longer DARK tail: fibre flocs read
-        // darker than the gaps between them read light, so the albedo histogram
-        // is not symmetric. Breaking symmetry requires an EVEN function of f.
-        //
-        // paperlab uses f * abs(f), which is ODD, so with a negative coefficient
-        // it shrinks both tails by the same amount: contrast compression, not
-        // skew. Measured on the rendered field, the histogram skew was 0.0102 at
-        // skew = 0 and 0.0103 at skew = -1.0 (unchanged), while sd collapsed
-        // from 9.58e-3 to 8.18e-3. The knob was only ever removing contrast.
-        //
-        // f * f is even, and normalising by the field's typical spread first
-        // keeps the term comparable to f regardless of amplitude and gsm_amount.
-        // Subtracting 1.0 makes it zero-mean, so the paper tone does not drift.
-        const float NOM_SD = 0.13;
-        float fn = f / NOM_SD;
-        f += u_form_skew * NOM_SD * 0.5 * (fn * fn - 1.0);
+        // darker than the gaps between them read light. Breaking symmetry needs
+        // an EVEN function of f. paperlab uses f * abs(f), which is ODD, so with
+        // a negative coefficient it shrinks both tails equally: measured
+        // histogram skew was 0.0102 at skew=0 and 0.0103 at skew=-1.0 while sd
+        // collapsed from 9.58e-3 to 8.18e-3. The knob only ever removed contrast.
+        if (u_legacy_noise == 1) {
+            f += u_form_skew * (f * abs(f) - 0.15);
+        } else {
+            const float NOM_SD = 0.13;
+            float fn = f / NOM_SD;
+            f += u_form_skew * NOM_SD * 0.5 * (fn * fn - 1.0);
+        }
         float dev = u_form_amp * f * 2.0;
         dev *= mix(1.0, 0.35, fade);
         albedo *= (1.0 + dev);

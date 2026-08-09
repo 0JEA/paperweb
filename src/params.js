@@ -28,6 +28,9 @@ export function defaults() {
       // gets its own cockle, formation, creases and torn edge. Paper assigns one
       // per instance automatically; pin it to reproduce a specific sheet.
       seed: 0,
+      // Debug A/B: 1 restores paperlab's original hashes, skew term and a fixed
+      // seed, so the two can be flipped live on one page.
+      legacy: 0,
     },
 
     tone: {
@@ -160,6 +163,13 @@ export function defaults() {
       scale_mm: 9.0,
       amplitude_um: 60,
       crease: 0.3,
+      // How much the cell network is bent out of a regular tiling. Worley with a
+      // correctly uniform hash gives evenly scattered feature points and so
+      // roughly hexagonal, similar-sized cells, which reads as bubble wrap.
+      // Real crumple crazing is irregular and stretched. This warps the sample
+      // position with a low-frequency fbm to get that back deliberately, rather
+      // than relying on a degenerate hash to do it by accident.
+      irregularity: 0.85,
       seed: 1.0,
     },
 

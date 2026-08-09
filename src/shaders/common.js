@@ -4,27 +4,29 @@
 // seed produces the same field at any DPI or element size.
 
 export const COMMON = /* glsl */ `
+// A/B switch between paperlab's original hashes and the current ones. A uniform
+// rather than a #define so a page can flip between them live: the branch is the
+// same for every pixel, so it costs essentially nothing.
+uniform int u_legacy_noise;
+
 // --- hashing ----------------------------------------------------------------
-// paperlab uses the widespread float hash
-//     p = fract(p * vec2(123.34, 345.45)); p += dot(p, p + 34.345);
-//     return fract(p.x * p.y);
-// which is EXACTLY periodic on the integer lattice. 123.34 x 50 = 6167 and
-// 345.45 x 20 = 6909 are both whole numbers, so the first fract() returns to the
-// same value every 50 steps in x and every 20 in y: measured identical at 100%
-// of lattice points. Every value-noise field built on it therefore tiles. At the
-// default 2.5 mm formation scale that is a 472 x 189 canvas-pixel repeat, which
-// is plainly visible on a card and unmissable on a hero. A per-surface seed
-// cannot help, because offsetting inside a periodic field only picks a different
-// phase of the same tile.
+// paperlab's hash21 is exactly periodic on the integer lattice: 123.34 x 50 and
+// 345.45 x 20 are whole numbers, so it repeats every 50 steps in x and 20 in y
+// (identical at 100% of lattice points). Every value-noise field built on it
+// tiles, which at the default 2.5 mm formation scale is a visible 472 x 189
+// canvas-pixel repeat.
 //
-// GLSL ES 3.00 has full integer support, so use an actual bit mixer. PCG's
-// output hash (O'Neill 2014) passes the statistical tests the float trick never
-// claimed to, and its period is 2^32 in the mixed key rather than 50.
+// paperlab's hash22 has a different problem: both components come from ONE
+// sin(), so the 2-D result lands on a curve rather than filling the square.
+// Measured over the unit cell it occupies 25% of the available positions and
+// clumps 118x more than uniform scatter. Worley puts its feature point at
+// hash22(cell), so that degeneracy is what shaped the crumple cells.
 //
-// Inputs are hashed by their BIT PATTERN rather than by a floor(), because
-// several call sites pass deliberately fractional keys (gaborNoise uses
-// cell * 1.3 + seed, the scratch and pit layers use cell * 1.7 + seed) and
-// flooring those would collapse distinct cells onto the same value.
+// The replacements are PCG's output hash (O'Neill 2014) over the inputs' bit
+// patterns. Bit patterns rather than floor() because several call sites pass
+// deliberately fractional keys (gaborNoise uses cell * 1.3 + seed; the scratch
+// and pit layers use cell * 1.7 + seed) and flooring would collapse distinct
+// cells together.
 uint pcgHash(uint v) {
     uint state = v * 747796405u + 2891336453u;
     uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
@@ -37,9 +39,18 @@ uint pcgHash2(vec2 p) {
 const float UINT_TO_UNIT = 1.0 / 4294967296.0;
 
 float hash21(vec2 p) {
+    if (u_legacy_noise == 1) {
+        vec2 q = fract(p * vec2(123.34, 345.45));
+        q += dot(q, q + 34.345);
+        return fract(q.x * q.y);
+    }
     return float(pcgHash2(p)) * UINT_TO_UNIT;
 }
 vec2 hash22(vec2 p) {
+    if (u_legacy_noise == 1) {
+        float n = sin(dot(p, vec2(41.0, 289.0)));
+        return fract(vec2(262144.0, 32768.0) * n);
+    }
     uint h = pcgHash2(p);
     return vec2(float(h), float(pcgHash(h ^ 0x85ebca6bu))) * UINT_TO_UNIT;
 }
