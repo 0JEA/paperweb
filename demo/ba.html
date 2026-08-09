@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paperweb · before and after, on the real surfaces</title>
+<style>
+  *{box-sizing:border-box} html{overflow-x:clip}
+  body{margin:0;background:#17161a;color:#e8e4dc;padding:34px clamp(16px,4vw,48px) 90px;
+       font:15px/1.65 ui-sans-serif,system-ui,-apple-system,sans-serif}
+  .wrap{max-width:1320px;margin:0 auto}
+  h1{font-size:clamp(24px,3.4vw,34px);margin:0 0 12px;font-weight:600;letter-spacing:-.02em}
+  p.lede{color:#8d8880;max-width:74ch;margin:0 0 8px}
+  a{color:#c8a06a}
+  h2{font:600 12px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.13em;text-transform:uppercase;
+     color:#8d8880;margin:44px 0 4px;padding-bottom:9px;border-bottom:1px solid #34323a}
+  h2 .verdict{float:right;text-transform:none;letter-spacing:0}
+  .bad{color:#e0876a}.ok{color:#9fd6a8}
+  h2+p{color:#7d776f;font-size:13.5px;margin:12px 0 16px;max-width:74ch}
+  img{display:block;width:100%;height:auto;border-radius:3px}
+  .cols{display:grid;grid-template-columns:repeat(4,1fr);gap:0 26px;margin-top:10px;
+        font:11px/1.5 ui-monospace,Menlo,monospace;color:#6f6a63;padding:0 26px}
+  .cols span{text-align:center}
+</style>
+</head>
+<body><div class="wrap">
+  <h1>Before and after, on the surfaces that actually showed it</h1>
+  <p class="lede">Four presets, each rendered <strong>twice</strong>, everything switched on, at demo card size. Two of the same preset side by side is the test: on a real page those are two different cards, and they should not be the same sheet of paper.</p>
+  <p class="lede"><a href="./">&larr; the demo</a> &nbsp;·&nbsp; <a href="compare.html">why the hash changed</a> &nbsp;·&nbsp; <a href="atlas.html">every surface</a></p>
+
+  <h2>Before <span class="verdict bad">each pair is the same card twice</span></h2>
+  <p>paperlab's constants: periodic noise hash, one fixed seed for every surface, and the inert skew term. The creases land in the same place on every sheet because folds are positioned in sheet-relative coordinates.</p>
+  <div class="cols"><span>Interesting &times;2</span><span>pronounced &times;2</span><span>surface &times;2</span><span>worn &times;2</span></div>
+  <img src="ba/before.png" alt="Four presets rendered twice each; both copies of each preset are identical.">
+
+  <h2>After <span class="verdict ok">every sheet is its own</span></h2>
+  <p>Per-surface seed, aperiodic integer hash, working dark-skew. Same presets, same sizes, same code path otherwise.</p>
+  <div class="cols"><span>Interesting &times;2</span><span>pronounced &times;2</span><span>surface &times;2</span><span>worn &times;2</span></div>
+  <img src="ba/after.png" alt="The same four presets rendered twice each; every sheet now differs.">
+</div></body>
+</html>
