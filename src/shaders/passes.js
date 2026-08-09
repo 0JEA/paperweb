@@ -316,6 +316,14 @@ uniform float u_scr_scale_mm;
 uniform float u_scr_dark_frac;
 uniform float u_scr_seed;
 
+uniform int   u_mould_on;
+uniform float u_laid_pitch_mm;
+uniform float u_chain_pitch_mm;
+uniform float u_mould_angle_deg;
+uniform float u_mould_amount;
+uniform float u_chain_ratio;
+uniform float u_mould_wander;
+
 uniform int   u_imp_on;
 uniform float u_pit_density;
 uniform float u_pit_depth;
@@ -372,6 +380,59 @@ void main() {
         float dev = u_form_amp * f * 2.0;
         dev *= mix(1.0, 0.35, fade);
         albedo *= (1.0 + dev);
+    }
+
+    // --- mould marks: laid lines + chain lines ------------------------------
+    // The one structural feature real paper has that paperlab does not model.
+    // A sheet is formed on a wire mould, and the wires leave thinner paper where
+    // they pressed: closely spaced LAID lines (roughly 1 mm apart, from the
+    // wires themselves) and sparse perpendicular CHAIN lines (roughly every
+    // 25-30 mm, from the stitching that holds the wires together). Thinner paper
+    // is more translucent, so they read as a lightness variation, which is why
+    // this belongs in the albedo alongside formation rather than in the height.
+    //
+    // This exists because of what removing the tiling revealed. The periodic
+    // hash repeated the formation field every 472 x 189 px, which on a wide
+    // element produced a coherent two-direction motif -- accidentally a passable
+    // imitation of a mould mark. The statistics of the field did not change when
+    // the tiling was removed (sd 3.77e-3 vs 3.70e-3), but the recognisable
+    // structure did, and structure is what read as paper. So it is modelled
+    // deliberately instead of arriving as an artifact.
+    //
+    // The lines WANDER: a mould is a woven wire screen under tension, not a
+    // printing plate, so mechanically straight lines are the tell that gives a
+    // procedural texture away.
+    if (u_mould_on == 1) {
+        float a = radians(u_mould_angle_deg);
+        mat2 R = mat2(cos(a), -sin(a), sin(a), cos(a));
+        vec2 t = R * mm;
+        float wob = (fbm(mm / 45.0, 2, 0.5, 2.0) - 0.5) * u_mould_wander;
+        float wob2 = (fbm(mm / 22.0 + vec2(11.3, 4.7), 2, 0.5, 2.0) - 0.5) * u_mould_wander * 0.5;
+
+        // Laid lines: fine, dense, and not a pure sine. Real wires give a
+        // rounded ridge, so the wave is biased toward its peaks.
+        float lp = 6.2831853 * (t.x + wob + wob2) / max(u_laid_pitch_mm, 0.05);
+        float laid = sin(lp);
+        laid = sign(laid) * pow(abs(laid), 0.7);
+
+        // Chain lines: NARROW ridges at a wide spacing, not a slow alternation.
+        // A sine at a 26 mm pitch spends half its period light and half dark,
+        // which the eye reads as general mottling rather than as lines. The
+        // stitching wire is thin, so the mark is a thin bright line with flat
+        // paper between: a narrow Gaussian pulse once per spacing.
+        float cphase = fract((t.y + wob * 2.0) / max(u_chain_pitch_mm, 1.0));
+        float cd = (cphase - 0.5) * 11.0;
+        float chain = exp(-cd * cd) * 2.0 - 0.12;   // pulse, then re-centred
+
+        // ADDED rather than mixed. Mixing trades one direction against the
+        // other, and two directions at once is the entire point of a mould
+        // mark. chain_ratio sets the balance; the 3.2 compensates for the
+        // pulse being near zero most of the time, so the two read as comparable.
+        float r = clamp(u_chain_ratio, 0.0, 1.0);
+        float mould = laid * (1.0 - r) + chain * r * 3.2;
+        // Quieted by the same non-stationary fade as everything else, so the
+        // mould does not read as uniformly stamped across the whole sheet.
+        albedo *= (1.0 + u_mould_amount * mould * (1.0 - 0.55 * fade));
     }
 
     // --- sparse scratches (mostly light fibre-lift, a fraction dark) ---

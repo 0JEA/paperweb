@@ -93,7 +93,7 @@ function signatures(p, geom) {
   const cavity = sig(height, p.cavity.radius_mm);
   const normal = sig(height, p.light.relief_exaggerate);
   const shade = sig(normal, cavity, p.cavity.enabled, p.cavity.lambda, p.light);
-  const albedo = sig(g, p.formation, p.fade, p.scratches, p.imperfect);
+  const albedo = sig(g, p.formation, p.fade, p.mould, p.scratches, p.imperfect);
   const mask = sig(g, p.edge);
   const shadow = sig(mask, p.shadow.blur_px, p.shadow.enabled);
   const composite = sig(shade, albedo, mask, shadow, cavity,
@@ -272,6 +272,13 @@ export class Pipeline {
         u_fade_on: { i: p.fade.enabled ? 1 : 0 },
         u_fade_scale_mm: p.fade.scale_mm,
         u_fade_amount: p.fade.amount,
+        u_mould_on: { i: p.mould.enabled ? 1 : 0 },
+        u_laid_pitch_mm: p.mould.laid_pitch_mm,
+        u_chain_pitch_mm: p.mould.chain_pitch_mm,
+        u_mould_angle_deg: p.mould.angle_deg,
+        u_mould_amount: p.mould.amount,
+        u_chain_ratio: p.mould.chain_ratio,
+        u_mould_wander: p.mould.wander,
         u_scr_on: { i: p.scratches.enabled ? 1 : 0 },
         u_scr_density: p.scratches.density,
         u_scr_lightness: p.scratches.lightness,

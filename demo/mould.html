@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paperweb · mould marks</title>
+<style>
+  *{box-sizing:border-box} html{overflow-x:clip}
+  body{margin:0;background:#17161a;color:#e8e4dc;padding:32px clamp(16px,4vw,44px) 100px;
+       font:15px/1.65 ui-sans-serif,system-ui,-apple-system,sans-serif}
+  .wrap{max-width:1260px;margin:0 auto}
+  h1{font-size:clamp(24px,3.3vw,33px);margin:0 0 12px;font-weight:600;letter-spacing:-.02em}
+  p.lede{color:#8d8880;max-width:76ch;margin:0 0 9px}
+  a{color:#c8a06a} code{font-family:ui-monospace,Menlo,monospace;font-size:.87em;
+    background:#1f1e23;padding:2px 6px;border-radius:4px;color:#c8a06a}
+  figure{margin:0 0 40px}
+  img{display:block;width:100%;height:auto;border-radius:3px}
+  figcaption{margin-top:11px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+  .n{font:600 12px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.09em;
+     text-transform:uppercase;color:#e8e4dc}
+  .p{font:11.5px/1.5 ui-monospace,Menlo,monospace;color:#6f6a63}
+  .d{color:#7d776f;font-size:13.5px;margin-top:6px;width:100%;max-width:76ch}
+  hr{border:0;border-top:1px solid #34323a;margin:44px 0}
+</style>
+</head>
+<body><div class="wrap">
+  <h1>Mould marks: the two-direction structure, modelled on purpose</h1>
+  <p class="lede">A sheet is formed on a wire mould. The wires leave thinner paper where they pressed: closely spaced <strong>laid lines</strong> about a millimetre apart from the wires themselves, and sparse perpendicular <strong>chain lines</strong> every 25&ndash;30&nbsp;mm from the stitching that holds them together. Thinner paper is more translucent, so they read as lightness rather than relief.</p>
+  <p class="lede">paperlab has no layer for this. The old build's two-direction pattern came from the noise hash repeating every 472&times;189&nbsp;px, which on a wide element happened to imitate one. When the tiling went, the field's statistics were unchanged (sd 3.77e-3 vs 3.70e-3) but the legible structure was not, and structure is what read as paper.</p>
+  <p class="lede">Same preset, same seed, same size on every strip below. Only <code>mould</code> changes. Tell me a number.</p>
+  <p class="lede"><a href="./">&larr; the demo</a> &middot; <a href="ab.html">live A/B</a></p>
+
+  <hr>
+  <figure><img src="mould/ref-old.png" alt="The original hero, with the tiling artifact.">
+    <figcaption><span class="n">reference &middot; the old build</span>
+    <span class="p">the accidental version, from the repeating hash</span>
+    <span class="d">This is the one you said looked good but repeated too obviously.</span></figcaption></figure>
+
+  <figure><img src="mould/0-off.png" alt="Current build with no mould layer.">
+    <figcaption><span class="n">0 &middot; off</span><span class="p">mould.enabled = false</span>
+    <span class="d">Where it is now. Correct statistics, no legible structure.</span></figcaption></figure>
+
+  <figure><img src="mould/1-subtle.png" alt="Mould marks at amount 0.010.">
+    <figcaption><span class="n">1 &middot; subtle</span><span class="p">amount 0.010</span>
+    <span class="d">Present but easy to miss at arm's length.</span></figcaption></figure>
+
+  <figure><img src="mould/2-default.png" alt="Mould marks at amount 0.016.">
+    <figcaption><span class="n">2 &middot; default</span><span class="p">amount 0.016 &middot; chain_ratio 0.35</span>
+    <span class="d">Both directions legible without announcing themselves.</span></figcaption></figure>
+
+  <figure><img src="mould/3-strong.png" alt="Mould marks at amount 0.028.">
+    <figcaption><span class="n">3 &middot; strong</span><span class="p">amount 0.028</span>
+    <span class="d">Unmistakably laid paper. Probably too much for body text.</span></figcaption></figure>
+
+  <figure><img src="mould/4-laid-only.png" alt="Laid lines only, no chain lines.">
+    <figcaption><span class="n">4 &middot; laid only</span><span class="p">amount 0.020 &middot; chain_ratio 0</span>
+    <span class="d">One direction. Useful if the horizontal banding is the part that bothers you.</span></figcaption></figure>
+
+  <figure><img src="mould/5-wove.png" alt="A fine even mesh in both directions.">
+    <figcaption><span class="n">5 &middot; wove</span><span class="p">both pitches 0.55&nbsp;mm &middot; chain_ratio 0.5</span>
+    <span class="d">Wove paper rather than laid: a fine even mesh in both directions, no wide chain spacing.</span></figcaption></figure>
+</div></body>
+</html>

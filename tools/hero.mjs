@@ -1,0 +1,13 @@
+import { chromium } from 'playwright-core';
+const port = process.argv[2], tag = process.argv[3];
+const b = await chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader'] });
+const p = await b.newPage({ viewport: { width: 1400, height: 1000 }, deviceScaleFactor: 1 });
+p.on('pageerror', e => console.log('PAGEERROR', e.message));
+await p.goto(`http://127.0.0.1:${port}/demo/`, { waitUntil: 'networkidle' });
+await p.evaluate(async () => { for (let y=0;y<3000;y+=350){window.scrollTo(0,y);await new Promise(r=>setTimeout(r,90));} });
+await p.waitForTimeout(6000);
+const el = await p.$('.hero');
+await el.scrollIntoViewIfNeeded(); await p.waitForTimeout(800);
+await el.screenshot({ path: `/home/john/screenshots/2026-08-08-paperweb/hero-${tag}.png` });
+console.log('hero-' + tag + '.png', JSON.stringify(await el.boundingBox()));
+await b.close();

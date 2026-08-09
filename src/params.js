@@ -120,6 +120,24 @@ export function defaults() {
       amount: 0.7,
     },
 
+    mould: {
+      // Laid and chain lines from the wire mould the sheet was formed on. Real
+      // laid paper: laid lines about 1 mm apart from the wires, chain lines
+      // every 25-30 mm from the stitching. Wove paper has a much finer, more
+      // even mesh, which is `laid_pitch_mm` small and `chain_ratio` low.
+      //
+      // Off by default because plenty of modern stock has no visible mould
+      // mark, but it is the layer that gives a sheet legible two-direction
+      // structure rather than statistically-correct featureless grain.
+      enabled: false,
+      laid_pitch_mm: 1.1,
+      chain_pitch_mm: 26,
+      angle_deg: 0,
+      amount: 0.012,        // fraction of tone; very small goes a long way
+      chain_ratio: 0.35,    // 0 = laid lines only, 1 = chain lines only
+      wander: 0.6,          // mm of drift; 0 = mechanically straight, and looks it
+    },
+
     scratches: {
       // Sparse, and they read LIGHT (fibre lift), not dark. A fraction are dark
       // (embedded dirt / pressed lines). Wear-correlated rather than stacked.
