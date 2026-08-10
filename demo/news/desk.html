@@ -1,0 +1,1435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Newsroom Desk: twenty papered components</title>
+<style>
+/* ---------------------------------------------------------------------------
+   THE NEWSROOM DESK
+   Twenty editorial components, each built as a physical object that used to sit
+   on a working editor's desk. Every cream surface is a real paperweb render;
+   every pin, clip, spike, band and stain is drawn in CSS or inline SVG.
+   --------------------------------------------------------------------------- */
+
+:root{
+  --ink:#14110D;
+  --ink-2:#3A342B;
+  --ink-soft:#564E43;
+  --faint:#8A7F6D;
+  --red:#B03A2E;
+  --ochre:#C8A06A;
+  --blue:#2E4756;
+  --sage:#7D8C7C;
+  --desk:#171310;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;
+}
+
+/* paperweb's cast shadow overhangs the element box; clip (not hidden) keeps the
+   page from scrolling sideways without creating a scroll container. */
+html{overflow-x:clip;background:var(--desk);}
+
+body{
+  margin:0;
+  color:#E9DEC8;
+  font-family:var(--serif);
+  -webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(140% 70% at 50% -12%, rgba(150,104,58,.20), transparent 62%),
+    repeating-linear-gradient(92deg,
+      rgba(255,235,200,.014) 0 2px, transparent 2px 6px,
+      rgba(0,0,0,.05) 6px 9px, transparent 9px 15px),
+    repeating-linear-gradient(92deg,
+      rgba(0,0,0,.06) 0 40px, transparent 40px 90px, rgba(255,220,170,.012) 90px 120px),
+    linear-gradient(#1b1611, #120f0c 60%, #0d0b09);
+}
+
+.wrap{max-width:1060px;margin:0 auto;padding:0 30px 130px;}
+
+/* --- desk-level chrome ---------------------------------------------------- */
+
+.masthead{padding:86px 0 30px;text-align:center;}
+.masthead h1{
+  margin:0;font-size:40px;line-height:1.05;font-weight:600;letter-spacing:.02em;
+  color:#F6ECD7;
+}
+.masthead .kicker{
+  margin:0 0 16px;font:600 11.5px/1 var(--sans);letter-spacing:.36em;
+  text-transform:uppercase;color:var(--ochre);
+}
+.masthead p{
+  max-width:640px;margin:18px auto 0;font:400 15px/1.7 var(--serif);color:#A99C88;
+}
+.rule{height:1px;background:linear-gradient(90deg,transparent,rgba(200,160,106,.5),transparent);margin:44px 0 0;}
+
+.bay{padding:64px 0 8px;}
+.bay+.bay{border-top:1px solid rgba(200,160,106,.14);}
+.bay-head{display:flex;gap:16px;align-items:flex-start;}
+.idx{
+  flex:none;font:600 11.5px/1 var(--sans);letter-spacing:.16em;color:var(--ochre);
+  border:1px solid rgba(200,160,106,.42);padding:7px 8px 6px;border-radius:2px;
+}
+.bay-head h2{margin:0;font:600 22px/1.25 var(--serif);color:#F4EAD5;letter-spacing:.005em;}
+.role{margin:3px 0 0;font:400 11.5px/1.4 var(--sans);letter-spacing:.14em;
+  text-transform:uppercase;color:#9A8F7C;}
+
+.stage{position:relative;display:flex;justify-content:center;align-items:flex-start;
+  padding:40px 0 8px;}
+.stage--tall{padding-bottom:24px;}
+
+.cap{max-width:780px;margin:26px auto 0;font:400 13.5px/1.7 var(--sans);color:#9C917F;}
+.cap b{color:#DCCDAF;font-weight:600;}
+.cap code{font:12.5px/1.5 var(--mono);color:var(--ochre);
+  background:rgba(200,160,106,.09);padding:2px 5px;border-radius:2px;
+  box-decoration-break:clone;-webkit-box-decoration-break:clone;}
+
+footer{padding:20px 0 0;text-align:center;font:400 12.5px/1.8 var(--sans);color:#7E7566;}
+
+/* --- shared paper typography ---------------------------------------------- */
+
+.sheet{color:var(--ink);font-family:var(--serif);box-sizing:border-box;}
+.sheet h2,.sheet h3,.sheet h4{margin:0;font-weight:600;letter-spacing:.005em;}
+.sheet p{margin:0;}
+.sheet a{color:var(--ink);}
+.stamp{font:600 11px/1.3 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);}
+.stamp--red{color:var(--red);}
+.stamp--blue{color:var(--blue);}
+.src{font:400 11.5px/1.5 var(--sans);color:var(--faint);}
+.hair{height:1px;background:rgba(20,17,13,.35);}
+.hair--thick{height:2px;background:rgba(20,17,13,.7);}
+
+/* tilt is applied only AFTER every surface has rendered: paperweb measures the
+   element with getBoundingClientRect, which returns the ROTATED bounding box,
+   so a sheet rotated before its render gets an oversized, offset sheet. */
+.tilt{transform:rotate(0deg);}
+body.settled .tilt{transform:rotate(var(--r,0deg));}
+
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--red);outline-offset:3px;border-radius:1px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important;animation:none !important;}
+}
+
+/* --- props: pins, clips, tape, stains ------------------------------------- */
+
+.pin{position:absolute;z-index:6;filter:drop-shadow(0 4px 4px rgba(0,0,0,.55));}
+.staple{position:absolute;z-index:6;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45));}
+
+.tape{
+  position:absolute;z-index:6;height:30px;
+  background:
+    repeating-linear-gradient(96deg, rgba(255,255,255,.05) 0 3px, transparent 3px 9px),
+    linear-gradient(180deg, rgba(255,251,238,.34), rgba(236,227,204,.20));
+  box-shadow:0 2px 4px rgba(0,0,0,.30), inset 0 0 0 1px rgba(255,255,255,.13);
+  clip-path:polygon(0 8%,5% 0,13% 9%,24% 1%,36% 8%,48% 0,60% 9%,72% 1%,84% 8%,93% 0,100% 7%,
+                    100% 93%,92% 100%,81% 92%,69% 100%,56% 91%,45% 100%,33% 92%,21% 100%,9% 92%,0 100%);
+}
+
+.coffee{
+  position:absolute;border-radius:50%;mix-blend-mode:multiply;pointer-events:none;
+  background:radial-gradient(closest-side,
+    rgba(122,80,36,.10) 0 58%, rgba(108,62,22,.34) 65%, rgba(78,42,12,.52) 79%,
+    rgba(120,78,34,.24) 87%, transparent 93%);
+  filter:blur(.5px);
+}
+
+.grease{position:absolute;inset:0;mix-blend-mode:multiply;pointer-events:none;z-index:4;}
+
+/* cork board */
+.cork{
+  position:relative;box-sizing:border-box;width:100%;
+  background-color:#96683b;
+  background-image:
+    radial-gradient(circle at 30% 40%, rgba(58,30,8,.30) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 65%, rgba(255,228,190,.13) 0 2px, transparent 3px),
+    radial-gradient(circle at 50% 20%, rgba(48,26,8,.22) 0 1.4px, transparent 2.4px),
+    radial-gradient(circle at 15% 80%, rgba(255,225,180,.08) 0 1.6px, transparent 2.6px);
+  background-size:19px 17px, 24px 29px, 13px 11px, 31px 23px;
+  box-shadow:inset 0 0 90px rgba(42,20,4,.62), inset 0 0 12px rgba(30,14,2,.7);
+  border-radius:2px;
+}
+.corkframe{
+  padding:15px;border-radius:5px;width:100%;box-sizing:border-box;
+  background:linear-gradient(160deg,#63452b,#3a2717 60%,#503722);
+  box-shadow:0 18px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,214,160,.18);
+}
+
+/* green leather blotter */
+.blotter{
+  position:relative;box-sizing:border-box;width:100%;padding:34px 36px 40px;
+  background:
+    radial-gradient(120% 90% at 30% 10%, rgba(255,255,255,.045), transparent 60%),
+    linear-gradient(#334136,#242e28 70%,#1d251f);
+  box-shadow:inset 0 0 70px rgba(0,0,0,.55), 0 20px 46px rgba(0,0,0,.55);
+  border-radius:2px;
+}
+.strap{position:absolute;width:78px;height:78px;background:linear-gradient(135deg,#7a5734,#3d2814);
+  box-shadow:inset 0 0 14px rgba(0,0,0,.45);}
+.strap.tl{top:0;left:0;clip-path:polygon(0 0,100% 0,0 100%);}
+.strap.tr{top:0;right:0;clip-path:polygon(100% 0,100% 100%,0 0);}
+.strap.bl{bottom:0;left:0;clip-path:polygon(0 0,0 100%,100% 100%);}
+.strap.br{bottom:0;right:0;clip-path:polygon(100% 0,100% 100%,0 100%);}
+
+/* ruled / squared overlays that live ON the paper */
+.rules{position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;
+  background:repeating-linear-gradient(to bottom, transparent 0 21px, rgba(46,71,86,.26) 21px 22px);}
+.rules--red-top{background:
+    linear-gradient(to bottom, transparent 0 40px, rgba(176,58,46,.45) 40px 41.5px, transparent 41.5px),
+    repeating-linear-gradient(to bottom, transparent 0 21px, rgba(46,71,86,.24) 21px 22px);}
+.margin-rule{position:absolute;top:0;bottom:0;width:1.5px;background:rgba(176,58,46,.38);
+  mix-blend-mode:multiply;pointer-events:none;}
+
+/* continuous-form sprocket strips */
+.sprockets{
+  position:absolute;top:0;bottom:0;width:26px;pointer-events:none;
+  background:radial-gradient(circle 4.6px at 50% 50%,
+    #100d0a 0 4.6px, rgba(0,0,0,.22) 4.6px 6.4px, transparent 6.6px) 0 8px/26px 24px repeat-y;
+}
+.sprockets.l{left:0;border-right:1px dashed rgba(20,17,13,.28);}
+.sprockets.r{right:0;border-left:1px dashed rgba(20,17,13,.28);}
+.perf{position:absolute;left:26px;right:26px;height:1px;pointer-events:none;
+  background:repeating-linear-gradient(90deg, rgba(20,17,13,.34) 0 4px, transparent 4px 9px);}
+
+/* stack-of-sheets edges, drawn rather than rendered (cheaper than more surfaces) */
+.edges{position:absolute;pointer-events:none;}
+.edges i{position:absolute;display:block;left:0;right:0;height:100%;
+  background:linear-gradient(#efe4cd,#d9caac);box-shadow:0 1px 0 rgba(0,0,0,.25);border-radius:1px;}
+
+/* ticker / roll cylinder shading */
+.tube-shade{position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(180deg,
+    rgba(30,20,8,.45) 0%, rgba(60,42,18,.14) 14%, rgba(255,248,230,.28) 34%,
+    rgba(90,66,30,.10) 62%, rgba(36,24,10,.42) 100%);
+  mix-blend-mode:multiply;}
+.tube-lit{position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(180deg, transparent 22%, rgba(255,250,235,.30) 33%, transparent 46%);}
+
+.band{
+  position:absolute;top:-4px;bottom:-4px;width:19px;border-radius:2px;z-index:6;
+  background:linear-gradient(90deg,#311c11,#4e2e1d 22%,#5b3826 46%,#472a19 70%,#2a1710);
+  box-shadow:0 0 0 .5px rgba(0,0,0,.4), 0 0 8px 4px rgba(0,0,0,.22), 4px 0 8px rgba(0,0,0,.35),
+             inset 0 8px 8px -8px rgba(255,228,205,.28), inset 0 -8px 8px -8px rgba(0,0,0,.45);
+  opacity:.96;
+}
+
+/* small print helpers */
+.mono{font-family:var(--mono);}
+.uc{text-transform:uppercase;letter-spacing:.14em;}
+
+/* --- component-specific --------------------------------------------------- */
+
+/* 01 leads board */
+.slip{position:absolute;padding:17px 17px 15px;}
+.slip h3{font-size:15.5px;line-height:1.25;margin-bottom:6px;}
+.slip p.body{font-size:12.5px;line-height:1.5;color:var(--ink-2);}
+.slip .src{margin-top:8px;}
+
+/* 02 spike */
+.spikebed{position:relative;width:700px;max-width:100%;height:340px;}
+.spiked{position:absolute;padding:16px 18px 22px;}
+.pierce{position:absolute;width:19px;height:10px;border-radius:50%;z-index:5;
+  background:radial-gradient(ellipse at 50% 45%, #17120d 0 55%, rgba(30,20,10,.45) 62%, transparent 78%);}
+
+/* 03 index cards */
+.icard{position:relative;padding:44px 20px 18px;}
+.icard ol{margin:0;padding-left:20px;font-size:13px;line-height:22px;}
+.icard li{margin:0;}
+
+/* 05 rolodex */
+.rolo{position:relative;padding:20px 22px 32px;border-radius:10px 10px 3px 3px;}
+
+/* 06 memo pad */
+.padbase{position:absolute;inset:0;}
+.padglue{position:absolute;left:0;right:0;top:0;height:20px;pointer-events:none;z-index:5;
+  background:linear-gradient(#c69a52,#9a7233);box-shadow:0 2px 4px rgba(0,0,0,.28);}
+
+/* 07 front page */
+.front{padding:30px 32px 34px;}
+.front .cols{display:flex;gap:20px;}
+.front .cols > div{flex:1 1 0;}
+
+/* 08 sticky notes */
+.sticky{position:absolute;padding:16px 16px 14px;}
+.sticky .shine{position:absolute;left:0;right:0;top:0;height:26px;pointer-events:none;
+  background:linear-gradient(rgba(255,255,255,.22),transparent);}
+
+/* 11 wire */
+.wire{position:relative;padding:26px 46px 30px;font-family:var(--mono);}
+.wire p{font-size:12.5px;line-height:1.75;letter-spacing:.01em;}
+
+/* 12 proof */
+.proof{position:relative;padding:28px 34px 30px;}
+.proof p{font-size:14px;line-height:1.75;text-align:justify;}
+
+/* 13 photo */
+.photo{padding:12px 12px 12px;}
+.photo figcaption{margin-top:9px;font:400 11.5px/1.45 var(--sans);color:var(--ink-soft);}
+.mount{position:absolute;width:22px;height:22px;z-index:5;
+  background:linear-gradient(135deg,rgba(58,44,26,.55),rgba(24,17,10,.75));}
+
+/* 14 section index */
+.index-list{margin:0;padding:0;list-style:none;}
+.index-list li{display:flex;align-items:baseline;gap:10px;padding:7px 0;
+  border-bottom:1px dotted rgba(20,17,13,.28);}
+.index-list a{text-decoration:none;font-size:15px;}
+.index-list a:hover{text-decoration:underline;}
+.index-list .pg{margin-left:auto;font:400 12px/1 var(--mono);color:var(--faint);}
+
+/* 17 docket */
+.docket{position:relative;padding:20px 22px 22px;}
+.docket nav ul{margin:0;padding:0;list-style:none;}
+.docket nav li{display:flex;align-items:center;gap:9px;padding:5px 0;}
+.docket nav a{text-decoration:none;font-size:14px;}
+.docket nav a:hover{text-decoration:underline;}
+.box{width:11px;height:11px;border:1px solid rgba(20,17,13,.55);flex:none;}
+
+/* 18 ticker tape */
+.tape-strip{padding:16px 26px;}
+.tape-strip .row{display:flex;gap:26px;justify-content:space-between;font-family:var(--mono);font-size:12.5px;}
+
+/* 19 message slip */
+.wywo{position:relative;padding:18px 20px 20px;}
+.wywo label{display:block;font:600 11px/1.6 var(--sans);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-soft);}
+.wywo input[type=text],.wywo textarea{
+  width:100%;box-sizing:border-box;background:transparent;border:0;
+  border-bottom:1px solid rgba(20,17,13,.4);color:var(--ink);
+  font:400 14px/1.7 var(--serif);padding:2px 0;resize:none;
+}
+.wywo .checks{display:flex;flex-wrap:wrap;gap:6px 18px;margin:12px 0 4px;}
+.wywo .checks span{display:flex;align-items:center;gap:7px;font:400 12.5px/1 var(--sans);color:var(--ink-2);}
+.wywo input[type=checkbox]{accent-color:#B03A2E;width:13px;height:13px;margin:0;}
+.wywo button{
+  margin-top:14px;font:600 11px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink);background:transparent;border:1px solid rgba(20,17,13,.5);
+  padding:9px 14px;cursor:pointer;
+}
+.wywo button:hover{background:rgba(20,17,13,.07);}
+
+/* 20 classifieds */
+.classifieds{padding:24px 28px 26px;}
+.classifieds .cols{display:flex;gap:22px;}
+.classifieds .cols > div{flex:1 1 0;}
+.classifieds .cols > div + div{border-left:1px solid rgba(20,17,13,.22);padding-left:22px;}
+.classifieds p{font-size:12px;line-height:1.55;margin-bottom:10px;color:var(--ink-2);}
+.classifieds b{display:block;font:600 11px/1.5 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink);}
+
+@media (max-width:820px){
+  .masthead h1{font-size:30px;}
+  .bay h2{font-size:19px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ====================== drawn props: shared SVG defs ====================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id="pinShade" cx="35%" cy="30%" r="78%">
+      <stop offset="0" stop-color="#fff" stop-opacity=".45"/>
+      <stop offset=".55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".5"/>
+    </radialGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2f4f6"/>
+      <stop offset=".38" stop-color="#a8aeb4"/>
+      <stop offset=".62" stop-color="#dfe4e8"/>
+      <stop offset="1" stop-color="#7d848a"/>
+    </linearGradient>
+    <linearGradient id="steelDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3c4046"/>
+      <stop offset=".5" stop-color="#1c1f23"/>
+      <stop offset="1" stop-color="#0c0e10"/>
+    </linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6d4f22"/>
+      <stop offset=".22" stop-color="#e2c184"/>
+      <stop offset=".42" stop-color="#f6e6bd"/>
+      <stop offset=".7" stop-color="#a67f3c"/>
+      <stop offset="1" stop-color="#5d431c"/>
+    </linearGradient>
+    <filter id="grease" x="-15%" y="-15%" width="130%" height="130%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="greaseFine" x="-15%" y="-15%" width="130%" height="130%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="2" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="htLight" width="5" height="5" patternUnits="userSpaceOnUse">
+      <circle cx="2.5" cy="2.5" r="0.85" fill="#14110D"/>
+    </pattern>
+    <pattern id="htMid" width="5" height="5" patternUnits="userSpaceOnUse">
+      <circle cx="2.5" cy="2.5" r="1.55" fill="#14110D"/>
+    </pattern>
+    <pattern id="htDark" width="5" height="5" patternUnits="userSpaceOnUse">
+      <circle cx="2.5" cy="2.5" r="2.2" fill="#14110D"/>
+    </pattern>
+
+    <symbol id="pin" viewBox="0 0 34 34">
+      <circle cx="17" cy="17" r="10.6" fill="currentColor"/>
+      <circle cx="17" cy="17" r="10.6" fill="url(#pinShade)"/>
+      <circle cx="13.2" cy="12.8" r="3.1" fill="#fff" opacity=".5"/>
+      <circle cx="17" cy="17" r="2.7" fill="#000" opacity=".3"/>
+      <circle cx="17" cy="17" r="1.1" fill="#fff" opacity=".22"/>
+    </symbol>
+
+    <symbol id="staple" viewBox="0 0 30 16">
+      <path d="M4 14 V6 H26 V14" fill="none" stroke="url(#steel)" stroke-width="3.2" stroke-linejoin="round"/>
+      <path d="M4 14 V6 H26" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="kicker">paperweb showcase</p>
+  <h1>The Newsroom Desk</h1>
+  <p>Twenty editorial components, each built as the physical thing an editor
+     actually kept on the desk: pinned, spiked, clipped, stacked, weighted down
+     and scribbled on. Every cream surface below is a live WebGL2 paper render.
+     The pins, clips, spikes, bands and coffee rings are CSS and inline SVG.</p>
+  <div class="rule"></div>
+</header>
+
+<main>
+
+<!-- ============================== 01 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">01</span>
+    <div><h2>The leads board</h2><p class="role">Incoming tips · assignment queue</p></div>
+  </div>
+  <div class="stage">
+    <div class="corkframe">
+      <div class="cork" style="height:268px">
+
+        <article class="sheet slip tilt" style="--r:-3.4deg;left:2.5%;top:16px;width:250px"
+          data-paper="textured" data-paper-dpi="150"
+          data-paper-params='{"edge":{"deckle_px":9,"wobble_px":7},"shadow":{"offset_px":8,"blur_px":13,"darkness":0.72}}'>
+          <svg class="pin" style="color:#B03A2E;top:-4px;left:50%;margin-left:-15px" width="30" height="30" viewBox="0 0 34 34"><use href="#pin"/></svg>
+          <p class="stamp">Tip &middot; 09:41</p>
+          <h3>Water main contract</h3>
+          <p class="body">Went to a firm registered three weeks before the bid closed. Caller says she has the incorporation papers.</p>
+          <p class="src">via switchboard, two calls</p>
+        </article>
+
+        <article class="sheet slip tilt" style="--r:2.6deg;left:36%;top:52px;width:236px"
+          data-paper="textured" data-paper-dpi="150"
+          data-paper-params='{"edge":{"deckle_px":11,"wobble_px":8},"tone":{"paper":[0.98,0.94,0.86]},"shadow":{"offset_px":8,"blur_px":13,"darkness":0.72}}'>
+          <svg class="pin" style="color:#2E4756;top:-4px;left:24%;margin-left:-15px" width="30" height="30" viewBox="0 0 34 34"><use href="#pin"/></svg>
+          <p class="stamp">Tip &middot; 11:06</p>
+          <h3>Night shift, rail yard</h3>
+          <p class="body">Cut without notice on Friday. Three people willing to talk if we do not name the depot.</p>
+          <p class="src">by email, unverified</p>
+        </article>
+
+        <article class="sheet slip tilt" style="--r:-1.4deg;left:69%;top:10px;width:226px"
+          data-paper="textured" data-paper-dpi="150"
+          data-paper-params='{"edge":{"deckle_px":8,"wobble_px":6},"shadow":{"offset_px":8,"blur_px":13,"darkness":0.72}}'>
+          <svg class="pin" style="color:#C8A06A;top:-4px;left:62%;margin-left:-15px" width="30" height="30" viewBox="0 0 34 34"><use href="#pin"/></svg>
+          <p class="stamp">Tip &middot; 12:20</p>
+          <h3>Bell St. mural</h3>
+          <p class="body">Someone is repainting it. Nobody asked the artist, and she found out from a neighbour.</p>
+          <p class="src">walk-in, front counter</p>
+        </article>
+
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>Idea.</b> Reader tips as pinned slips on a cork board. Three sheets,
+    three different bits of stock, three pin colours, no two hanging straight.
+    <code>preset textured · dpi 150 · edge.deckle_px 8–11 · edge.wobble_px 6–8</code>
+    The tilt is a CSS <code>rotate()</code> applied <em>after</em> the render, because
+    paperweb sizes a sheet from <code>getBoundingClientRect()</code> and that returns the
+    rotated bounding box.</p>
+</section>
+
+<!-- ============================== 02 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">02</span>
+    <div><h2>The spike</h2><p class="role">Killed stories · what we did not run</p></div>
+  </div>
+  <div class="stage">
+    <div class="spikebed">
+
+      <!-- spindle base and shaft, behind the paper -->
+      <svg width="170" height="340" viewBox="0 0 170 340" aria-hidden="true"
+           style="position:absolute;left:350px;margin-left:-85px;top:0;z-index:0">
+        <ellipse cx="85" cy="316" rx="60" ry="17" fill="#000" opacity=".5"/>
+        <ellipse cx="85" cy="306" rx="54" ry="15" fill="url(#steelDark)"/>
+        <ellipse cx="85" cy="299" rx="54" ry="15" fill="url(#steel)" opacity=".7"/>
+        <ellipse cx="85" cy="297" rx="30" ry="9" fill="#2a2f36"/>
+        <rect x="82.6" y="60" width="4.8" height="240" fill="url(#steel)"/>
+        <rect x="86" y="60" width="1.6" height="240" fill="#000" opacity=".35"/>
+      </svg>
+
+      <article class="sheet spiked tilt" style="--r:-4deg;left:56px;top:118px;width:302px;padding-right:64px;z-index:2"
+        data-paper="worn" data-paper-dpi="120"
+        data-paper-params='{"edge":{"deckle_px":7,"wobble_px":7},"folds":{"enabled":true,"count":2,"depth":0.35},"light":{"spec_intensity":0.4},"tone":{"paper":[0.98,0.93,0.83]}}'>
+        <span class="pierce" style="left:285px;top:-4px"></span>
+        <p class="stamp stamp--red">Spiked 16:40</p>
+        <h3 style="font-size:16px;margin:6px 0 6px">Parking levy “under review”</h3>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--ink-2)">Third time this year. No new
+          information, no new source, no vote scheduled. Hold until somebody signs something.</p>
+      </article>
+
+      <article class="sheet spiked tilt" style="--r:3.2deg;left:314px;top:172px;width:300px;z-index:3"
+        data-paper="worn" data-paper-dpi="120"
+        data-paper-params='{"edge":{"deckle_px":9,"wobble_px":8},"light":{"spec_intensity":0.4},"crumple":{"enabled":true,"scale_mm":11,"amplitude_um":46,"crease":0.35}}'>
+        <span class="pierce" style="left:27px;top:-4px"></span>
+        <p class="stamp stamp--red">Spiked 17:05</p>
+        <h3 style="font-size:16px;margin:6px 0 6px">Mayor’s dog is named Biscuit</h3>
+        <p style="font-size:12.5px;line-height:1.55;color:var(--ink-2)">Not news. Was not news the
+          first time either. Do not resubmit under a different slug.</p>
+      </article>
+
+      <!-- the needle tip, in front of everything it has gone through -->
+      <svg width="20" height="130" viewBox="0 0 20 130" aria-hidden="true"
+           style="position:absolute;left:350px;margin-left:-10px;top:0;z-index:7">
+        <path d="M10 0 L12.4 46 H7.6 Z" fill="url(#steel)"/>
+        <rect x="7.6" y="44" width="4.8" height="86" fill="url(#steel)"/>
+        <rect x="11" y="44" width="1.6" height="86" fill="#000" opacity=".35"/>
+        <path d="M10 0 L11.2 46 H9.4 Z" fill="#fff" opacity=".5"/>
+      </svg>
+
+    </div>
+  </div>
+  <p class="cap"><b>Idea.</b> Killed copy, impaled. Two badly-handled sheets skewered on a
+    desk spindle drawn in SVG; the shaft sits behind the paper, the needle tip in front, and each
+    sheet carries a small torn pierce hole where the steel went through.
+    <code>preset worn · dpi 120 · folds · crumple.crease 0.35 · edge.deckle_px 10–13</code></p>
+</section>
+
+<!-- ============================== 03 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">03</span>
+    <div><h2>Running order</h2><p class="role">Bulletin rundown · index cards</p></div>
+  </div>
+  <div class="stage" style="gap:38px">
+
+    <article class="sheet icard tilt" style="--r:-1.8deg;width:300px"
+      data-paper="paper" data-paper-dpi="170"
+      data-paper-params='{"edge":{"radius_px":3,"wobble_px":3},"cockle":{"amplitude_um":16},"tone":{"paper":[1,0.965,0.90]}}'>
+      <div class="rules rules--red-top"></div>
+      <span class="margin-rule" style="left:34px"></span>
+      <p class="stamp" style="position:absolute;top:16px;left:20px">Running order &middot; 6&thinsp;pm</p>
+      <ol>
+        <li>Levy vote &middot; 1:40 + wall</li>
+        <li>Rail yard cuts &middot; 2:10</li>
+        <li>Mural, Bell St. &middot; 0:50</li>
+        <li>Markets &middot; 0:35</li>
+        <li>Weather &middot; 0:40</li>
+      </ol>
+    </article>
+
+    <article class="sheet icard tilt" style="--r:2.4deg;width:270px"
+      data-paper="paper" data-paper-dpi="170"
+      data-paper-params='{"edge":{"radius_px":3,"wobble_px":3},"cockle":{"amplitude_um":16},"tone":{"paper":[1,0.955,0.885]}}'>
+      <div class="rules rules--red-top"></div>
+      <span class="margin-rule" style="left:34px"></span>
+      <svg class="staple" style="top:9px;right:16px;transform:rotate(-16deg)" width="24" height="13" viewBox="0 0 30 16"><use href="#staple"/></svg>
+      <p class="stamp" style="position:absolute;top:16px;left:20px">Hold for late</p>
+      <ol start="6">
+        <li>Court list &middot; if it lands</li>
+        <li>Obituary &middot; Halloran, R.</li>
+        <li>Letters &middot; two, cut to 90</li>
+      </ol>
+    </article>
+
+  </div>
+  <p class="cap"><b>Idea.</b> The bulletin rundown as ruled index cards. The rules are a
+    <code>repeating-linear-gradient</code> child at <code>mix-blend-mode: multiply</code>, so they
+    sink into the paper's own shading instead of floating on it. High DPI keeps the grain fine at
+    card scale, and <code>edge.radius_px</code> makes the sheet silhouette follow the CSS corner.
+    <code>preset paper · dpi 170 · edge.radius_px 3 · cockle.amplitude_um 16</code></p>
+</section>
+
+<!-- ============================== 04 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">04</span>
+    <div><h2>Carbon flimsy</h2><p class="role">Correction notice · desk copy</p></div>
+  </div>
+  <div class="stage">
+    <article class="sheet tilt" style="--r:-1.2deg;width:520px;padding:26px 30px 28px"
+      data-paper="reading" data-paper-dpi="150" data-paper-content="rasterize"
+      data-paper-params='{"tone":{"paper":[0.97,0.965,0.92],"opacity":0.86,"duotone":0.42},
+                          "ink":{"ink_over_white":[0.16,0.14,0.22],"ink_over_black":[0.06,0.055,0.10],"thickness":0.85,"granulation":0.5},
+                          "cockle":{"amplitude_um":10,"wavelength_mm":22},
+                          "formation":{"amplitude":0.014},
+                          "edge":{"wobble_px":4},"shadow":{"offset_px":5,"blur_px":9,"darkness":0.5}}'>
+      <div>
+        <p class="stamp" style="color:#4a4260">Second carbon &middot; desk</p>
+      </div>
+      <div>
+        <h3 style="font-size:19px;margin:10px 0 8px">Correction</h3>
+      </div>
+      <div>
+        <p style="font-size:13.5px;line-height:1.7;color:#3c3648">An earlier edition reported that
+          the parking levy passed eight votes to three. The vote was seven to four; Councillor Reyes
+          abstained and was recorded in error. The Ledger regrets the mistake and has corrected the
+          record online.</p>
+      </div>
+      <div>
+        <p style="font-size:11.5px;line-height:1.6;margin-top:12px;color:#5b5468">Filed 18:12 &middot; corrections@ledger</p>
+      </div>
+    </article>
+  </div>
+  <p class="cap"><b>Idea.</b> A carbon flimsy: thin, faintly translucent, the type violet-grey and
+    pressed <em>into</em> the sheet rather than printed on it. This is the rasterize showpiece:
+    the text is snapshotted and run through Kubelka-Munk, so it takes the paper's shading.
+    <code>content: 'rasterize' · tone.opacity 0.86 · ink.ink_over_white [0.16,0.14,0.22] · ink.granulation 0.5</code>
+    Note: rasterized content loses interactivity, and CSS <code>transform</code> and
+    <code>column-count</code> do not survive the foreignObject snapshot, so lay these out with flex.</p>
+</section>
+
+<!-- ============================== 05 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">05</span>
+    <div><h2>Rolodex card</h2><p class="role">Byline &amp; contributor block</p></div>
+  </div>
+  <div class="stage" style="padding-bottom:72px">
+    <div style="position:relative;width:470px">
+
+      <!-- the rolodex rails, behind the card and sticking out past it -->
+      <svg width="470" height="60" viewBox="0 0 470 60" aria-hidden="true"
+           style="position:absolute;left:0;bottom:-46px;z-index:0">
+        <ellipse cx="235" cy="52" rx="205" ry="8" fill="#000" opacity=".45"/>
+        <rect x="6" y="30" width="458" height="9" rx="4.5" fill="url(#steelDark)"/>
+        <rect x="6" y="30" width="458" height="3" rx="1.5" fill="#fff" opacity=".25"/>
+        <rect x="0" y="22" width="13" height="26" rx="3" fill="url(#steel)"/>
+        <rect x="457" y="22" width="13" height="26" rx="3" fill="url(#steel)"/>
+      </svg>
+
+      <article class="sheet rolo" style="width:400px;margin:0 35px;position:relative;z-index:2"
+        data-paper="paper" data-paper-dpi="165"
+        data-paper-params='{"edge":{"radius_px":10,"wobble_px":3},"cockle":{"amplitude_um":15},"tone":{"paper":[1,0.96,0.895]},"shadow":{"offset_px":7,"blur_px":12}}'>
+        <p class="stamp">City desk &middot; ext. 214</p>
+        <h3 style="font-size:23px;margin:8px 0 2px">Halloran, M.</h3>
+        <p style="font-size:13.5px;line-height:1.6;color:var(--ink-2);margin-bottom:8px">
+          Water, transit, procurement. Eleven years on the beat, four of them at the licensing desk.
+          Sends everything back once.</p>
+        <p class="src mono" style="font-size:11.5px">m.halloran@ledger &middot; signal on request</p>
+      </article>
+
+      <!-- rings hooked over the card's bottom edge and round the rail, in front -->
+      <svg width="470" height="60" viewBox="0 0 470 60" aria-hidden="true"
+           style="position:absolute;left:0;bottom:-40px;z-index:5;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45))">
+        <g fill="none" stroke="url(#steel)" stroke-width="4.6">
+          <circle cx="150" cy="20" r="20"/>
+          <circle cx="320" cy="20" r="20"/>
+        </g>
+        <g fill="none" stroke="#000" stroke-opacity=".28" stroke-width="1.3">
+          <circle cx="150" cy="20" r="22.5"/>
+          <circle cx="320" cy="20" r="22.5"/>
+        </g>
+      </svg>
+
+    </div>
+  </div>
+  <p class="cap"><b>Idea.</b> The byline block as the card it used to be: a rolodex slot, hooked by
+    two steel rings onto a rail that runs out past both sides of the card. Three layers do the work,
+    rail behind, sheet, rings in front, and the sheet is the only one that costs a render.
+    <code>preset paper · dpi 165 · edge.radius_px 10 (matched to border-radius) · shadow.offset_px 7</code></p>
+</section>
+
+<!-- ============================== 06 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">06</span>
+    <div><h2>Memo pad, top sheet torn</h2><p class="role">Breaking alert</p></div>
+  </div>
+  <div class="stage" style="padding-bottom:30px">
+    <div style="position:relative;width:430px;height:270px">
+
+      <!-- the pad itself -->
+      <div class="sheet" style="position:absolute;left:0;top:8px;width:430px;height:250px"
+        data-paper="paper" data-paper-dpi="110"
+        data-paper-params='{"tone":{"paper":[0.96,0.92,0.84]},"edge":{"wobble_px":4},"shadow":{"offset_px":12,"blur_px":18,"darkness":0.72}}'>
+        <div class="padglue"></div>
+        <p class="stamp" style="position:absolute;bottom:14px;right:20px;color:var(--faint)">Ledger news desk &middot; pad 7</p>
+      </div>
+
+      <!-- the top sheet, half torn away -->
+      <article class="sheet tilt" style="--r:-1.6deg;position:absolute;left:15px;top:38px;width:400px;padding:20px 22px 26px;z-index:3"
+        data-paper="worn" data-paper-dpi="128"
+        data-paper-params='{"edge":{"deckle_px":9,"wobble_px":6},"folds":{"enabled":true,"count":1,"depth":0.22,"sharpness":0.5},"crumple":{"enabled":false},"scratches":{"enabled":true,"density":0.03},"light":{"spec_intensity":0.32,"relief_exaggerate":7}}'>
+        <p class="stamp stamp--red">Breaking &middot; 14:02</p>
+        <h3 style="font-size:21px;line-height:1.2;margin:8px 0 8px">Council freezes the parking levy</h3>
+        <p style="font-size:13px;line-height:1.6;color:var(--ink-2)">Seven to four, after two hours.
+          Reyes abstained. Full vote breakdown to follow. Halloran is in the chamber.</p>
+      </article>
+
+    </div>
+  </div>
+  <p class="cap"><b>Idea.</b> A breaking alert as the top sheet of a memo pad, half ripped off the
+    glue strip. Two surfaces: the pad (aged, coarse, heavy shadow) and the sheet on top of it, torn
+    along a fibrous deckle edge with a single fold where somebody's thumb bent it.
+    <code>top: preset worn · dpi 128 · edge.deckle_px 9 · folds {count 1, depth 0.22} ·
+    light.spec_intensity 0.32 · pad: dpi 110 · tone.paper [0.96,0.92,0.84]</code>
+    Worth knowing: <code>worn</code>'s default specular blows a fold out to white on a small sheet,
+    so the fold depth and <code>spec_intensity</code> both come down.</p>
+</section>
+
+<!-- ============================== 07 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">07</span>
+    <div><h2>Front page on the blotter</h2><p class="role">Lead story · the page itself</p></div>
+  </div>
+  <div class="stage stage--tall">
+    <div class="blotter">
+      <span class="strap tl"></span><span class="strap tr"></span>
+      <span class="strap bl"></span><span class="strap br"></span>
+
+      <article class="sheet front" style="position:relative;width:100%"
+        data-paper="reading" data-paper-dpi="76" data-paper-light="pointer"
+        data-paper-params='{"cockle":{"amplitude_um":26,"wavelength_mm":34,"anisotropy":2.4},
+                            "formation":{"amplitude":0.024,"gsm_amount":0.8},
+                            "fade":{"scale_mm":70,"amount":0.75},
+                            "edge":{"wobble_px":5},"shadow":{"offset_px":13,"blur_px":22,"darkness":0.72}}'>
+        <p class="stamp" style="text-align:center;letter-spacing:.34em">Founded 1897 &middot; City Edition &middot; Three Star</p>
+        <h2 style="text-align:center;font-size:44px;letter-spacing:.16em;margin:8px 0 10px">THE LEDGER</h2>
+        <div class="hair--thick"></div>
+        <p class="stamp" style="display:flex;justify-content:space-between;padding:7px 0 9px">
+          <span>Tuesday</span><span>Water &amp; Works</span><span>Price 60c</span></p>
+        <div class="hair" style="margin-bottom:20px"></div>
+
+        <h1 style="font-size:40px;line-height:1.08;margin:0 0 12px;text-align:center;font-weight:600">
+          The city signed before the ink was dry</h1>
+        <p style="text-align:center;font-size:16px;line-height:1.6;color:var(--ink-soft);
+                  max-width:640px;margin:0 auto 22px;font-style:italic">
+          A twelve-million-dollar water main contract went to a company incorporated three weeks
+          before the bid closed. Nobody at City Hall can say who read the tender.</p>
+        <div class="hair" style="margin-bottom:18px"></div>
+
+        <div class="cols">
+          <div>
+            <p style="font-size:13.5px;line-height:1.72;text-align:justify">
+              <b style="font:600 11px/1.5 var(--sans);letter-spacing:.14em;text-transform:uppercase">By M. Halloran</b><br>
+              The tender for the Ninth Street water main closed on a Friday afternoon in March. By the
+              following Tuesday the work had been awarded, and the company that won it had existed for
+              nineteen days.</p>
+          </div>
+          <div>
+            <p style="font-size:13.5px;line-height:1.72;text-align:justify">
+              Its registered address is a mailbox above a dry cleaner. Its sole director shares a
+              surname with a former assistant in the procurement office, who left the city's employ
+              in January and has not returned four calls.</p>
+          </div>
+          <div>
+            <p style="font-size:13.5px;line-height:1.72;text-align:justify">
+              The city says the process was competitive. Asked how many bids were received, three
+              departments gave three different numbers, and the only written record anyone could
+              produce was a one-page summary. <span class="mono" style="font-size:12px">cont. p.4</span></p>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+  <p class="cap"><b>Idea.</b> The lead story is the whole page, weighted onto a green leather desk
+    blotter with four corner straps. Low DPI is the trick here: at <code>dpi 76</code> the cockle
+    buckling scales up to something a broadsheet-sized sheet would actually do, where the default 96
+    would look like a postcard blown up. <code>light: 'pointer'</code> rakes the light across it as
+    the cursor moves; only two of twelve passes re-run.
+    <code>preset reading · dpi 76 · cockle.wavelength_mm 34 · light pointer</code></p>
+</section>
+
+<!-- ============================== 08 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">08</span>
+    <div><h2>Most read</h2><p class="role">Traffic list · stuck to the monitor</p></div>
+  </div>
+  <div class="stage">
+    <div style="position:relative;width:100%;max-width:760px;height:250px">
+
+      <article class="sheet sticky tilt" style="--r:-4.6deg;left:8%;top:10px;width:210px;height:200px"
+        data-paper="subtle" data-paper-dpi="150"
+        data-paper-params='{"tone":{"paper":[1,0.90,0.63],"duotone":0.4},"edge":{"wobble_px":2},"cockle":{"amplitude_um":12,"wavelength_mm":18},"shadow":{"offset_px":7,"blur_px":11,"darkness":0.6,"contact":0.85}}'>
+        <span class="shine"></span>
+        <p class="stamp" style="color:#7a5c1e">Most read &middot; 1</p>
+        <h3 style="font-size:16px;line-height:1.3;margin:10px 0 8px">What the levy actually costs you</h3>
+        <p class="mono" style="font-size:12.5px;color:#6b5323">41,208 reads</p>
+      </article>
+
+      <article class="sheet sticky tilt" style="--r:3.1deg;left:38%;top:26px;width:210px;height:200px"
+        data-paper="subtle" data-paper-dpi="150"
+        data-paper-params='{"tone":{"paper":[0.86,0.94,0.83],"duotone":0.4},"edge":{"wobble_px":2},"cockle":{"amplitude_um":12,"wavelength_mm":18},"shadow":{"offset_px":7,"blur_px":11,"darkness":0.6,"contact":0.85}}'>
+        <span class="shine"></span>
+        <p class="stamp" style="color:#3f5b3c">Most read &middot; 2</p>
+        <h3 style="font-size:16px;line-height:1.3;margin:10px 0 8px">The rail yard letter, annotated</h3>
+        <p class="mono" style="font-size:12.5px;color:#3f5b3c">28,940 reads</p>
+      </article>
+
+      <article class="sheet sticky tilt" style="--r:-1.6deg;left:68%;top:2px;width:210px;height:200px"
+        data-paper="subtle" data-paper-dpi="150"
+        data-paper-params='{"tone":{"paper":[1,0.86,0.80],"duotone":0.4},"edge":{"wobble_px":2},"cockle":{"amplitude_um":12,"wavelength_mm":18},"shadow":{"offset_px":7,"blur_px":11,"darkness":0.6,"contact":0.85}}'>
+        <span class="shine"></span>
+        <p class="stamp" style="color:#7d3a33">Most read &middot; 3</p>
+        <h3 style="font-size:16px;line-height:1.3;margin:10px 0 8px">Every mural the city painted over</h3>
+        <p class="mono" style="font-size:12.5px;color:#7d3a33">19,077 reads</p>
+      </article>
+
+    </div>
+  </div>
+  <p class="cap"><b>Idea.</b> The most-read list as three sticky notes at three angles. Retinting is
+    the whole job. <code>tone.paper</code> is sRGB divided by 255, not hex, and a small
+    <code>duotone</code> keeps the shading from going muddy on a saturated stock. A short cockle
+    wavelength and a high shadow <code>contact</code> make small squares read as stuck down rather
+    than floating. <code>preset subtle · dpi 150 · tone.paper [1,0.90,0.63] · shadow.contact 0.85</code></p>
+</section>
+
+<!-- ============================== 09 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">09</span>
+    <div><h2>Paperclipped bundle</h2><p class="role">Related coverage</p></div>
+  </div>
+  <div class="stage" style="padding-bottom:26px">
+    <div style="position:relative;width:440px;height:260px">
+
+      <div class="sheet tilt" style="--r:4deg;position:absolute;left:22px;top:16px;width:400px;height:222px"
+        data-paper="paper" data-paper-dpi="120"
+        data-paper-params='{"tone":{"paper":[0.97,0.93,0.85]},"edge":{"wobble_px":5},"shadow":{"offset_px":9,"blur_px":15}}'></div>
+
+      <article class="sheet" style="position:absolute;left:6px;top:26px;width:400px;padding:22px 24px 24px;z-index:3"
+        data-paper="paper" data-paper-dpi="120"
+        data-paper-params='{"edge":{"wobble_px":5},"shadow":{"offset_px":9,"blur_px":15}}'>
+        <p class="stamp">Related &middot; four pieces</p>
+        <ul style="margin:12px 0 0;padding:0;list-style:none">
+          <li style="padding:6px 0;border-bottom:1px dotted rgba(20,17,13,.25);font-size:13.5px">Who owns the mailbox on Ninth</li>
+          <li style="padding:6px 0;border-bottom:1px dotted rgba(20,17,13,.25);font-size:13.5px">Procurement, explained in one page</li>
+          <li style="padding:6px 0;border-bottom:1px dotted rgba(20,17,13,.25);font-size:13.5px">The last three contracts, side by side</li>
+          <li style="padding:6px 0;font-size:13.5px">What a nineteen-day company looks like</li>
+        </ul>
+      </article>
+
+      <!-- gem clip: only the part above the sheet's top edge is drawn, because the
+           back leg is genuinely behind the paper -->
+      <svg width="64" height="120" viewBox="0 0 64 120" aria-hidden="true"
+           style="position:absolute;left:296px;top:-4px;z-index:6;filter:drop-shadow(0 3px 3px rgba(0,0,0,.45))">
+        <path d="M22 96 V26 a12 12 0 0 1 24 0 V86 a8 8 0 0 1 -16 0 V34"
+              fill="none" stroke="#00000055" stroke-width="5" transform="translate(1.5,2)"/>
+        <path d="M22 96 V26 a12 12 0 0 1 24 0 V86 a8 8 0 0 1 -16 0 V34"
+              fill="none" stroke="url(#steel)" stroke-width="4.4" stroke-linecap="round"/>
+      </svg>
+
+    </div>
+  </div>
+  <p class="cap"><b>Idea.</b> Related links as a clipped bundle: two sheets of slightly different
+    stock, one showing at the corner, a gem clip over the top edge. The clip is drawn only where it
+    would really be visible (the return leg disappears behind the top sheet), and it gets its metal
+    from two strokes of the same path, a dark one offset underneath a gradient one.
+    <code>preset paper · dpi 120 · two surfaces, second tinted [0.97,0.93,0.85]</code></p>
+</section>
+
+<!-- ============================== 10 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">10</span>
+    <div><h2>Slugline card</h2><p class="role">Story metadata · desk status</p></div>
+  </div>
+  <div class="stage">
+    <article class="sheet tilt" style="--r:-2.2deg;width:330px;padding:18px 20px 20px;position:relative"
+      data-paper="paper" data-paper-dpi="175"
+      data-paper-params='{"tone":{"paper":[0.94,0.89,0.79],"duotone":0.55},"edge":{"wobble_px":4,"deckle_px":3},"cockle":{"amplitude_um":14},"mould":{"enabled":true,"laid_pitch_mm":0.55,"chain_pitch_mm":0.55,"chain_ratio":0.5,"amount":0.016}}'>
+      <p class="stamp" style="margin-bottom:10px">Slug</p>
+      <p class="mono" style="font-size:19px;letter-spacing:.02em;margin-bottom:12px">levy-vote-2</p>
+      <div class="hair" style="margin-bottom:10px"></div>
+      <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;color:var(--ink-2)">
+        <tbody>
+          <tr><td style="padding:3px 0">edition</td><td style="text-align:right">3 star</td></tr>
+          <tr><td style="padding:3px 0">words</td><td style="text-align:right">780 / 800</td></tr>
+          <tr><td style="padding:3px 0">art</td><td style="text-align:right">1 col + map</td></tr>
+          <tr><td style="padding:3px 0">desk</td><td style="text-align:right">city</td></tr>
+        </tbody>
+      </table>
+      <svg class="grease" viewBox="0 0 330 200" preserveAspectRatio="none" aria-hidden="true">
+        <g filter="url(#grease)" stroke="#2E4756" stroke-opacity=".8" fill="none" stroke-linecap="round">
+          <path d="M232 24 h72" stroke-width="3"/>
+          <path d="M236 34 h60" stroke-width="2"/>
+        </g>
+        <text x="238" y="20" font-family="Georgia,serif" font-size="19" font-weight="700"
+              fill="#2E4756" fill-opacity=".85" filter="url(#greaseFine)">SET</text>
+      </svg>
+    </article>
+  </div>
+  <p class="cap"><b>Idea.</b> The slug card the sub keeps next to the terminal: buff stock, wove
+    mould grain, and a blue grease-pencil <em>SET</em> scrawled across the corner. The mould layer
+    with both pitches at 0.55&thinsp;mm gives a fine two-direction wire mesh instead of featureless
+    noise; the scrawl is an SVG path pushed through an <code>feTurbulence</code> displacement filter
+    so it wobbles like wax.
+    <code>preset paper · dpi 175 · mould {0.55, 0.55, chain_ratio 0.5, amount 0.016} · tone.paper [0.94,0.89,0.79]</code></p>
+</section>
+
+<!-- ============================== 11 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">11</span>
+    <div><h2>Wire copy</h2><p class="role">Live updates · continuous form</p></div>
+  </div>
+  <div class="stage">
+    <article class="sheet wire" style="width:100%;max-width:720px"
+      data-paper="paper" data-paper-dpi="70"
+      data-paper-params='{"tone":{"paper":[0.96,0.945,0.90],"duotone":0.45},
+                          "folds":{"enabled":true,"count":3,"depth":0.55,"sharpness":0.8},
+                          "formation":{"amplitude":0.026,"gsm_amount":0.8},
+                          "edge":{"wobble_px":3},"shadow":{"offset_px":10,"blur_px":16}}'>
+      <span class="sprockets l"></span>
+      <span class="sprockets r"></span>
+      <span class="perf" style="top:33%"></span>
+      <span class="perf" style="top:66%"></span>
+
+      <p style="font-weight:700">URGENT / LEDGER WIRE / CITY DESK</p>
+      <p style="margin:10px 0 0">14:02 &nbsp;COUNCIL FREEZES PARKING LEVY 7-4. REYES ABSTAINS.</p>
+      <p>14:07 &nbsp;FREEZE RUNS TO END OF FISCAL YEAR, CLERK CONFIRMS.</p>
+      <p>14:19 &nbsp;TREASURER: SHORTFALL "IN THE ORDER OF" $2.4M. NO PLAN YET.</p>
+      <p>14:31 &nbsp;OPPOSITION CALLS FOR AUDIT OF NINTH ST WATER MAIN AWARD.</p>
+      <p>14:48 &nbsp;CITY MANAGER'S OFFICE: NO COMMENT AT THIS TIME. WE ASKED TWICE.</p>
+      <p style="margin-top:12px">MORE ▸</p>
+    </article>
+  </div>
+  <p class="cap"><b>Idea.</b> A live blog as continuous-form wire copy, tractor-feed holes down both
+    sides and perforations across the fanfold. Very low DPI plus three sharp folds is what sells the
+    concertina: at <code>dpi 70</code> the fold creases land at printer-paper scale instead of
+    stationery scale. The sprocket holes are a repeating radial-gradient painted the colour of the
+    desk, so they read as punched through.
+    <code>preset paper · dpi 70 · folds {count 3, depth 0.55, sharpness 0.8}</code></p>
+</section>
+
+<!-- ============================== 12 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">12</span>
+    <div><h2>Marked page proof</h2><p class="role">Corrections &amp; clarifications</p></div>
+  </div>
+  <div class="stage">
+    <article class="sheet proof" style="width:100%;max-width:600px" data-paper-light="pointer"
+      data-paper="paper" data-paper-dpi="100"
+      data-paper-params='{"tone":{"paper":[0.99,0.955,0.885]},"scratches":{"enabled":true,"density":0.02,"lightness":0.12},"edge":{"wobble_px":5},"shadow":{"offset_px":10,"blur_px":16}}'>
+      <p class="stamp" style="margin-bottom:14px">Page proof &middot; 3rd revise &middot; 17:44</p>
+      <h3 style="font-size:20px;line-height:1.25;margin-bottom:12px">Nineteen days from company to contract</h3>
+      <p style="margin-bottom:12px">The tender closed on a Friday afternoon. By Tuesday the work had
+        been awarded to a company that had existed for nineteen days, at a price the city has
+        described as competitive without saying what it was competing against.</p>
+      <p>Three departments gave three different counts of the bids received. The only written record
+        produced under request was a single page, undated, and initialled by nobody in particular.</p>
+
+      <svg class="grease" viewBox="0 0 600 262" preserveAspectRatio="none" aria-hidden="true">
+        <g filter="url(#grease)" fill="none" stroke="#B03A2E" stroke-opacity=".85" stroke-linecap="round">
+          <!-- ring the phrase that needs a number on it -->
+          <ellipse cx="182" cy="136" rx="96" ry="14" stroke-width="2.8"/>
+          <!-- caret, insert here -->
+          <path d="M300 166 l10 -14 l10 14" stroke-width="2.8"/>
+          <path d="M310 152 v-16" stroke-width="2"/>
+          <!-- strike the line that has to go -->
+          <path d="M36 197 h300" stroke-width="2.6"/>
+          <!-- marginal marks -->
+          <path d="M528 128 v20" stroke-width="2.8"/>
+          <path d="M524 210 l14 14 M538 210 l-14 14" stroke-width="2.6"/>
+        </g>
+        <text x="500" y="122" font-family="Georgia,serif" font-size="15" font-weight="700"
+              fill="#B03A2E" fill-opacity=".9" filter="url(#greaseFine)">TK</text>
+        <text x="492" y="205" font-family="Georgia,serif" font-size="15" font-weight="700"
+              fill="#B03A2E" fill-opacity=".9" filter="url(#greaseFine)">STET</text>
+        <text x="292" y="132" font-family="Georgia,serif" font-size="14" font-style="italic"
+              fill="#2E4756" fill-opacity=".9" filter="url(#greaseFine)">how much?</text>
+      </svg>
+    </article>
+  </div>
+  <p class="cap"><b>Idea.</b> The corrections page as the proof it came from: live, selectable copy
+    with grease-pencil marks over it. The marks are one SVG at <code>mix-blend-mode: multiply</code>,
+    so the red sinks into the paper's shading and the cast shadow still passes over them.
+    <code>light: 'pointer'</code> here too: move the cursor and the rake changes across the relief.
+    <code>preset paper · dpi 100 · scratches.density 0.02 · light pointer</code></p>
+</section>
+
+<!-- ============================== 13 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">13</span>
+    <div><h2>Print &amp; chinagraph back</h2><p class="role">Photo caption &amp; picture desk marks</p></div>
+  </div>
+  <div class="stage" style="gap:30px;align-items:center;flex-wrap:wrap">
+
+    <figure class="sheet photo" style="margin:0;width:360px;position:relative" data-paper-light="pointer"
+      data-paper="paper" data-paper-dpi="160"
+      data-paper-params='{"tone":{"paper":[0.99,0.985,0.955],"duotone":0.35},"cockle":{"amplitude_um":9,"wavelength_mm":20},"formation":{"amplitude":0.01},"edge":{"wobble_px":2},"shadow":{"offset_px":8,"blur_px":13}}'>
+      <span class="mount" style="left:-2px;top:-2px;clip-path:polygon(0 0,100% 0,0 100%)"></span>
+      <span class="mount" style="right:-2px;top:-2px;clip-path:polygon(100% 0,100% 100%,0 0)"></span>
+      <svg viewBox="0 0 336 210" width="100%" style="display:block" role="img"
+           aria-label="Screened press photograph: the rail yard at dawn, a crane above the river">
+        <defs>
+          <linearGradient id="phSky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#14110D" stop-opacity=".42"/>
+            <stop offset=".72" stop-color="#14110D" stop-opacity=".10"/>
+            <stop offset="1" stop-color="#14110D" stop-opacity=".03"/>
+          </linearGradient>
+          <linearGradient id="phWater" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#14110D" stop-opacity=".22"/>
+            <stop offset="1" stop-color="#14110D" stop-opacity=".55"/>
+          </linearGradient>
+          <radialGradient id="phSun"><stop offset="0" stop-color="#FFF8EA"/>
+            <stop offset=".7" stop-color="#FFF8EA" stop-opacity=".85"/>
+            <stop offset="1" stop-color="#FFF8EA" stop-opacity="0"/></radialGradient>
+        </defs>
+
+        <rect width="336" height="210" fill="#FCF4E2"/>
+        <rect width="336" height="140" fill="url(#phSky)"/>
+        <circle cx="256" cy="52" r="30" fill="url(#phSun)"/>
+        <rect width="336" height="140" fill="url(#htLight)" opacity=".22"/>
+
+        <!-- far bank, atmospheric -->
+        <path d="M0 120 h30 v-14 h16 v14 h34 v-22 h18 v22 h44 v-10 h14 v10 h56 v-18 h14 v18 h110 v22 H0 Z"
+              fill="#14110D" opacity=".24"/>
+        <!-- mid skyline -->
+        <path d="M0 128 h46 v-24 h24 v24 h26 v-13 h20 v13 h50 v-19 h18 v19 h48 v-9 h44 v20 H0 Z"
+              fill="#14110D" opacity=".46"/>
+        <!-- gantry crane -->
+        <g stroke="#14110D" stroke-opacity=".92" fill="none">
+          <path d="M182 108 V58 l76 -12" stroke-width="3"/>
+          <path d="M182 62 l-16 7" stroke-width="3"/>
+          <path d="M182 68 l58 -9 M182 78 l40 -6" stroke-width="1.2"/>
+          <path d="M238 48 v20" stroke-width="1.6"/>
+          <path d="M170 108 h24" stroke-width="4"/>
+        </g>
+        <!-- near sheds and stock, solid black -->
+        <path d="M0 140 h54 v-26 h34 v26 h30 v-15 h30 v15 h64 v-21 h26 v21 h98 v18 H0 Z" fill="#14110D"/>
+        <g fill="#FCF4E2" opacity=".9">
+          <rect x="12" y="126" width="6" height="8"/><rect x="26" y="126" width="6" height="8"/>
+          <rect x="62" y="122" width="6" height="8"/><rect x="76" y="122" width="6" height="8"/>
+          <rect x="128" y="130" width="6" height="8"/><rect x="222" y="126" width="6" height="8"/>
+          <rect x="240" y="126" width="6" height="8"/><rect x="290" y="144" width="6" height="8"/>
+        </g>
+
+        <!-- river -->
+        <rect y="158" width="336" height="30" fill="url(#phWater)"/>
+        <rect y="158" width="336" height="30" fill="url(#htMid)" opacity=".28"/>
+        <g stroke="#FCF4E2" stroke-linecap="round">
+          <path d="M18 166 h70" stroke-opacity=".55" stroke-width="1.8"/>
+          <path d="M132 172 h116" stroke-opacity=".42" stroke-width="1.6"/>
+          <path d="M46 180 h54" stroke-opacity=".34" stroke-width="1.5"/>
+          <path d="M244 164 h64" stroke-opacity=".48" stroke-width="1.6"/>
+          <path d="M180 184 h92" stroke-opacity=".28" stroke-width="1.4"/>
+        </g>
+
+        <!-- quay in the foreground: a bollard, and the last of the shift walking off -->
+        <rect y="188" width="336" height="22" fill="#14110D"/>
+        <g fill="#14110D">
+          <path d="M40 188 v-14 q0 -6 7 -6 q7 0 7 6 v14 Z"/>
+          <path d="M262 188 l-5 -20 h4 l-1 -9 h8 l-1 9 h4 l-5 20 Z"/>
+          <circle cx="266" cy="152" r="5"/>
+          <path d="M258 162 l16 -3 v4 l-16 3 Z"/>
+        </g>
+        <!-- birds -->
+        <path d="M56 42 q8 -6 16 0 q8 -6 16 0" stroke="#14110D" stroke-width="1.6" fill="none" opacity=".65"/>
+        <path d="M92 32 q7 -5 14 0 q7 -5 14 0" stroke="#14110D" stroke-width="1.3" fill="none" opacity=".45"/>
+        <!-- the printing screen over everything -->
+        <rect width="336" height="210" fill="url(#htLight)" opacity=".16"/>
+      </svg>
+      <figcaption><b style="font-weight:600">Riverfront, 05:40.</b> The last shift leaves the yard on
+        the morning the cuts were confirmed. <span style="color:var(--faint)">Photograph: A. Meun</span></figcaption>
+    </figure>
+
+    <article class="sheet tilt" style="--r:4.5deg;width:288px;padding:20px 20px 34px;position:relative"
+      data-paper="textured" data-paper-dpi="160"
+      data-paper-params='{"tone":{"paper":[0.98,0.97,0.94],"duotone":0.4},"edge":{"wobble_px":3,"deckle_px":0},"shadow":{"offset_px":7,"blur_px":12}}'>
+      <p class="stamp" style="margin-bottom:12px">Verso &middot; picture desk</p>
+      <p class="mono" style="font-size:12.5px;line-height:1.9;color:var(--ink-2)">
+        NEG 114-7<br>CROP TO 3 COL<br>KILL SKY, HOLD CRANE<br>NOT FOR SYNDICATION</p>
+      <svg class="grease" viewBox="0 0 288 180" preserveAspectRatio="none" aria-hidden="true">
+        <g filter="url(#grease)" fill="none" stroke="#2E4756" stroke-opacity=".7" stroke-linecap="round">
+          <path d="M24 128 h214" stroke-width="2.4"/>
+          <path d="M24 128 v22 M238 128 v22" stroke-width="2.4"/>
+        </g>
+        <text x="24" y="166" font-family="Georgia,serif" font-size="15" font-style="italic"
+              fill="#B03A2E" fill-opacity=".85" filter="url(#greaseFine)">3 col, bleed left</text>
+      </svg>
+    </article>
+
+  </div>
+  <p class="cap"><b>Idea.</b> A print and its back. The photograph is inline SVG, drawn in four
+    tonal layers and screened with <code>&lt;pattern&gt;</code> dot grids
+    (r&nbsp;=&nbsp;0.85/1.55/2.2) so it prints rather than renders, on a cooler, smoother,
+    higher-DPI stock than everything else on the desk: photographic paper, not newsprint.
+    Beside it, the verso with the picture editor's chinagraph crop marks.
+    <code>print: dpi 160 · tone.paper [0.99,0.985,0.955] · cockle.amplitude_um 9 · light pointer</code></p>
+</section>
+
+<!-- ============================== 14 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">14</span>
+    <div><h2>Bulldog-clipped stack</h2><p class="role">Section index · site navigation</p></div>
+  </div>
+  <div class="stage" style="padding-bottom:26px">
+    <div style="position:relative;width:400px">
+
+      <!-- drawn sheet edges: implies a thick stack without paying for more renders -->
+      <div class="edges" style="left:5px;right:5px;top:24px;height:12px">
+        <i style="top:8px"></i><i style="top:4px;left:3px;right:3px"></i><i style="top:0"></i>
+      </div>
+
+      <nav class="sheet" aria-label="Sections" style="position:relative;width:400px;padding:54px 26px 24px;z-index:3"
+        data-paper="paper" data-paper-dpi="115"
+        data-paper-params='{"tone":{"paper":[0.99,0.95,0.87]},"edge":{"wobble_px":5},"shadow":{"offset_px":12,"blur_px":19,"darkness":0.7}}'>
+        <p class="stamp" style="margin-bottom:12px">Index &middot; this edition</p>
+        <ul class="index-list">
+          <li><a href="#c07">City &amp; Council</a><span class="pg">p.1</span></li>
+          <li><a href="#c11">The wire</a><span class="pg">p.2</span></li>
+          <li><a href="#c18">Markets</a><span class="pg">p.6</span></li>
+          <li><a href="#c15">Weather</a><span class="pg">p.9</span></li>
+          <li><a href="#c16">Letters</a><span class="pg">p.11</span></li>
+          <li><a href="#c20">Classified</a><span class="pg">p.14</span></li>
+        </ul>
+      </nav>
+
+      <svg width="140" height="80" viewBox="0 0 140 80" aria-hidden="true"
+           style="position:absolute;left:50%;margin-left:-70px;top:-16px;z-index:6;filter:drop-shadow(0 5px 6px rgba(0,0,0,.55))">
+        <path d="M38 34 C 26 8 66 0 70 24" fill="none" stroke="url(#steel)" stroke-width="4.4" stroke-linecap="round"/>
+        <path d="M102 34 C 114 8 74 0 70 24" fill="none" stroke="url(#steel)" stroke-width="4.4" stroke-linecap="round"/>
+        <circle cx="38" cy="34" r="3.6" fill="#c9ced3"/>
+        <circle cx="102" cy="34" r="3.6" fill="#c9ced3"/>
+        <path d="M18 72 L32 32 H108 L122 72 Z" fill="url(#steelDark)"/>
+        <path d="M34 37 H106" stroke="#fff" stroke-opacity=".3" stroke-width="2.4"/>
+        <path d="M18 72 H122" stroke="#000" stroke-opacity=".55" stroke-width="2.4"/>
+      </svg>
+
+    </div>
+  </div>
+  <p class="cap"><b>Idea.</b> Site navigation as the section index, bulldog-clipped to the desk. Only
+    the top sheet is a real render; the stack under it is three drawn edges, which is the cheap way to
+    imply thickness without spending three more GPU surfaces. Links stay real links with focus rings.
+    <code>preset paper · dpi 115 · shadow {offset 12, blur 19} for a stack's worth of lift</code></p>
+</section>
+
+<!-- ============================== 15 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">15</span>
+    <div><h2>Rolled weather chart</h2><p class="role">Forecast · synoptic chart off the fax</p></div>
+  </div>
+  <div class="stage" style="padding-bottom:30px">
+    <div style="position:relative;width:100%;max-width:700px">
+
+      <article class="sheet" style="width:100%;padding:22px 26px 24px"
+        data-paper="paper" data-paper-dpi="88"
+        data-paper-params='{"tone":{"paper":[0.99,0.96,0.90]},"edge":{"wobble_px":4,"curl":0.5},"cockle":{"amplitude_um":24,"anisotropy":3},"shadow":{"offset_px":10,"blur_px":17}}'>
+        <span class="tape" style="width:104px;left:-26px;top:-13px;transform:rotate(-7deg)"></span>
+        <span class="tape" style="width:104px;right:-26px;top:-13px;transform:rotate(6deg)"></span>
+        <p class="stamp" style="margin-bottom:10px">Synoptic chart &middot; valid 06 UTC</p>
+        <div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">
+          <svg viewBox="0 0 300 190" width="300" height="190" role="img"
+               aria-label="Synoptic chart: a low to the west, a cold front crossing the city">
+            <path d="M6 150 C 60 138 74 108 122 104 C 168 100 190 66 246 60 L294 52"
+                  fill="none" stroke="#2E4756" stroke-width="2" stroke-opacity=".55"/>
+            <g fill="none" stroke="#2E4756" stroke-opacity=".75">
+              <path d="M96 96 C 130 74 168 84 172 108 C 176 136 138 152 110 142 C 84 132 76 112 96 96 Z" stroke-width="1.6"/>
+              <path d="M80 90 C 124 58 184 72 190 108 C 196 148 140 170 100 156 C 64 144 52 112 80 90 Z" stroke-width="1.4"/>
+              <path d="M62 84 C 118 42 202 60 210 108 C 218 160 142 190 92 172 C 44 156 28 110 62 84 Z" stroke-width="1.2"/>
+            </g>
+            <text x="128" y="120" font-family="Georgia,serif" font-size="26" font-weight="700" fill="#2E4756">L</text>
+            <text x="256" y="150" font-family="Georgia,serif" font-size="24" font-weight="700" fill="#2E4756" fill-opacity=".7">H</text>
+            <path d="M214 8 C 226 46 214 84 236 118 C 248 138 244 164 258 182"
+                  fill="none" stroke="#B03A2E" stroke-width="2.6"/>
+            <g fill="#B03A2E">
+              <path d="M219 30 l11 -4 l-3 11 z"/><path d="M221 66 l11 -3 l-4 11 z"/>
+              <path d="M234 108 l11 -2 l-5 11 z"/><path d="M245 150 l11 -2 l-5 11 z"/>
+            </g>
+            <circle cx="150" cy="112" r="3.4" fill="#14110D"/>
+            <text x="158" y="116" font-family="Georgia,serif" font-size="12" fill="#14110D">City</text>
+          </svg>
+          <div style="flex:1 1 200px;min-width:190px">
+            <p style="font-size:14px;line-height:1.7;margin-bottom:10px"><b>Rain from the west by
+              mid-morning</b>, heaviest along the river. Wind southwest 30&nbsp;km/h, gusting 50 on
+              the bridges.</p>
+            <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;color:var(--ink-2)">
+              <tbody>
+                <tr><td style="padding:3px 0">06:00</td><td style="text-align:right">9°  rain</td></tr>
+                <tr><td style="padding:3px 0">12:00</td><td style="text-align:right">12°  rain</td></tr>
+                <tr><td style="padding:3px 0">18:00</td><td style="text-align:right">11°  showers</td></tr>
+                <tr><td style="padding:3px 0">00:00</td><td style="text-align:right">7°  clearing</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <!-- the part still rolled, with a rubber band round it -->
+      <div style="position:relative;height:96px;margin-top:8px">
+        <div class="sheet" style="position:absolute;left:0;right:0;top:16px;height:62px;border-radius:9px"
+          data-paper="paper" data-paper-dpi="88"
+          data-paper-params='{"tone":{"paper":[0.99,0.96,0.90]},"edge":{"radius_px":9,"wobble_px":2},"cockle":{"amplitude_um":30,"anisotropy":6,"md_angle_deg":0,"wavelength_mm":16},"shadow":{"offset_px":14,"blur_px":18,"darkness":0.75,"contact":0.5}}'>
+          <span class="tube-shade"></span>
+          <span class="tube-lit"></span>
+        </div>
+        <span class="band" style="left:23%;transform:rotate(1.5deg)"></span>
+        <span class="band" style="right:23%;transform:rotate(-1deg)"></span>
+      </div>
+
+    </div>
+  </div>
+  <p class="cap"><b>Idea.</b> The chart is half unrolled and taped down at both top corners; the rest
+    is still a tube with two rubber bands round it. The tape is one div: a translucent fill, a
+    ragged <code>clip-path</code> at both ends, and an inset white hairline for the edge shine. The tube is a second papered surface at strong anisotropy. <code>anisotropy 6</code>
+    with a short wavelength stretches the cockle into cylinder-aligned ridges, plus two blended
+    gradient children for the cylindrical falloff and the highlight band.
+    <code>flat: dpi 88 · edge.curl 0.5 · tube: cockle {anisotropy 6, wavelength_mm 16} · edge.radius_px 9</code></p>
+</section>
+
+<!-- ============================== 16 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">16</span>
+    <div><h2>Coffee-ringed sheet</h2><p class="role">Letters to the editor</p></div>
+  </div>
+  <div class="stage">
+    <article class="sheet tilt" style="--r:1.1deg;width:100%;max-width:620px;padding:26px 30px 28px;position:relative"
+      data-paper="worn" data-paper-dpi="105"
+      data-paper-params='{"tone":{"paper":[0.98,0.92,0.81],"duotone":0.6},
+                          "imperfect":{"enabled":true,"pit_density":0.02,"mark_density":0.05,"mark_strength":0.14},
+                          "crumple":{"enabled":true,"scale_mm":16,"amplitude_um":26,"crease":0.15},
+                          "folds":{"enabled":true,"count":2,"depth":0.35},
+                          "edge":{"deckle_px":6,"wobble_px":7}}'>
+      <span class="coffee" style="width:150px;height:138px;right:16px;top:6px;transform:rotate(-11deg) scaleY(.94)"></span>
+      <span class="coffee" style="width:86px;height:80px;right:118px;top:118px;transform:rotate(8deg) scaleY(.9);opacity:.7"></span>
+
+      <p class="stamp" style="margin-bottom:14px">Letters &middot; 40 received, two printed</p>
+      <h3 style="font-size:18px;margin-bottom:8px">“Nobody asked us about the mural”</h3>
+      <p style="font-size:14px;line-height:1.72;margin-bottom:6px">Sir, I have lived on Bell Street
+        for thirty-one years and I found out that the mural was being painted over from the woman who
+        sells me my newspaper. If the city consulted anybody, it was not anybody on Bell Street.</p>
+      <p class="src" style="margin-bottom:20px">R. Okonkwo, Bell Street</p>
+
+      <h3 style="font-size:18px;margin-bottom:8px">“Nineteen days is not a company”</h3>
+      <p style="font-size:14px;line-height:1.72;margin-bottom:6px">Sir, your reporter asked the
+        right question and got four different answers, which is itself the answer. Print the one-page
+        summary. Let us all read it together.</p>
+      <p class="src">T. Vasquez, by email</p>
+    </article>
+  </div>
+  <p class="cap"><b>Idea.</b> Letters as the sheet that sat under somebody's mug all afternoon. The
+    rings are two radial-gradient ellipses at <code>mix-blend-mode: multiply</code>, and the paper's own
+    relief shows through the stain, which is the entire reason not to draw stains as flat blobs. The
+    <code>imperfect</code> layer adds the sparse pits and blotches underneath.
+    <code>preset worn · dpi 105 · imperfect.mark_density 0.05 · crumple.crease 0.15 · edge.deckle_px 6</code></p>
+</section>
+
+<!-- ============================== 17 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">17</span>
+    <div><h2>Pneumatic docket</h2><p class="role">Routing slip · desk navigation</p></div>
+  </div>
+  <div class="stage" style="gap:34px;align-items:center;flex-wrap:wrap">
+
+    <svg width="96" height="250" viewBox="0 0 96 250" aria-hidden="true" style="flex:none">
+      <ellipse cx="48" cy="240" rx="40" ry="9" fill="#000" opacity=".5"/>
+      <!-- felt sealing rings top and bottom -->
+      <rect x="8" y="40" width="80" height="16" rx="8" fill="#2f2417"/>
+      <rect x="8" y="196" width="80" height="16" rx="8" fill="#2f2417"/>
+      <!-- brass body -->
+      <rect x="14" y="30" width="68" height="200" rx="16" fill="url(#brass)"/>
+      <rect x="14" y="30" width="68" height="200" rx="16" fill="none" stroke="#3a2a10" stroke-opacity=".55"/>
+      <!-- domed cap with its catch -->
+      <path d="M14 46 V44 a34 34 0 0 1 68 0 v2 Z" fill="#8c3d30"/>
+      <path d="M14 46 V44 a34 34 0 0 1 68 0 v2 Z" fill="none" stroke="#4a1d16" stroke-opacity=".6"/>
+      <rect x="40" y="6" width="16" height="10" rx="4" fill="#7a3227"/>
+      <!-- docket window -->
+      <rect x="26" y="96" width="44" height="56" rx="4" fill="#2b1e0c" opacity=".5"/>
+      <rect x="30" y="100" width="36" height="48" rx="2" fill="#f6ecd2" opacity=".82"/>
+      <text x="48" y="132" text-anchor="middle" font-family="Georgia,serif" font-size="20"
+            font-weight="700" fill="#3a2a10">14</text>
+      <!-- specular strip -->
+      <rect x="26" y="40" width="9" height="180" rx="4" fill="#fff" opacity=".3"/>
+      <rect x="70" y="40" width="4" height="180" rx="2" fill="#2b1e0c" opacity=".3"/>
+    </svg>
+
+    <article class="sheet docket" style="width:330px"
+      data-paper="subtle" data-paper-dpi="140"
+      data-paper-params='{"tone":{"paper":[0.99,0.96,0.89]},"edge":{"wobble_px":4,"deckle_px":4},"shadow":{"offset_px":8,"blur_px":13}}'>
+      <p class="stamp" style="margin-bottom:4px">Tube 14 &middot; route to</p>
+      <div class="hair" style="margin:10px 0 8px"></div>
+      <nav aria-label="Desks">
+        <ul>
+          <li><span class="box" aria-hidden="true"></span><a href="#c07">City desk</a></li>
+          <li><span class="box" aria-hidden="true"></span><a href="#c11">Wire room</a></li>
+          <li><span class="box" aria-hidden="true"></span><a href="#c12">Subs / proofs</a></li>
+          <li><span class="box" aria-hidden="true"></span><a href="#c13">Picture desk</a></li>
+          <li><span class="box" aria-hidden="true"></span><a href="#c18">Markets</a></li>
+          <li><span class="box" aria-hidden="true"></span><a href="#c20">Composing room</a></li>
+        </ul>
+      </nav>
+      <div class="hair" style="margin:10px 0 8px"></div>
+      <p class="src mono" style="font-size:11.5px">Sent 14:06 &middot; return capsule to 2nd floor</p>
+    </article>
+
+  </div>
+  <p class="cap"><b>Idea.</b> Navigation as a pneumatic-tube routing docket: tick a desk, send the
+    capsule. A quiet stock for UI chrome: <code>preset subtle</code> is the one that stays out of the
+    way of the links, with a small deckle so the slip still looks torn from a book.
+    <code>preset subtle · dpi 140 · edge.deckle_px 4 · brass capsule in inline SVG</code></p>
+</section>
+
+<!-- ============================== 18 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">18</span>
+    <div><h2>Ticker tape</h2><p class="role">Markets · torn off the machine</p></div>
+  </div>
+  <div class="stage">
+    <div class="sheet tape-strip tilt" style="--r:-0.8deg;width:100%;max-width:760px"
+      data-paper="paper" data-paper-dpi="185" data-paper-content="rasterize"
+      data-paper-params='{"tone":{"paper":[1,0.965,0.90],"duotone":0.45},
+                          "cockle":{"amplitude_um":10,"wavelength_mm":14,"anisotropy":4},
+                          "ink":{"thickness":1.15,"granulation":0.35},
+                          "edge":{"deckle_px":14,"wobble_px":9},
+                          "shadow":{"offset_px":6,"blur_px":11,"darkness":0.62}}'>
+      <div class="row">
+        <span>LDGR 41.20 &#9650;0.6</span>
+        <span>MUNI-A 98.4 &#9660;0.2</span>
+        <span>NINTH ST WTR SUSP</span>
+        <span>RAIL 12.05 &#9660;3.1</span>
+        <span>CIVIC 7.62 &#9650;0.4</span>
+      </div>
+      <div class="row" style="margin-top:8px;color:#564E43">
+        <span>OPEN 09:30</span>
+        <span>VOL 1.2M</span>
+        <span>LEVY FREEZE PRICED IN</span>
+        <span>BONDS STEADY</span>
+        <span>CLOSE 16:00</span>
+      </div>
+    </div>
+  </div>
+  <p class="cap"><b>Idea.</b> The markets line as a strip torn off the ticker at both ends. Second
+    rasterize showpiece: the monospace quotes are baked into the sheet so the ink picks up the
+    paper's shading. A big <code>deckle_px</code> against a very high DPI gives a fibrous tear on a
+    narrow strip without eating the type. <code>content: 'rasterize' · dpi 185 · edge.deckle_px 14 ·
+    cockle.anisotropy 4 · ink.granulation 0.35</code></p>
+</section>
+
+<!-- ============================== 19 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">19</span>
+    <div><h2>While you were out</h2><p class="role">Tip line · reader submission</p></div>
+  </div>
+  <div class="stage">
+    <form class="sheet wywo tilt" style="--r:-1.6deg;width:100%;max-width:440px"
+      data-paper="paper" data-paper-dpi="150"
+      data-paper-params='{"tone":{"paper":[1,0.925,0.895],"duotone":0.55},"edge":{"wobble_px":4,"deckle_px":5},"cockle":{"amplitude_um":13},"shadow":{"offset_px":8,"blur_px":13}}'
+      onsubmit="event.preventDefault();this.querySelector('.sent').hidden=false;">
+      <p class="stamp stamp--red" style="text-align:center;letter-spacing:.22em;margin-bottom:4px">While you were out</p>
+      <div class="hair--thick" style="margin-bottom:14px"></div>
+
+      <label for="w-name">Caller</label>
+      <input id="w-name" type="text" autocomplete="name" placeholder="name, or none">
+
+      <label for="w-num" style="margin-top:12px">Number</label>
+      <input id="w-num" type="text" inputmode="tel" autocomplete="tel" placeholder="how we reach you">
+
+      <label for="w-msg" style="margin-top:12px">Message</label>
+      <textarea id="w-msg" rows="3" placeholder="what you saw, where, when"></textarea>
+
+      <div class="checks">
+        <span><input type="checkbox" id="w-1"><label for="w-1" style="font:inherit;letter-spacing:0;text-transform:none;display:inline">Please call back</label></span>
+        <span><input type="checkbox" id="w-2"><label for="w-2" style="font:inherit;letter-spacing:0;text-transform:none;display:inline">Urgent</label></span>
+        <span><input type="checkbox" id="w-3"><label for="w-3" style="font:inherit;letter-spacing:0;text-transform:none;display:inline">Off the record</label></span>
+      </div>
+
+      <button type="submit">Take the message</button>
+      <p class="sent src" hidden style="margin-top:10px;color:#7d3a33">Slip spiked on the news desk. Somebody will call.</p>
+    </form>
+  </div>
+  <p class="cap"><b>Idea.</b> The reader tip form as a pink telephone-message slip. Everything is a
+    real control. The inputs are transparent with a single ruled underline, so you appear to be
+    writing on the paper, and focus rings are drawn outside the sheet where they stay visible.
+    Never <code>rasterize</code> anything interactive: it hides the element's own children.
+    <code>preset paper · dpi 150 · tone.paper [1,0.925,0.895] · edge.deckle_px 5</code></p>
+</section>
+
+<!-- ============================== 20 ================================== -->
+<section class="bay">
+  <div class="bay-head">
+    <span class="idx">20</span>
+    <div><h2>Classified column</h2><p class="role">Small ads · the back of the book</p></div>
+  </div>
+  <div class="stage">
+    <section class="sheet classifieds" style="width:100%;max-width:760px"
+      data-paper="paper" data-paper-dpi="58"
+      data-paper-params='{"tone":{"paper":[0.92,0.905,0.855],"duotone":0.62,"shadow":[0.88,0.90,0.97]},
+                          "formation":{"amplitude":0.034,"gsm_amount":0.85,"scale_mm":2.0,"skew":-0.45},
+                          "mould":{"enabled":true,"laid_pitch_mm":0.55,"chain_pitch_mm":0.55,"chain_ratio":0.5,"amount":0.016},
+                          "cockle":{"amplitude_um":18,"wavelength_mm":34},
+                          "fade":{"amount":0.8},"edge":{"wobble_px":6},"shadow":{"offset_px":9,"blur_px":15}}'>
+      <p class="stamp" style="margin-bottom:4px">Classified &middot; 60c the line</p>
+      <div class="hair--thick" style="margin-bottom:14px"></div>
+      <div class="cols">
+        <div>
+          <p><b>Notices</b>Tender: replacement of the Ninth Street main. Documents at the clerk's
+            counter, weekdays, cash or cheque, no telephone enquiries.</p>
+          <p><b>Lost</b>Grey cat, answers to nothing, last seen crossing the yard footbridge on the
+            fourteenth. Reward offered, no questions.</p>
+          <p><b>Found</b>Set of keys, brass fob marked “14”, outside the composing room door. Claim
+            at the front desk.</p>
+        </div>
+        <div>
+          <p><b>Wanted</b>Compositor, evenings, must set to time and take correction without
+            argument. Apply in writing, stone floor.</p>
+          <p><b>For sale</b>Upright typewriter, ribbon included, carriage true. Buyer collects, third
+            floor, ask for Meun.</p>
+          <p><b>Rooms</b>Two above the dry cleaner on Ninth. Quiet except Thursdays. References, one
+            month down.</p>
+        </div>
+        <div>
+          <p><b>Personal</b>To the caller who rang at 09:41 and would not leave a name: we believe
+            you. Ring back and ask for the city desk.</p>
+          <p><b>Public</b>The council meets Tuesday at seven. The gallery holds forty and the agenda
+            holds nine items, one of which is yours.</p>
+          <p><b>Trade</b>Ink, black, two drums, surplus to requirement. Offers to the works manager.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+  <p class="cap"><b>Idea.</b> The back of the book on proper newsprint: greyer, greener, coarser and
+    thinner than anything else here. This is the widest stock divergence on the page:
+    <code>dpi 58</code> makes the buckling big and slack, heavy skewed formation gives the pulp its
+    blotchiness, and the wove mould adds the fine wire mesh that keeps it from reading as noise.
+    <code>preset paper · dpi 58 · tone.paper [0.92,0.905,0.855] · formation {amplitude 0.034, skew -0.45} · mould wove</code></p>
+</section>
+
+</main>
+
+<footer>
+  <p>Thirty live paper surfaces. No images, no webfonts, no CDN. Every prop is CSS or inline SVG.</p>
+</footer>
+
+</div>
+
+<script type="module">
+import { scan } from '../../src/index.js';
+
+// lazy:false, deliberately. Every tilted sheet has to be rendered BEFORE its CSS
+// rotation lands, because paperweb sizes a sheet from getBoundingClientRect(),
+// which reports the rotated bounding box, so a sheet rotated first renders too big
+// and off-centre. Rendering eagerly makes the ordering deterministic.
+const papers = scan(document, { lazy: false });
+
+Promise.all(papers.map((p) => p.render()))
+  .then(() => new Promise((r) => setTimeout(r, 420)))   // let the initial ResizeObserver settle
+  .then(() => { document.body.classList.add('settled'); });
+</script>
+
+</body>
+</html>

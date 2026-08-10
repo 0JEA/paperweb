@@ -1,0 +1,1454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Clippings Archive · paperweb</title>
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   THE CLIPPINGS ARCHIVE
+   A morgue file for one long story, rendered in paperweb. Dark ground on
+   purpose: the sheets have to read as objects lying on a table, not as
+   panels in a layout.
+   ───────────────────────────────────────────────────────────────────────── */
+
+html { overflow-x: clip; }               /* required by overhang:'grow' */
+
+:root{
+  --ground:#17130F;
+  --ground-2:#211A13;
+  --rule:#3B3125;
+
+  --ink:#241F17;          /* primary ink on aged stock  */
+  --ink-2:#4A4133;        /* secondary                  */
+  --ink-3:#6B6152;        /* faded, still ≥4.5:1        */
+  --pencil:#5A5344;
+  --red:#8C2F22;          /* stamp / editor's pencil    */
+  --blue:#2E4756;         /* ballpoint                  */
+  --ochre:#C8A06A;
+
+  --label:#E0D3B8;
+  --label-2:#A79A83;
+
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;
+  --mono:ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono","Liberation Mono",monospace;
+  --sans:"Helvetica Neue",Helvetica,Arial,"Liberation Sans",sans-serif;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 50% -160px, #241D15 0%, rgba(36,29,21,0) 70%),
+    repeating-linear-gradient(101deg, rgba(255,255,255,.012) 0 2px, rgba(0,0,0,0) 2px 7px),
+    var(--ground);
+  color:var(--label);
+  font-family:var(--serif);
+  -webkit-font-smoothing:antialiased;
+}
+
+.wrap{ max-width:1100px; margin:0 auto; padding:0 40px 140px; }
+
+/* ── page furniture ─────────────────────────────────────────────────────── */
+
+.topline{
+  display:flex; flex-wrap:wrap; gap:14px 26px; align-items:baseline;
+  padding:26px 0 18px; border-bottom:1px solid var(--rule);
+  font-family:var(--mono); font-size:12px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--label-2);
+}
+.topline strong{ color:var(--ochre); font-weight:600; }
+
+nav.finding{ padding:22px 0 0; }
+nav.finding h2{
+  font-family:var(--mono); font-size:12px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--label-2); font-weight:500; margin:0 0 14px;
+}
+nav.finding ol{
+  list-style:none; margin:0; padding:0;
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:2px 22px;
+}
+nav.finding li{ font-family:var(--mono); font-size:12.5px; line-height:1.9; }
+nav.finding a{
+  color:var(--label-2); text-decoration:none;
+  border-bottom:1px solid transparent; padding-bottom:1px;
+}
+nav.finding a:hover{ color:var(--ochre); border-bottom-color:rgba(200,160,106,.5); }
+nav.finding .n{ color:#7C6E58; margin-right:8px; }
+
+a:focus-visible, [tabindex]:focus-visible{
+  outline:2px solid var(--ochre); outline-offset:3px; border-radius:2px;
+}
+
+/* ── section scaffolding ────────────────────────────────────────────────── */
+
+.sec{ padding-top:96px; }
+.sec-head{ display:flex; align-items:baseline; gap:16px; margin-bottom:8px; }
+.sec-head .num{
+  font-family:var(--mono); font-size:12px; letter-spacing:.16em; color:var(--ochre);
+  border:1px solid rgba(200,160,106,.4); padding:3px 7px; border-radius:2px;
+}
+.sec-head h2{
+  margin:0; font-size:22px; font-weight:500; letter-spacing:.01em; color:var(--label);
+}
+.sec-sub{
+  margin:0 0 22px; font-family:var(--mono); font-size:12.5px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--label-2);
+}
+.stage{ position:relative; padding:8px 0 4px; }
+.cap{
+  margin:26px 0 0; max-width:74ch;
+  font-family:var(--mono); font-size:12.5px; line-height:1.75; color:var(--label-2);
+  border-left:2px solid var(--rule); padding-left:14px;
+}
+.cap b{ color:var(--ochre); font-weight:600; }
+.cap code{ font-family:var(--mono); color:#D6C8A8; font-size:12.5px; }
+
+/* ── paper: shared type on the sheet ───────────────────────────────────── */
+
+.sheet{ color:var(--ink); }
+.sheet p{ margin:0 0 .78em; }
+.sheet h1,.sheet h2,.sheet h3,.sheet h4{ margin:0; font-weight:600; letter-spacing:-.01em; }
+.kicker{
+  font-family:var(--mono); font-size:12px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.byline{
+  font-family:var(--mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); margin:10px 0 14px;
+}
+.body{ font-size:15.5px; line-height:1.62; color:var(--ink-2); }
+.body.two{ column-count:2; column-gap:26px; column-rule:1px solid rgba(90,78,60,.28); }
+.tw{ font-family:var(--mono); font-size:13.5px; line-height:1.85; color:var(--ink-2); }
+.rulehair{ height:1px; background:rgba(60,50,36,.45); margin:12px 0; }
+.ruledouble{ height:4px; border-top:2px solid rgba(36,31,23,.8); border-bottom:1px solid rgba(36,31,23,.55); margin:12px 0; }
+
+/* ── props drawn in CSS: tape, staples, pins, stamps, clips ─────────────── */
+
+.tape{
+  position:absolute; width:118px; height:34px; z-index:4;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,246,224,.07) 0 1px, rgba(0,0,0,0) 1px 4px),
+    linear-gradient(180deg, rgba(212,182,124,.34), rgba(176,143,86,.46) 45%, rgba(206,176,116,.30));
+  border-top:1px solid rgba(240,222,182,.24);
+  border-bottom:1px solid rgba(88,64,32,.30);
+  clip-path:polygon(4% 0,100% 3%,96% 100%,0 96%);
+  box-shadow:0 3px 7px rgba(0,0,0,.30);
+}
+.tape.short{ width:86px; height:28px; }
+.tape.long{ width:170px; }
+
+.stamp{
+  font-family:var(--sans); font-weight:700; font-size:13px; line-height:1.2;
+  letter-spacing:.15em; text-transform:uppercase;
+  color:var(--red); border:2.5px solid var(--red); padding:7px 11px;
+  opacity:.74; filter:url(#roughStamp);
+}
+.stamp.blue{ color:var(--blue); border-color:var(--blue); opacity:.66; }
+.stamp.round{ border-radius:50%; width:112px; height:112px; display:flex;
+  align-items:center; justify-content:center; text-align:center; font-size:11.5px; padding:0; }
+.stamp .big{ display:block; font-size:16px; letter-spacing:.1em; }
+
+.staple{ position:absolute; width:30px; height:11px; z-index:4; }
+.rust{ position:absolute; z-index:3; opacity:.55; filter:blur(.5px); }
+
+.pin{
+  position:absolute; width:15px; height:15px; border-radius:50%; z-index:5;
+  background:radial-gradient(circle at 32% 28%, #C9584A 0 26%, #8C2F22 55%, #521B12 100%);
+  box-shadow:0 3px 6px rgba(0,0,0,.55), inset 0 -1px 2px rgba(0,0,0,.4);
+}
+
+.hole{
+  position:absolute; width:16px; height:16px; border-radius:50%;
+  background:var(--ground);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.75), 0 1px 0 rgba(255,248,228,.35);
+}
+
+/* redaction: a real bar over EMPTY markup. No secret exists in the DOM. */
+.redact{
+  display:inline-block; vertical-align:-.2em; height:1.06em; width:var(--w,6em);
+  background:#16130F; border-radius:1px;
+  clip-path:polygon(0 7%,100% 0,100% 93%,0 100%);
+  box-shadow:0 0 0 .5px rgba(0,0,0,.45);
+}
+.redact.b{ clip-path:polygon(0 0,100% 6%,100% 100%,0 94%); }
+
+/* highlighter: multiply against the sheet's own canvas (the host isolates) */
+mark.hl{
+  background:linear-gradient(180deg,
+    rgba(228,196,72,0) 4%, rgba(228,196,72,.58) 11%,
+    rgba(222,188,64,.52) 84%, rgba(228,196,72,0) 95%);
+  color:inherit; mix-blend-mode:multiply; padding:0 .12em; border-radius:1px;
+}
+mark.hl.pink{
+  background:linear-gradient(180deg,
+    rgba(226,120,140,0) 5%, rgba(226,120,140,.46) 12%,
+    rgba(220,110,132,.42) 85%, rgba(226,120,140,0) 95%);
+}
+
+.margin-note{
+  font-family:var(--serif); font-style:italic; font-size:14px; line-height:1.35;
+  color:var(--pencil);
+}
+.margin-note.blue{ color:var(--blue); }
+.margin-note.red{ color:var(--red); }
+
+/* ── section-specific layout ───────────────────────────────────────────── */
+
+/* 01 masthead */
+.masthead{
+  padding:30px 40px 26px; min-height:210px;
+  display:flex; justify-content:space-between; gap:30px; align-items:flex-start;
+}
+.masthead h1{
+  font-size:52px; line-height:.98; letter-spacing:-.02em; font-weight:600;
+  color:var(--ink); margin:0 0 12px;
+}
+.masthead .sub{ font-size:15.5px; color:var(--ink-2); max-width:46ch; line-height:1.5; }
+.accession{
+  border:2px solid rgba(140,47,34,.75); color:var(--red); padding:10px 13px;
+  font-family:var(--mono); font-size:12px; line-height:1.7; letter-spacing:.1em;
+  text-transform:uppercase; transform:rotate(-4.5deg); opacity:.82; flex:none;
+  filter:url(#roughStamp);
+}
+
+/* 02 taped clipping */
+.clip-lead{ width:660px; max-width:100%; padding:26px 30px 46px; margin-left:34px; transform:rotate(-.7deg); }
+.clip-lead h3{ font-size:34px; line-height:1.06; color:var(--ink); }
+.tear{
+  position:absolute; left:0; right:0; bottom:0; height:30px; background:var(--ground); z-index:6;
+  clip-path:polygon(0 42%,4% 66%,9% 40%,14% 72%,19% 48%,25% 78%,31% 44%,37% 70%,43% 38%,
+    49% 74%,55% 46%,61% 80%,67% 42%,73% 68%,79% 44%,85% 76%,91% 40%,96% 66%,100% 44%,
+    100% 100%,0 100%);
+}
+
+/* 03 timeline */
+.rail{ position:relative; padding:26px 0 10px; }
+.rail .line{ position:absolute; left:0; right:0; top:120px; height:1px; background:var(--rule); }
+.rail .row{ position:relative; display:flex; gap:26px; align-items:flex-start; }
+.stub{ width:302px; padding:16px 18px 18px; }
+.stub h4{ font-size:19px; line-height:1.14; color:var(--ink); margin-bottom:7px; }
+.stub .d{ font-family:var(--mono); font-size:12px; letter-spacing:.14em; color:var(--ink-3); margin-bottom:8px; }
+.stub p{ font-size:13.5px; line-height:1.5; color:var(--ink-2); margin:0; }
+
+/* 04 FOI memo */
+.foi{ width:700px; max-width:100%; padding:34px 40px 30px; }
+.foi .letterhead{ display:flex; justify-content:space-between; align-items:flex-end; gap:20px; }
+.foi h3{ font-size:17px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink); }
+.foi .exempt{
+  font-family:var(--mono); font-size:12px; color:var(--blue); letter-spacing:.06em;
+  float:right; margin:2px 0 2px 14px;
+}
+.foi .tw{ font-size:14px; }
+
+/* 05 photocopy */
+.xerox{ width:640px; max-width:100%; padding:34px 44px 34px 34px; }
+.xerox .skewed{ transform:skewY(-.55deg) rotate(.35deg); }
+.xerox h3{ font-size:27px; line-height:1.1; color:#151310; text-shadow:0 0 1.4px rgba(0,0,0,.55); }
+.xerox .body{ color:#332C22; text-shadow:0 0 1.1px rgba(0,0,0,.35); }
+.lidgap{
+  position:absolute; top:0; bottom:0; right:0; width:34px; z-index:5;
+  background:linear-gradient(90deg, rgba(14,13,11,0) 0%, rgba(14,13,11,.5) 45%, rgba(10,9,8,.92) 100%);
+}
+.lidgap.bottom{ top:auto; left:0; right:0; height:18px; width:auto;
+  background:linear-gradient(180deg, rgba(14,13,11,0), rgba(10,9,8,.85)); }
+
+/* 06 index cards */
+.cards{ position:relative; height:280px; }
+.icard{
+  position:absolute; width:352px; height:222px; padding:16px 18px 0;
+  background-image:repeating-linear-gradient(180deg,
+    rgba(0,0,0,0) 0 25px, rgba(46,71,86,.24) 25px 26px);
+}
+.icard .top{ border-bottom:1.5px solid rgba(140,47,34,.6); padding-bottom:7px; margin-bottom:8px; }
+.icard h4{ font-family:var(--mono); font-size:13.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink); }
+.icard .tw{ font-size:12.5px; line-height:1.98; }
+.icard .call{ font-family:var(--mono); font-size:12px; color:var(--red); letter-spacing:.1em; }
+
+/* 07 microfilm */
+.film{ width:760px; max-width:100%; padding:12px 14px; }
+.sprockets{ display:flex; gap:12px; padding:2px 6px; }
+.sprockets i{ display:block; width:20px; height:13px; border-radius:2px; background:var(--ground);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.8), 0 1px 0 rgba(255,248,228,.3); flex:none; }
+.frames{ display:flex; gap:12px; padding:10px 0; }
+.frame{ background:#1B1815; color:#E6DECC; padding:16px 18px; flex:1; }
+.frame h4{ font-size:19px; line-height:1.14; color:#F1E9D6; margin-bottom:6px; }
+.frame p{ font-size:13px; line-height:1.55; color:#C9C0AC; margin:0; }
+.frame .m{ font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; color:#9A927F; margin-bottom:8px; }
+.frame.small{ flex:0 0 168px; }
+
+/* 08 fact check */
+.fc{ display:flex; gap:52px; align-items:flex-start; position:relative; }
+.fc .side{ width:452px; max-width:100%; padding:22px 24px 24px; }
+.fc h4{ font-family:var(--mono); font-size:12px; letter-spacing:.18em; text-transform:uppercase; margin-bottom:10px; }
+.fc .claim h4{ color:var(--red); }
+.fc .record h4{ color:var(--blue); }
+.fc blockquote{ margin:0 0 12px; font-size:17px; line-height:1.42; color:var(--ink); }
+.fc .verdict{ font-family:var(--mono); font-size:12.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-2); }
+.fc .bridge{ position:absolute; left:404px; top:-9px; width:152px; transform:rotate(3deg); }
+.fc .bridge2{ position:absolute; left:410px; bottom:26px; width:140px; transform:rotate(-2deg); }
+
+/* 09 marginalia */
+.column{ width:660px; max-width:100%; padding:30px 168px 30px 34px; }
+.column h3{ font-size:26px; line-height:1.12; color:var(--ink); margin-bottom:6px; }
+.column .mn{ position:absolute; width:150px; }
+
+/* 10 carbon */
+.flimsy{ width:496px; max-width:100%; padding:28px 32px; }
+.flimsy .tw{ color:#3B4550; text-shadow:.7px .5px 0 rgba(46,71,86,.34); font-size:13px; line-height:1.95; }
+.flimsy h4{ font-family:var(--mono); font-size:13px; letter-spacing:.12em; color:#2F3945; margin-bottom:12px; }
+
+/* 11 tissue over front page */
+.fp-stage{ position:relative; height:562px; }
+.frontpage{ position:absolute; left:0; top:0; width:748px; height:530px; padding:26px 30px; }
+.frontpage .name{ font-size:40px; letter-spacing:.04em; text-align:center; color:var(--ink); font-weight:600; line-height:1; }
+.frontpage .dateline{ font-family:var(--mono); font-size:11.5px; letter-spacing:.2em; text-transform:uppercase;
+  text-align:center; color:var(--ink-2); margin:8px 0 10px; }
+.frontpage h3{ font-size:38px; line-height:1.04; color:var(--ink); text-align:center; margin:12px 0 8px; }
+.frontpage .deck{ font-size:15px; line-height:1.4; color:var(--ink-2); text-align:center; margin:0 0 14px; }
+/* three explicit columns, not CSS multicol: multicol does not fragment
+   reliably inside the foreignObject snapshot that content:'rasterize' takes. */
+.frontpage .cols{ display:flex; gap:19px; font-size:12.5px; line-height:1.5; color:var(--ink-2); }
+.frontpage .col{ flex:1 1 0; }
+.frontpage .col + .col{ border-left:1px solid rgba(90,78,60,.32); padding-left:19px; }
+.tissue{ position:absolute; left:236px; top:-18px; width:462px; height:548px; z-index:3; }
+
+/* 12 fax */
+.fax{ width:466px; max-width:100%; padding:0 0 26px; }
+.fax .hdr{
+  font-family:var(--mono); font-size:11.5px; letter-spacing:-.01em; color:#332E25;
+  border-bottom:1px solid rgba(58,52,42,.5); padding:9px 16px; white-space:nowrap; overflow:hidden;
+}
+.fax .inner{ padding:20px 26px 0; }
+.fax h4{ font-family:var(--mono); font-size:14px; letter-spacing:.08em; color:var(--ink); margin-bottom:12px; }
+.fax .glitch{ transform:translateX(9px); }
+.fax .fadeout{ position:relative; color:var(--ink-2); }
+.fax .thermal{ position:absolute; left:0; right:0; bottom:0; height:66px; z-index:5;
+  background:linear-gradient(180deg, rgba(244,236,214,0), rgba(244,236,214,.55)); }
+
+/* 13 exhibit tag */
+.tagrow{ display:flex; gap:46px; align-items:flex-start; }
+.tag{
+  width:276px; padding:20px 20px 16px;
+  clip-path:polygon(30px 0, 100% 0, 100% 100%, 0 100%, 0 30px);
+  filter:drop-shadow(7px 11px 13px rgba(0,0,0,.55));
+  transform:rotate(-5deg);
+}
+.tag h4{ font-family:var(--sans); font-size:20px; letter-spacing:.12em; color:var(--red); margin-bottom:10px; }
+.tag .tw{ font-size:12.5px; line-height:1.8; }
+.tag .hole{ left:14px; top:38px; }
+
+/* 14 custody */
+.custody{ width:660px; max-width:100%; padding:24px 28px 26px; }
+.custody table{ border-collapse:collapse; width:100%; }
+.custody caption{ text-align:left; font-family:var(--mono); font-size:12px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-3); padding-bottom:10px; }
+.custody th{ font-family:var(--mono); font-size:11.5px; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--ink-2); text-align:left; border-bottom:1.5px solid rgba(36,31,23,.6); padding:0 8px 6px 0; }
+.custody td{ font-size:13.5px; color:var(--ink-2); border-bottom:1px solid rgba(90,78,60,.35);
+  padding:8px 8px 8px 0; vertical-align:top; }
+.custody td.sig{ font-family:var(--serif); font-style:italic; font-size:16px; color:var(--blue); }
+
+/* 15 folded memo */
+.memo{ width:568px; max-width:100%; padding:30px 34px; }
+.memo h4{ font-family:var(--mono); font-size:13px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink); margin-bottom:14px; }
+.memo dl{ margin:0 0 16px; font-family:var(--mono); font-size:12.5px; line-height:1.9; color:var(--ink-2); }
+.memo dt{ display:inline-block; width:74px; color:var(--ink-3); letter-spacing:.1em; }
+.memo dd{ display:inline; margin:0; }
+.memo dd::after{ content:""; display:block; }
+
+/* 16 folder */
+.folder-stage{ position:relative; height:330px; }
+.folder{
+  position:absolute; left:0; top:52px; width:768px; height:262px; padding:76px 34px 0;
+  clip-path:polygon(0 24px, 300px 24px, 322px 0, 520px 0, 520px 24px, 100% 24px, 100% 100%, 0 100%);
+  filter:drop-shadow(9px 13px 16px rgba(0,0,0,.5));
+}
+.folder .tabtext{ position:absolute; left:334px; top:2px; font-family:var(--mono); font-size:12px;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--ink-2); }
+.folder .fname{ font-size:23px; color:var(--ink); }
+.folder .fmeta{ font-family:var(--mono); font-size:12.5px; color:var(--ink-3); letter-spacing:.08em; margin-top:8px; }
+.peek{ position:absolute; left:396px; top:0; width:300px; height:170px; padding:14px 16px; transform:rotate(2.4deg); z-index:-1; }
+.peek h4{ font-size:16px; line-height:1.15; color:var(--ink); }
+.peek p{ font-size:12.5px; line-height:1.5; color:var(--ink-2); margin:6px 0 0; }
+
+/* 17 mourning border */
+.memoriam{ width:520px; max-width:100%; padding:12px; }
+.memoriam .inner{ border:9px solid #1A1610; padding:26px 28px 30px; text-align:center; }
+.memoriam .inner .in2{ border:1px solid rgba(26,22,16,.5); padding:24px 20px; }
+.memoriam h3{ font-size:27px; line-height:1.18; color:var(--ink); margin-bottom:10px; }
+.memoriam .yrs{ font-family:var(--mono); font-size:12.5px; letter-spacing:.28em; color:var(--ink-3); margin-bottom:16px; }
+.memoriam p{ font-size:14.5px; line-height:1.6; color:var(--ink-2); }
+
+/* 18 paste-up */
+.galley{ width:616px; max-width:100%; padding:28px 32px 34px; }
+.galley .old{ color:var(--ink-3); }
+.patch{
+  position:absolute; left:44px; top:186px; width:452px; padding:11px 14px;
+  transform:rotate(1.4deg); z-index:4; filter:drop-shadow(3px 5px 7px rgba(0,0,0,.42));
+}
+.patch p{ margin:0; font-size:15px; line-height:1.5; color:var(--ink); }
+.patch .mk{ font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; color:var(--red); display:block; margin-bottom:4px; }
+
+/* 19 spiked */
+.spike-stage{ position:relative; height:452px; }
+.spiked{ position:absolute; left:60px; top:34px; width:512px; padding:44px 34px 30px; transform:rotate(-2.6deg); }
+.spiked h3{ font-size:26px; line-height:1.14; color:var(--ink); margin-bottom:8px; }
+.spindle{ position:absolute; left:268px; top:-16px; z-index:6; }
+.spiked .stamp{ position:absolute; right:26px; bottom:26px; transform:rotate(-11deg); font-size:22px; letter-spacing:.2em; }
+
+/* 20 see also */
+.seealso{ width:560px; max-width:100%; padding:24px 28px 26px; }
+.seealso h4{ font-family:var(--mono); font-size:12.5px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--red); margin-bottom:12px; }
+.seealso ul{ margin:0; padding:0; list-style:none; }
+.seealso li{ font-family:var(--mono); font-size:13px; line-height:2.05; color:var(--ink-2);
+  border-bottom:1px dotted rgba(90,78,60,.45); }
+.seealso li a{ color:var(--ink); text-decoration:none; border-bottom:1px solid rgba(140,47,34,.4); }
+.seealso li a:hover{ color:var(--red); }
+.seealso .idx{ color:var(--ink-3); margin-right:10px; }
+
+footer.colophon{
+  margin-top:110px; padding-top:26px; border-top:1px solid var(--rule);
+  font-family:var(--mono); font-size:12.5px; line-height:1.85; color:var(--label-2); max-width:78ch;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition:none !important; animation:none !important; }
+}
+@media (max-width:900px){
+  .wrap{ padding:0 20px 100px; }
+  .fc{ flex-direction:column; gap:34px; }
+  .fc .bridge{ display:none; }
+  .masthead{ flex-direction:column; }
+  .body.two{ column-count:1; }
+}
+</style>
+</head>
+<body>
+
+<!-- rubber-stamp roughening; inline SVG only, no external assets -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <filter id="roughStamp" x="-15%" y="-15%" width="130%" height="130%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="wrap">
+
+  <div class="topline">
+    <span><strong>Ledger-Chronicle</strong> · morgue file</span>
+    <span>Folder 3 of 11 · Cedar Reservoir (Halloway)</span>
+    <span>1971 – 2026</span>
+    <span>Twenty surfaces, one story</span>
+  </div>
+
+  <nav class="finding" aria-label="Finding aid">
+    <h2>Finding aid</h2>
+    <ol>
+      <li><a href="#s01"><span class="n">01</span>Accession header</a></li>
+      <li><a href="#s02"><span class="n">02</span>Taped clipping, torn</a></li>
+      <li><a href="#s03"><span class="n">03</span>Timeline of cuttings</a></li>
+      <li><a href="#s04"><span class="n">04</span>Redacted FOI release</a></li>
+      <li><a href="#s05"><span class="n">05</span>Photocopy of a photocopy</a></li>
+      <li><a href="#s06"><span class="n">06</span>Card catalogue</a></li>
+      <li><a href="#s07"><span class="n">07</span>Reader-printer copy</a></li>
+      <li><a href="#s08"><span class="n">08</span>Claim beside correction</a></li>
+      <li><a href="#s09"><span class="n">09</span>Marginalia, three hands</a></li>
+      <li><a href="#s10"><span class="n">10</span>Carbon flimsy</a></li>
+      <li><a href="#s11"><span class="n">11</span>Tissue over a front page</a></li>
+      <li><a href="#s12"><span class="n">12</span>Fax, page 3 of 7</a></li>
+      <li><a href="#s13"><span class="n">13</span>Exhibit tag</a></li>
+      <li><a href="#s14"><span class="n">14</span>Chain of custody</a></li>
+      <li><a href="#s15"><span class="n">15</span>Folded and refolded</a></li>
+      <li><a href="#s16"><span class="n">16</span>Morgue folder</a></li>
+      <li><a href="#s17"><span class="n">17</span>Fifty years on</a></li>
+      <li><a href="#s18"><span class="n">18</span>Pasted-up correction</a></li>
+      <li><a href="#s19"><span class="n">19</span>Spiked</a></li>
+      <li><a href="#s20"><span class="n">20</span>See also</a></li>
+    </ol>
+  </nav>
+
+  <!-- ══ 01 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s01">
+    <header class="sec-head">
+      <span class="num">01</span>
+      <h2>Accession header</h2>
+    </header>
+    <p class="sec-sub">The masthead as an intake sheet: stamped, dated, filed</p>
+
+    <div class="stage">
+      <div class="sheet masthead"
+           data-paper="worn"
+           data-paper-light="pointer"
+           data-paper-dpi="76"
+           data-paper-seed="101"
+           data-paper-params='{"tone":{"paper":[0.93,0.865,0.715],"duotone":0.62},
+             "fade":{"amount":0.95,"scale_mm":70},
+             "edge":{"deckle_px":9,"wobble_px":9},
+             "imperfect":{"enabled":true,"pit_density":0.05,"mark_density":0.03},
+             "folds":{"enabled":true,"count":2,"depth":0.28,"sharpness":0.45},
+             "light":{"relief_exaggerate":7,"spec_intensity":0.3,"spec_power":52},
+             "shadow":{"offset_px":14,"blur_px":26,"darkness":0.78}}'>
+        <div>
+          <p class="kicker">Accession 1971.048 · Ledger-Chronicle morgue</p>
+          <h1>The Clippings<br>Archive</h1>
+          <p class="sub">Everything the paper kept about Cedar Reservoir, in the order it
+            came in: cuttings, carbons, a spiked page, one fax and a great deal of tape.</p>
+        </div>
+        <div class="accession">Accession<br>1971.048<br>Received 14 Mar 1974<br>Folder 3 of 11</div>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> <code>preset:'worn'</code> retinted to
+      <code>tone.paper [0.93,0.865,0.715]</code> with <code>fade.amount 0.95</code> so the
+      yellowing is blotchy rather than uniform. <code>dpi:76</code> coarsens the cockle for a
+      big sheet, <code>edge.deckle_px 9</code> frays the cut, and
+      <code>light:'pointer'</code> rakes the relief as you move over it.</p>
+  </section>
+
+  <!-- ══ 02 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s02">
+    <header class="sec-head">
+      <span class="num">02</span>
+      <h2>Taped clipping, torn through a word</h2>
+    </header>
+    <p class="sec-sub">The cutting that started the file. Held down, bottom missing</p>
+
+    <div class="stage">
+      <div class="tape" style="left:34px;top:-6px;transform:rotate(-7deg)"></div>
+      <div class="tape short" style="left:610px;top:2px;transform:rotate(6deg)"></div>
+      <article class="sheet clip-lead"
+           data-paper="worn"
+           data-paper-seed="102"
+           data-paper-dpi="88"
+           data-paper-params='{"tone":{"paper":[0.905,0.825,0.645],"duotone":0.6},
+             "fade":{"amount":0.9,"scale_mm":48},
+             "edge":{"deckle_px":14,"wobble_px":11},
+             "scratches":{"enabled":true,"density":0.06,"lightness":0.18},
+             "imperfect":{"enabled":true,"pit_density":0.06,"mark_density":0.035},
+             "crumple":{"enabled":true,"scale_mm":15,"amplitude_um":22,"crease":0.18},
+             "folds":{"enabled":true,"count":2,"depth":0.3,"sharpness":0.5},
+             "light":{"relief_exaggerate":8,"spec_intensity":0.32,"spec_power":48}}'>
+        <p class="kicker">The Ledger-Chronicle · Tuesday 12 March 1974 · Page one</p>
+        <h3>Cedar Reservoir Closed<br>After Fish Kill</h3>
+        <p class="byline">By Marta Quill · Staff reporter</p>
+        <div class="ruledouble"></div>
+        <div class="body two">
+          <p>The city closed Cedar Reservoir to all use on Monday after crews recovered
+            an estimated four thousand dead fish along the western shore, most of them
+            within a half mile of the Halloway Chemical Works outfall.</p>
+          <p>Works manager R. Pettibone said the plant had "discharged nothing out of
+            the ordinary" and attributed the kill to warm weather and low water.</p>
+          <p>The city engineer's office confirmed it had taken samples on Sunday
+            evening but declined to say what was being tested for, or when results
+            would be published.</p>
+          <p>Residents of the Cedar Flats district said the smell had been noticeable
+            for a fortnight. "You could taste it off the tap," said one, who asked not
+            to be named because her husband works at the plant. She said the water had
+            run yellow twice since Christm</p>
+        </div>
+        <div class="tear"></div>
+      </article>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> <code>worn</code> at
+      <code>edge.deckle_px 14 / wobble_px 11</code> for a hand-torn silhouette, plus a light
+      <code>crumple</code> (<code>amplitude_um 22</code>) for handling. The bottom tear is a
+      CSS <code>clip-path</code> in the ground colour laid over the last line, so the tear
+      genuinely runs through a word. Tape is CSS gradient + <code>clip-path</code>.</p>
+  </section>
+
+  <!-- ══ 03 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s03">
+    <header class="sec-head">
+      <span class="num">03</span>
+      <h2>Timeline of cuttings</h2>
+    </header>
+    <p class="sec-sub">Three stubs on one rail; the paper yellows as the date recedes</p>
+
+    <div class="stage rail">
+      <div class="line"></div>
+      <div class="row">
+        <div class="sheet stub" style="transform:rotate(-1.8deg)"
+             data-paper="worn" data-paper-seed="110" data-paper-dpi="130"
+             data-paper-params='{"tone":{"paper":[0.895,0.805,0.615]},
+               "fade":{"amount":0.85,"scale_mm":40},"edge":{"deckle_px":10,"wobble_px":8},
+               "light":{"spec_intensity":0.32},"folds":{"depth":0.3},
+               "imperfect":{"enabled":true,"pit_density":0.07,"mark_density":0.04}}'>
+          <div class="pin" style="left:50%;top:-7px;margin-left:-7px"></div>
+          <p class="d">12 Mar 1974</p>
+          <h4>Reservoir closed after fish kill</h4>
+          <p>Four thousand fish. The plant blames the weather. Samples taken, results
+            not published.</p>
+        </div>
+
+        <div class="sheet stub" style="transform:rotate(1.3deg);margin-top:24px"
+             data-paper="worn" data-paper-seed="111" data-paper-dpi="130"
+             data-paper-params='{"tone":{"paper":[0.935,0.87,0.705]},
+               "fade":{"amount":0.8,"scale_mm":45},"edge":{"deckle_px":8,"wobble_px":7},
+               "light":{"spec_intensity":0.32},"folds":{"depth":0.3},
+               "imperfect":{"enabled":true,"pit_density":0.04,"mark_density":0.025}}'>
+          <div class="pin" style="left:50%;top:-7px;margin-left:-7px"></div>
+          <p class="d">4 Sept 1989</p>
+          <h4>"Nothing was ever discharged"</h4>
+          <p>Halloway's new owners tell council the 1974 outfall was storm water only.
+            Council accepts the assurance.</p>
+        </div>
+
+        <div class="sheet stub" style="transform:rotate(-.9deg);margin-top:8px"
+             data-paper="textured" data-paper-seed="112" data-paper-dpi="130"
+             data-paper-params='{"tone":{"paper":[0.965,0.925,0.83]},
+               "fade":{"amount":0.6},"edge":{"deckle_px":6,"wobble_px":6}}'>
+          <div class="pin" style="left:50%;top:-7px;margin-left:-7px"></div>
+          <p class="d">8 Nov 2004</p>
+          <h4>Records released after 31 years</h4>
+          <p>The 1971 discharge permits arrive in part. Two paragraphs of the covering
+            memo are withheld.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> one preset, three tints:
+      <code>tone.paper</code> steps <code>[0.895,0.805,0.615] → [0.935,0.87,0.705] →
+      [0.965,0.925,0.83]</code> and <code>fade.amount</code> steps 0.85 → 0.8 → 0.6, so age
+      reads as a gradient across the rail. <code>dpi:130</code> keeps the grain fine at stub
+      size; each stub has its own <code>seed</code>, so no two sheets repeat.</p>
+  </section>
+
+  <!-- ══ 04 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s04">
+    <header class="sec-head">
+      <span class="num">04</span>
+      <h2>Released in part</h2>
+    </header>
+    <p class="sec-sub">A freedom-of-information response, with the bars drawn in CSS</p>
+
+    <div class="stage">
+      <article class="sheet foi"
+           data-paper="reading" data-paper-light="pointer" data-paper-seed="120" data-paper-dpi="110"
+           data-paper-params='{"tone":{"paper":[0.955,0.935,0.885],"duotone":0.45},
+             "fade":{"amount":0.55,"scale_mm":75},
+             "imperfect":{"enabled":true,"pit_density":0.02,"mark_density":0.02},
+             "edge":{"wobble_px":4},"mould":{"enabled":true,"laid_pitch_mm":0.55,
+             "chain_pitch_mm":0.55,"chain_ratio":0.5,"amount":0.016}}'>
+        <div class="letterhead">
+          <div>
+            <p class="kicker">Office of the Provincial Registrar · Records Branch</p>
+            <h3>Access to Information Act, Release Package 2004-0331</h3>
+          </div>
+          <div class="stamp" style="transform:rotate(-8deg);flex:none">Released<br>in part</div>
+        </div>
+        <div class="ruledouble"></div>
+        <div class="tw">
+          <p><span class="exempt">s.19(1)</span>
+            1. Further to your request of 14 June 2004 for all correspondence between
+            this office and Halloway Chemical Works concerning discharge permit
+            <span class="redact" style="--w:5.4em" role="img" aria-label="withheld"></span>
+            for the period 1969 to 1975, please find enclosed 41 pages, of which 9 are
+            released in part.</p>
+          <p><span class="exempt">s.21(1)(a)</span>
+            2. Records were withheld where they would reveal advice developed for
+            <span class="redact b" style="--w:9.2em" role="img" aria-label="withheld"></span>
+            or where disclosure would constitute an unreasonable invasion of the
+            personal privacy of <span class="redact" style="--w:6.6em" role="img" aria-label="withheld"></span>.</p>
+          <p>3. Page 17 of the enclosed refers to a sampling run carried out on
+            <span class="redact b" style="--w:4.2em" role="img" aria-label="withheld"></span>
+            at the western outfall. The analytical results for that run are held by
+            <span class="redact" style="--w:7.8em" role="img" aria-label="withheld"></span>
+            and are not in the custody of this office.</p>
+          <p>4. You may ask the Commissioner to review this decision within 60 days.</p>
+        </div>
+        <div class="rulehair"></div>
+        <p class="tw" style="margin:0">A. Ferreira, Coordinator · 8 November 2004 · Pages 1–41, 9 severed</p>
+      </article>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> <code>reading</code> on near-white bond
+      <code>[0.955,0.935,0.885]</code> with the <code>mould</code> layer in its wove setting
+      (both pitches <code>0.55mm</code>, <code>chain_ratio 0.5</code>) for real two-direction
+      sheet structure. <code>light:'pointer'</code>. The redaction bars are empty
+      <code>&lt;span role="img" aria-label="withheld"&gt;</code> elements with a clipped black
+      background. There is no secret text under them for a screen reader to find.</p>
+  </section>
+
+  <!-- ══ 05 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s05">
+    <header class="sec-head">
+      <span class="num">05</span>
+      <h2>Photocopy of a photocopy</h2>
+    </header>
+    <p class="sec-sub">Fourth generation: crushed midtones, black lid gap, fed in crooked</p>
+
+    <div class="stage">
+      <article class="sheet xerox"
+           data-paper="textured" data-paper-seed="130" data-paper-dpi="120"
+           data-paper-params='{"tone":{"paper":[0.925,0.925,0.9],"duotone":0.3},
+             "formation":{"source":1,"amplitude":0.045,"scale_mm":1.5,"gsm_amount":0.85},
+             "fade":{"amount":0.6,"scale_mm":44},
+             "scratches":{"enabled":true,"density":0.09,"lightness":0.16,"scale_mm":5},
+             "imperfect":{"enabled":true,"pit_density":0.09,"mark_density":0.025,"mark_strength":0.12},
+             "light":{"spec_intensity":0.25,"relief_exaggerate":5},
+             "edge":{"wobble_px":3,"deckle_px":0},"cockle":{"amplitude_um":12}}'>
+        <div class="skewed">
+          <p class="kicker">Gen. 4 copy · from the file of M. Quill · not for publication</p>
+          <h3>Internal note: outfall sampling, 9 March 1974</h3>
+          <div class="rulehair"></div>
+          <div class="body" style="max-width:52ch">
+            <p>Two runs taken at the western outfall, 0600 and 1900. Second run reads
+              high across the board. Recommend we do not release until the lab has
+              repeated it, and until the works has had an opportunity to comment.</p>
+            <p>Copy to the manager's office only. Do not circulate to council.</p>
+          </div>
+          <p class="tw" style="margin-top:14px">Initialled J.W.H., illegible date</p>
+        </div>
+        <div class="lidgap"></div>
+        <div class="lidgap bottom"></div>
+      </article>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> the copier look is
+      <code>formation.source:1</code> (Gabor, band-limited and toothy) pushed to
+      <code>amplitude 0.045</code> at <code>scale_mm 1.5</code>, plus heavy
+      <code>scratches</code> and <code>imperfect</code> for toner speckle, on a cool near-grey
+      <code>tone.paper [0.925,0.925,0.9]</code> with <code>duotone 0.3</code>.
+      <code>cockle.amplitude_um 12</code> keeps the sheet flat like a copier feed. The black
+      lid gap and the <code>skewY(-0.55deg)</code> misfeed are pure CSS.</p>
+  </section>
+
+  <!-- ══ 06 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s06">
+    <header class="sec-head">
+      <span class="num">06</span>
+      <h2>From the card catalogue</h2>
+    </header>
+    <p class="sec-sub">Two ruled index cards, punched for the rod</p>
+
+    <div class="stage cards" style="height:300px">
+      <div class="sheet icard" style="left:290px;top:0;transform:rotate(3.2deg)"
+           data-paper="paper" data-paper-seed="140" data-paper-dpi="175"
+           data-paper-params='{"tone":{"paper":[0.955,0.915,0.815]},
+             "fade":{"amount":0.7,"scale_mm":30},"edge":{"radius_px":4,"wobble_px":3},
+             "shadow":{"offset_px":6,"blur_px":11,"darkness":0.6}}'>
+        <div class="top"><h4>Cedar Reservoir, water quality</h4></div>
+        <p class="tw">See <span class="call">HAL 4.2</span> · <span class="call">WAT 11</span><br>
+          Cuttings 1971–1979 in folder 3.</p>
+        <div class="hole" style="left:50%;bottom:12px;margin-left:-8px"></div>
+      </div>
+
+      <div class="sheet icard" style="left:0;top:58px"
+           data-paper="paper" data-paper-seed="141" data-paper-dpi="175"
+           data-paper-params='{"tone":{"paper":[0.972,0.945,0.865]},
+             "fade":{"amount":0.6,"scale_mm":30},"edge":{"radius_px":4,"wobble_px":3},
+             "shadow":{"offset_px":6,"blur_px":11,"darkness":0.6}}'>
+        <div class="top"><h4>Halloway Chemical Works</h4></div>
+        <p class="tw">Founded 1948. Sold 1986 to Meridian Holdings.<br>
+          <em>See also</em> <span class="call">CED 3.1</span> Cedar Reservoir;
+          <span class="call">PET 2</span> Pettibone, R.<br>
+          Cross-filed by reporter: Quill, M.</p>
+        <div class="hole" style="left:50%;bottom:12px;margin-left:-8px"></div>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> small cards want fine grain, so
+      <code>dpi:175</code>, the same relief at a quarter the physical scale.
+      <code>edge.radius_px 4</code> makes the sheet silhouette follow the card's rounded
+      corner instead of cutting across it, and the cast shadow is pulled in
+      (<code>offset_px 6, blur_px 11</code>) so the cards sit close to the table. Ruling and
+      the punched hole are CSS.</p>
+  </section>
+
+  <!-- ══ 07 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s07">
+    <header class="sec-head">
+      <span class="num">07</span>
+      <h2>Reader-printer copy</h2>
+    </header>
+    <p class="sec-sub">Microfilm printed back to paper, negative and all</p>
+
+    <div class="stage">
+      <div class="sheet film"
+           data-paper="paper" data-paper-seed="150" data-paper-dpi="105"
+           data-paper-params='{"tone":{"paper":[0.945,0.925,0.855],"duotone":0.4},
+             "fade":{"amount":0.7},"edge":{"wobble_px":4},
+             "imperfect":{"enabled":true,"pit_density":0.03,"mark_density":0.02}}'>
+        <div class="sprockets" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="frames">
+          <div class="frame">
+            <p class="m">Reel 12 · frame 0187 · 12 Mar 1974</p>
+            <h4>Cedar Reservoir Closed After Fish Kill</h4>
+            <p>The city closed Cedar Reservoir to all use on Monday after crews
+              recovered an estimated four thousand dead fish along the western shore,
+              most of them within a half mile of the Halloway outfall.</p>
+          </div>
+          <div class="frame small">
+            <p class="m">Frame 0188</p>
+            <h4 style="font-size:15px">Weather</h4>
+            <p>Cloud, then clearing. High 11. Winds light. Lake temperature 9 degrees,
+              two above normal for March.</p>
+          </div>
+        </div>
+        <div class="sprockets" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> one plain <code>paper</code> surface doing the work of
+      a machine: the carrier is real paper, the reversed frames are CSS panels on top of it
+      and the sprocket holes are <code>.hole</code> divs painted in the page's ground colour,
+      which reads as a punch because the sheet is genuinely behind them.
+      <code>tone.duotone 0.4</code> keeps the stock neutral so the negative panels stay the
+      darkest thing on the sheet.</p>
+  </section>
+
+  <!-- ══ 08 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s08">
+    <header class="sec-head">
+      <span class="num">08</span>
+      <h2>The claim, taped beside the record</h2>
+    </header>
+    <p class="sec-sub">A fact-check built out of two pieces of paper and one strip of tape</p>
+
+    <div class="stage fc">
+      <div class="sheet side claim"
+           data-paper="worn" data-paper-seed="160" data-paper-dpi="115"
+           data-paper-params='{"tone":{"paper":[0.925,0.855,0.685]},
+             "fade":{"amount":0.88,"scale_mm":44},"edge":{"deckle_px":11,"wobble_px":9},
+             "imperfect":{"enabled":true,"pit_density":0.05,"mark_density":0.03}}'>
+        <h4>The claim · 4 September 1989</h4>
+        <blockquote>“<mark class="hl">Nothing was ever discharged from that outfall
+          except storm water.</mark> There is no record of anything else, because there
+          was nothing else.”</blockquote>
+        <p class="tw" style="margin:0">Minuted: D. Meridian, to the works and utilities committee,
+          minuted at 7:42 p.m.</p>
+      </div>
+
+      <div class="sheet side record"
+           data-paper="reading" data-paper-seed="161" data-paper-dpi="115"
+           data-paper-params='{"tone":{"paper":[0.972,0.955,0.905],"duotone":0.4},
+             "fade":{"amount":0.5},"edge":{"wobble_px":4}}'>
+        <h4>The record · released 2004</h4>
+        <blockquote>Discharge permit 1971-C-4 authorised process effluent at the western
+          outfall from 1 May 1971. It was renewed twice and cancelled in 1978.</blockquote>
+        <p class="verdict">Verdict: the claim is false. The permit is in the release
+          package at pages 4, 9 and 31.</p>
+      </div>
+
+      <div class="tape bridge"></div>
+      <div class="tape bridge2"></div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> the whole argument is carried by the stock. Aged
+      <code>worn</code> at <code>[0.925,0.855,0.685]</code> with a torn
+      <code>deckle_px 11</code> edge for the claim; clean <code>reading</code> at
+      <code>[0.972,0.955,0.905]</code> with a straight <code>wobble_px 4</code> edge for the
+      record. The highlighter is a CSS gradient with <code>mix-blend-mode:multiply</code>,
+      which blends against paperweb's own canvas because the host is an isolated stacking
+      context.</p>
+  </section>
+
+  <!-- ══ 09 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s09">
+    <header class="sec-head">
+      <span class="num">09</span>
+      <h2>Marginalia, three hands</h2>
+    </header>
+    <p class="sec-sub">Pencil, ballpoint, editor's red, plus the rust the paperclip left</p>
+
+    <div class="stage">
+      <article class="sheet column"
+           data-paper="reading" data-paper-light="pointer" data-paper-seed="170" data-paper-dpi="100"
+           data-paper-params='{"tone":{"paper":[0.945,0.885,0.755]},
+             "fade":{"amount":0.85,"scale_mm":52},
+             "scratches":{"enabled":true,"density":0.035,"lightness":0.14},
+             "imperfect":{"enabled":true,"pit_density":0.045,"mark_density":0.03},
+             "edge":{"wobble_px":6,"deckle_px":5}}'>
+        <svg class="rust" viewBox="0 0 60 92" width="46" height="70" style="left:16px;top:12px" aria-hidden="true">
+          <path d="M30 84 V26 a16 16 0 0 1 32 0 V72" fill="none" stroke="#96562A" stroke-width="4"
+                transform="translate(-14,0)"/>
+          <path d="M18 72 V26 a12 12 0 0 1 24 0 V80" fill="none" stroke="#96562A" stroke-width="4"/>
+        </svg>
+
+        <p class="kicker">Reading file · annotated copy · do not re-file</p>
+        <h3>What the paper knew, and when it knew it</h3>
+        <p class="byline">Retrospective · 12 March 2026</p>
+        <div class="body">
+          <p>For thirty-one years the Ledger-Chronicle reported that the cause of the
+            1974 fish kill was never established. That sentence appeared in eleven
+            separate stories, the last of them in 2003.</p>
+          <p><mark class="hl">It was established. It was established on 9 March 1974, in
+            an internal note that this newspaper had in its possession by the following
+            week.</mark> The note recommended that the results not be released until the
+            works had been given an opportunity to comment. No such comment was ever
+            printed, and neither were the results.</p>
+          <p>What we have been able to reconstruct is not a conspiracy so much as a
+            filing decision: the note went into folder 3, folder 3 went into the
+            morgue, and the story went on being written from cuttings.</p>
+        </div>
+
+        <p class="margin-note mn" style="right:12px;top:118px;transform:rotate(-3deg)">
+          check this against the 1989 minutes. MQ</p>
+        <p class="margin-note blue mn" style="right:12px;top:212px;transform:rotate(2deg)">
+          who had it? get the sign-out card</p>
+        <p class="margin-note red mn" style="right:12px;top:298px;transform:rotate(-1.5deg)">
+          say WE. not “this newspaper”.</p>
+      </article>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> <code>reading</code> warmed to
+      <code>[0.945,0.885,0.755]</code> with <code>fade.amount 0.85</code>, light
+      <code>scratches</code> (they read as fibre lift, not dirt) and
+      <code>imperfect</code> for foxing. <code>light:'pointer'</code> is the point of this
+      one: move over the column and the raking light finds the handling marks. The paperclip
+      rust is an inline SVG stroke in <code>#96562A</code> at 55% with a 0.5px blur.</p>
+  </section>
+
+  <!-- ══ 10 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s10">
+    <header class="sec-head">
+      <span class="num">10</span>
+      <h2>Carbon flimsy</h2>
+    </header>
+    <p class="sec-sub">File copy three: thin, blue-grey, slightly out of register</p>
+
+    <div class="stage">
+      <div class="sheet flimsy"
+           data-paper="subtle" data-paper-seed="180" data-paper-dpi="150"
+           data-paper-params='{"tone":{"paper":[0.885,0.895,0.865],"opacity":0.88,"duotone":0.35},
+             "cockle":{"amplitude_um":30,"wavelength_mm":18,"anisotropy":1.4},
+             "formation":{"amplitude":0.012,"scale_mm":1.6},
+             "fade":{"amount":0.75,"scale_mm":40},
+             "edge":{"wobble_px":7,"curl":0.3},
+             "shadow":{"offset_px":5,"blur_px":10,"darkness":0.45}}'>
+        <h4>Carbon, file copy 3 of 3</h4>
+        <div class="tw">
+          <p>TO&nbsp;&nbsp;&nbsp;&nbsp;: CITY ENGINEER<br>
+             FROM&nbsp;&nbsp;: LABORATORY, WESTERN DISTRICT<br>
+             DATE&nbsp;&nbsp;: 11 MARCH 1974<br>
+             RE&nbsp;&nbsp;&nbsp;&nbsp;: OUTFALL SAMPLING, RUNS 1 AND 2</p>
+          <div class="rulehair"></div>
+          <p>RUN 2 CONFIRMED ON REPEAT. THE SECOND ANALYST OBTAINED THE SAME VALUES
+             WITHIN FIVE PER CENT. WE DO NOT CONSIDER THE RESULT TO BE AN ARTEFACT OF
+             THE SAMPLING.</p>
+          <p>NO FURTHER RUNS ARE SCHEDULED UNLESS REQUESTED IN WRITING.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> flimsy is thin, so
+      <code>tone.opacity 0.88</code> lets the dark ground come through and the cast shadow is
+      weakened to <code>darkness 0.45</code>: a thin sheet does not sit as heavily.
+      <code>cockle.wavelength_mm 18</code> with low <code>anisotropy</code> buckles it in
+      tighter waves than a stiff sheet would, and <code>edge.curl 0.3</code> lifts the
+      corners. The carbon's out-of-register double-strike is a CSS
+      <code>text-shadow</code>.</p>
+  </section>
+
+  <!-- ══ 11 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s11">
+    <header class="sec-head">
+      <span class="num">11</span>
+      <h2>Tissue over a front page</h2>
+    </header>
+    <p class="sec-sub">The interleaving sheet the bound volume kept between pages</p>
+
+    <div class="stage fp-stage">
+      <div class="sheet frontpage"
+           data-paper="worn" data-paper-content="rasterize" data-paper-seed="190" data-paper-dpi="72"
+           data-paper-params='{"tone":{"paper":[0.9,0.815,0.625],"duotone":0.65},
+             "fade":{"amount":0.95,"scale_mm":85},
+             "edge":{"deckle_px":10,"wobble_px":10},
+             "ink":{"thickness":1.35,"granulation":0.85},
+             "imperfect":{"enabled":true,"pit_density":0.06,"mark_density":0.04},
+             "folds":{"enabled":true,"count":1,"depth":0.5,"sharpness":0.8}}'>
+        <div class="name">The Ledger-Chronicle</div>
+        <div class="dateline">Tuesday 12 March 1974 · City edition · Ten cents</div>
+        <div class="ruledouble"></div>
+        <h3>Cedar Reservoir Closed After Fish Kill</h3>
+        <p class="deck">Four thousand dead along the western shore. Works manager blames
+          the weather; city engineer will not say what the samples were tested for.</p>
+        <div class="cols">
+          <div class="col">
+            <p>The city closed Cedar Reservoir to all use on Monday after crews recovered
+              an estimated four thousand dead fish along the western shore, most of them
+              within a half mile of the Halloway Chemical Works outfall.</p>
+            <p>Works manager R. Pettibone said the plant had discharged nothing out of
+              the ordinary and attributed the kill to warm weather and low water in the
+              channel.</p>
+            <p>The city engineer's office confirmed it had taken samples on Sunday
+              evening but declined to say what was being tested for, or when the results
+              would be published.</p>
+          </div>
+          <div class="col">
+            <p>Residents of the Cedar Flats district said the smell had been noticeable
+              for a fortnight. One, who asked not to be named because her husband works
+              at the plant, said the water had run yellow twice since Christmas.</p>
+            <p>A spokesman for the province said the reservoir would remain closed until
+              the city was satisfied it was safe, and that no timetable had been set.</p>
+            <p>Council will meet in special session on Thursday. The works and utilities
+              committee has asked for a written report in time for the meeting.</p>
+          </div>
+          <div class="col">
+            <p>The reservoir has supplied the district since 1948. It was last tested in
+              full in 1969, according to the engineer's annual report, which does not
+              list the substances tested for.</p>
+            <p>Anglers have been asked to keep off the western shore. The medical officer
+              of health said there was no cause for alarm and that the closure was a
+              precaution.</p>
+            <p>Water is being trucked to the Cedar Flats standpipes twice daily. The city
+              said the arrangement would hold for as long as it is needed.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tissue"
+           data-paper="subtle" data-paper-seed="191" data-paper-dpi="160"
+           data-paper-params='{"tone":{"paper":[0.985,0.975,0.945],"opacity":0.26,"duotone":0.2},
+             "cockle":{"amplitude_um":34,"wavelength_mm":14,"anisotropy":1.2,"irregularity":1},
+             "formation":{"amplitude":0.008,"scale_mm":1.2},
+             "crumple":{"enabled":true,"scale_mm":8,"amplitude_um":26,"crease":0.15},
+             "fade":{"amount":0.4},
+             "edge":{"wobble_px":9,"deckle_px":6,"curl":0.25},
+             "light":{"spec_intensity":0.22},
+             "shadow":{"offset_px":4,"blur_px":16,"darkness":0.3}}'></div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> the showpiece.
+      <code>content:'rasterize'</code> bakes the front page optically <em>into</em> the sheet
+      through Kubelka-Munk, so the ink takes the paper's shading and its one hard
+      <code>fold</code>; <code>ink.thickness 1.35</code> and
+      <code>granulation 0.85</code> pool the ink in the relief valleys the way old newsprint
+      does. The interleaf on top is a second surface at
+      <code>tone.opacity 0.26</code> with a fine, tight <code>cockle</code> and a light
+      <code>crumple</code>. Rasterized text is baked, so it is not selectable, and that is the
+      trade, and the reason to use it once. One gotcha worth knowing: CSS multicol does
+      not fragment inside the <code>foreignObject</code> snapshot, so the three columns
+      here are explicit flex children.</p>
+  </section>
+
+  <!-- ══ 12 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s12">
+    <header class="sec-head">
+      <span class="num">12</span>
+      <h2>Fax, page 3 of 7</h2>
+    </header>
+    <p class="sec-sub">Thermal roll, header line intact, bottom already going</p>
+
+    <div class="stage">
+      <div class="sheet fax"
+           data-paper="paper" data-paper-seed="200" data-paper-dpi="140"
+           data-paper-params='{"tone":{"paper":[0.955,0.94,0.875],"duotone":0.35},
+             "cockle":{"amplitude_um":26,"wavelength_mm":20,"anisotropy":4,"md_angle_deg":90},
+             "formation":{"amplitude":0.01},
+             "fade":{"amount":0.9,"scale_mm":30},
+             "edge":{"wobble_px":6,"curl":0.4},
+             "shadow":{"offset_px":7,"blur_px":13,"darkness":0.55}}'>
+        <p class="hdr">12-NOV-2004 09:41 &nbsp;FROM 403-555-0118 &nbsp;P.03/07</p>
+        <div class="inner">
+          <h4>Re: your enquiry of 9 November</h4>
+          <p class="tw">We have no records predating the 1986 acquisition. Any material
+            relating to the period you describe would have remained with the previous
+            owner and we are not able to say where it is held.</p>
+          <p class="tw glitch">We would ask that future enquiries be directed to counsel.</p>
+          <p class="tw">Yours etc.</p>
+          <p class="tw fadeout">Signature illegible · Meridian Holdings, corporate secretary
+            · end of transmission · this page was retransmitted twice</p>
+        </div>
+        <div class="thermal"></div>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> thermal roll paper curls along one axis only, which is
+      exactly what <code>cockle.anisotropy 4</code> with
+      <code>md_angle_deg 90</code> does: the buckling stretches down the roll instead of
+      across it. <code>edge.curl 0.4</code> lifts the cut end. The thermal fade at the foot
+      is a CSS gradient in the paper's own colour, applied only to text that does not carry
+      the story.</p>
+  </section>
+
+  <!-- ══ 13 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s13">
+    <header class="sec-head">
+      <span class="num">13</span>
+      <h2>Exhibit tag</h2>
+    </header>
+    <p class="sec-sub">Cardstock, corner cut, hung on its own string</p>
+
+    <div class="stage tagrow">
+      <div style="position:relative;width:330px;height:200px">
+        <svg width="330" height="200" viewBox="0 0 330 200" aria-hidden="true"
+             style="position:absolute;left:0;top:0;z-index:5;pointer-events:none">
+          <path d="M8 6 C 46 30, 62 54, 46 84" fill="none" stroke="#CFC5AB" stroke-width="3"
+                stroke-linecap="round" opacity=".85"/>
+        </svg>
+        <div class="sheet tag" style="position:absolute;left:34px;top:26px"
+             data-paper="textured" data-paper-overhang="clip" data-paper-seed="210" data-paper-dpi="165"
+             data-paper-params='{"tone":{"paper":[0.93,0.87,0.735]},
+               "cockle":{"amplitude_um":10},
+               "formation":{"source":1,"amplitude":0.035},
+               "fade":{"amount":0.6},"edge":{"deckle_px":4,"wobble_px":3}}'>
+          <div class="hole"></div>
+          <h4>Exhibit 14-B</h4>
+          <p class="tw">Note, one page, initialled J.W.H.<br>
+            Recovered from folder 3, Ledger-Chronicle morgue.<br>
+            Marked and entered 4 Feb 2026.</p>
+        </div>
+      </div>
+
+      <div style="align-self:center;max-width:34ch">
+        <p class="cap" style="border:0;padding:0;margin:0">Tagged for the standards
+          review, 4 February 2026. The note itself is the fourth-generation copy at 05;
+          the original has not been located and is one of the two items recorded as
+          missing from folder 3.</p>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> <code>overhang:'clip'</code> because the CSS
+      <code>clip-path</code> would slice a grown cast shadow in half; depth comes from a CSS
+      <code>drop-shadow()</code> filter instead, which follows the clip path exactly.
+      <code>dpi:165</code> and <code>cockle.amplitude_um 10</code> make it read stiff, like
+      card rather than paper. <code>formation.source:1</code> gives the toothy board surface.</p>
+  </section>
+
+  <!-- ══ 14 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s14">
+    <header class="sec-head">
+      <span class="num">14</span>
+      <h2>Chain of custody</h2>
+    </header>
+    <p class="sec-sub">The pink copy: who had folder 3, and when</p>
+
+    <div class="stage">
+      <div class="sheet custody"
+           data-paper="paper" data-paper-seed="220" data-paper-dpi="125"
+           data-paper-params='{"tone":{"paper":[0.955,0.885,0.865],"duotone":0.5},
+             "fade":{"amount":0.7,"scale_mm":50},
+             "formation":{"amplitude":0.016},
+             "edge":{"wobble_px":5},
+             "imperfect":{"enabled":true,"pit_density":0.025,"mark_density":0.02}}'>
+        <table>
+          <caption>Records Branch form R-9 · custody record · pink copy retained by branch</caption>
+          <thead>
+            <tr><th scope="col">Date</th><th scope="col">Released to</th>
+                <th scope="col">Purpose</th><th scope="col">Signature</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>19 Mar 1974</td><td>M. Quill, Ledger-Chronicle</td>
+                <td>Research, reservoir closure</td><td class="sig">M Quill</td></tr>
+            <tr><td>02 Apr 1974</td><td>Newsroom library</td>
+                <td>Re-filing</td><td class="sig">initialled</td></tr>
+            <tr><td>04 Sept 1989</td><td>City desk</td>
+                <td>Committee coverage</td><td class="sig">D. R.</td></tr>
+            <tr><td>08 Nov 2004</td><td>D. Okonjo</td>
+                <td>FOI comparison</td><td class="sig">D Okonjo</td></tr>
+            <tr><td>04 Feb 2026</td><td>Standards editor</td>
+                <td>Correction review</td><td class="sig">unsigned</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> a real <code>&lt;table&gt;</code> with
+      <code>&lt;caption&gt;</code> and <code>scope</code>, sitting on a pink duplicate-book
+      stock: <code>tone.paper [0.955,0.885,0.865]</code> at
+      <code>duotone 0.5</code>. Low <code>formation.amplitude 0.016</code> keeps the grain
+      out of the rules so the table stays scannable: texture and tabular data fight, and the
+      data has to win.</p>
+  </section>
+
+  <!-- ══ 15 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s15">
+    <header class="sec-head">
+      <span class="num">15</span>
+      <h2>Folded and refolded</h2>
+    </header>
+    <p class="sec-sub">Carried in a pocket for a week. Move the pointer across it</p>
+
+    <div class="stage">
+      <div class="sheet memo"
+           data-paper="worn" data-paper-light="pointer" data-paper-seed="230" data-paper-dpi="82"
+           data-paper-params='{"tone":{"paper":[0.94,0.885,0.755],"duotone":0.6},
+             "folds":{"enabled":true,"count":4,"depth":0.72,"sharpness":0.85},
+             "crumple":{"enabled":true,"scale_mm":13,"amplitude_um":26,"crease":0.3,"irregularity":0.95},
+             "cockle":{"amplitude_um":28,"wavelength_mm":24},
+             "fade":{"amount":0.75,"scale_mm":48},
+             "light":{"relief_exaggerate":8,"altitude_deg":40,"spec_intensity":0.3,"spec_power":50},
+             "edge":{"deckle_px":7,"wobble_px":9},
+             "shadow":{"offset_px":13,"blur_px":22,"darkness":0.75}}'>
+        <h4>Note found in the coat pocket, folder 3</h4>
+        <dl>
+          <dt>To</dt><dd>M.Q.</dd>
+          <dt>From</dt><dd>not given</dd>
+          <dt>Date</dt><dd>illegible, ink run</dd>
+        </dl>
+        <div class="body">
+          <p>Don't ask the works. Ask the lab. The second run is the one that matters and
+            they have kept the sheet.</p>
+          <p>If you print the numbers you will get them from me and nobody else, and I
+            will deny it, so make sure you can get them twice.</p>
+        </div>
+        <div class="rulehair"></div>
+        <p class="tw" style="margin:0">Folded in eight. Ink transferred at both creases.</p>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> the physics component.
+      <code>folds {count:4, depth:0.72, sharpness:0.85}</code> presses four hard creases into
+      the height field and <code>crumple {scale_mm:13, amplitude_um:26}</code> adds the
+      all-over crazing a refolded sheet gets. <code>light.altitude_deg 40</code> lowers the
+      sun so the creases throw longer shade, and <code>spec_intensity 0.3</code> keeps the
+      ridges from blowing out,
+      and <code>light:'pointer'</code> lets you sweep the light across, and only two of the
+      twelve passes re-run, so it stays cheap. Reduced-motion users get the static light.</p>
+  </section>
+
+  <!-- ══ 16 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s16">
+    <header class="sec-head">
+      <span class="num">16</span>
+      <h2>Morgue folder</h2>
+    </header>
+    <p class="sec-sub">Manila, tabbed, with a cutting working its way out of the top</p>
+
+    <div class="stage folder-stage">
+      <div class="sheet peek"
+           data-paper="worn" data-paper-seed="240" data-paper-dpi="125"
+           data-paper-params='{"tone":{"paper":[0.915,0.845,0.665]},
+             "fade":{"amount":0.9,"scale_mm":38},"edge":{"deckle_px":12,"wobble_px":10},
+             "imperfect":{"enabled":true,"pit_density":0.06,"mark_density":0.04}}'>
+        <h4>“It ran yellow twice since Christmas”</h4>
+        <p>Cedar Flats residents, quoted 12 March 1974. The quote appears in no later
+          story until 2026.</p>
+      </div>
+
+      <div class="sheet folder"
+           data-paper="textured" data-paper-overhang="clip" data-paper-seed="241" data-paper-dpi="70"
+           data-paper-params='{"tone":{"paper":[0.885,0.795,0.585],"duotone":0.6},
+             "cockle":{"amplitude_um":16,"wavelength_mm":34},
+             "formation":{"source":1,"amplitude":0.03,"scale_mm":2},
+             "fade":{"amount":0.8,"scale_mm":90},
+             "scratches":{"enabled":true,"density":0.05,"lightness":0.16},
+             "imperfect":{"enabled":true,"pit_density":0.05,"mark_density":0.04},
+             "folds":{"enabled":true,"count":1,"depth":0.16,"sharpness":0.9},
+             "light":{"spec_intensity":0.28,"relief_exaggerate":6},
+             "edge":{"wobble_px":5,"deckle_px":3}}'>
+        <p class="tabtext">Ced 3.1</p>
+        <p class="fname">Cedar Reservoir / Halloway · cuttings, correspondence, one fax</p>
+        <p class="fmeta">Folder 3 of 11 · accession 1971.048 · last signed out 04 Feb 2026 ·
+          contents 41 items, 2 items missing</p>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> the folder tab is one <code>clip-path</code> polygon on
+      the host, so the sheet's silhouette steps up over the tab and back down, with no
+      second surface and no fake tab. Manila is board, so
+      <code>dpi:70</code> for coarse buckling, <code>cockle.wavelength_mm 34</code>, a single
+      shallow <code>fold</code> for the score line, and
+      <code>formation.source:1</code> for the fibrous board tooth. The cutting behind it sits
+      at <code>z-index:-1</code> so it reads as being <em>inside</em>.</p>
+  </section>
+
+  <!-- ══ 17 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s17">
+    <header class="sec-head">
+      <span class="num">17</span>
+      <h2>Fifty years on</h2>
+    </header>
+    <p class="sec-sub">The anniversary notice, set inside a mourning border</p>
+
+    <div class="stage">
+      <div class="sheet memoriam"
+           data-paper="reading" data-paper-seed="250" data-paper-dpi="115"
+           data-paper-params='{"tone":{"paper":[0.965,0.925,0.83],"duotone":0.55},
+             "fade":{"amount":0.7,"scale_mm":58},
+             "ink":{"thickness":1.2},
+             "edge":{"deckle_px":8,"wobble_px":7},
+             "shadow":{"offset_px":11,"blur_px":19,"darkness":0.7}}'>
+        <div class="inner">
+          <div class="in2">
+            <h3>Cedar Reservoir</h3>
+            <p class="yrs">1948 – 1974</p>
+            <p>Closed to all use on the eleventh of March, nineteen seventy-four, and
+              never reopened. Drained in 1981. The Cedar Flats district drew its water
+              from it for twenty-six years.</p>
+            <p style="margin-top:14px">This notice is published on the fiftieth
+              anniversary, together with the record we did not print at the time.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> the mourning border is CSS
+      (<code>9px</code> solid rule plus a hairline inside it), but the heavy black bar is
+      what proves the paper: <code>ink.thickness 1.2</code> under Kubelka-Munk lets the
+      sheet's cockle show <em>through</em> the black, which a flat CSS border on a flat
+      background never does. <code>deckle_px 8</code> keeps the notice hand-cut.</p>
+  </section>
+
+  <!-- ══ 18 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s18">
+    <header class="sec-head">
+      <span class="num">18</span>
+      <h2>Correction, pasted in</h2>
+    </header>
+    <p class="sec-sub">A galley from edition two, with edition three's line cemented over it</p>
+
+    <div class="stage">
+      <div class="sheet galley"
+           data-paper="paper" data-paper-seed="260" data-paper-dpi="105"
+           data-paper-params='{"tone":{"paper":[0.945,0.9,0.79]},
+             "fade":{"amount":0.75,"scale_mm":50},
+             "formation":{"amplitude":0.024},
+             "edge":{"wobble_px":6,"deckle_px":4},
+             "imperfect":{"enabled":true,"pit_density":0.03,"mark_density":0.02}}'>
+        <p class="kicker">Galley 4 · edition 2 · corrected for edition 3</p>
+        <h3 style="font-size:24px;line-height:1.14">Council accepts assurance on outfall</h3>
+        <div class="ruledouble"></div>
+        <div class="body">
+          <p>The works and utilities committee voted on Monday to accept the company's
+            assurance that no process effluent had ever been discharged at the western
+            outfall.</p>
+          <p class="old">The committee heard that no permit for such a discharge had ever
+            been issued, and that the 1974 closure had followed an unusually warm spring.</p>
+          <p>Councillor Amaro asked that the assurance be provided in writing. The
+            committee agreed and adjourned at 8:15 p.m.</p>
+        </div>
+      </div>
+
+      <div class="sheet patch"
+           data-paper="paper" data-paper-overhang="clip" data-paper-seed="261" data-paper-dpi="170"
+           data-paper-params='{"tone":{"paper":[0.985,0.965,0.9],"duotone":0.4},
+             "fade":{"amount":0.35},"formation":{"amplitude":0.018},
+             "edge":{"wobble_px":3},"cockle":{"amplitude_um":12}}'>
+        <span class="mk">Set again · ed. 3 · replaces line 14–16</span>
+        <p>A permit for process effluent at the western outfall was issued in 1971,
+          renewed twice, and cancelled in 1978.</p>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> two surfaces, and the difference between them is the
+      whole idea: the galley is aged <code>[0.945,0.9,0.79]</code> at
+      <code>dpi:105</code>, the pasted patch is fresh <code>[0.985,0.965,0.9]</code> at
+      <code>dpi:170</code> with <code>cockle.amplitude_um 12</code>: newer, flatter, finer
+      grained. <code>overhang:'clip'</code> on the patch plus a CSS
+      <code>drop-shadow()</code> gives it the tight rubber-cement lift instead of a full
+      sheet shadow.</p>
+  </section>
+
+  <!-- ══ 19 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s19">
+    <header class="sec-head">
+      <span class="num">19</span>
+      <h2>Spiked</h2>
+    </header>
+    <p class="sec-sub">The story that ran nowhere, still on the spindle</p>
+
+    <div class="stage spike-stage">
+      <article class="sheet spiked"
+           data-paper="worn" data-paper-seed="270" data-paper-dpi="86"
+           data-paper-params='{"tone":{"paper":[0.915,0.85,0.685],"duotone":0.62},
+             "crumple":{"enabled":true,"scale_mm":14,"amplitude_um":30,"crease":0.3,"irregularity":0.95},
+             "folds":{"enabled":true,"count":3,"depth":0.42,"sharpness":0.7},
+             "fade":{"amount":0.7,"scale_mm":44},
+             "scratches":{"enabled":true,"density":0.08,"lightness":0.16},
+             "imperfect":{"enabled":true,"pit_density":0.06,"mark_density":0.03},
+             "light":{"relief_exaggerate":8,"altitude_deg":40,"spec_intensity":0.28,"spec_power":50},
+             "edge":{"deckle_px":13,"wobble_px":12},
+             "shadow":{"offset_px":15,"blur_px":25,"darkness":0.8}}'>
+        <div class="hole" style="left:220px;top:20px"></div>
+        <p class="kicker">Held · not scheduled · killed 20 March 1974</p>
+        <h3>Laboratory stands by second reading at reservoir outfall</h3>
+        <p class="byline">By Marta Quill · 480 words · kill fee paid</p>
+        <div class="body" style="max-width:46ch">
+          <p>The city laboratory has repeated its 9 March sampling at the Cedar Reservoir
+            outfall and obtained the same result within five per cent, according to an
+            internal note.</p>
+          <p>The note recommends that the figures not be released until the Halloway
+            works has had an opportunity to comment.</p>
+        </div>
+        <div class="stamp">Spiked</div>
+      </article>
+
+      <svg class="spindle" width="24" height="104" viewBox="0 0 24 104" aria-hidden="true">
+        <rect x="9" y="6" width="6" height="98" rx="3" fill="#8A8478"/>
+        <rect x="10.5" y="6" width="2" height="98" fill="#C7C1B3" opacity=".75"/>
+        <path d="M9 8 L12 0 L15 8 Z" fill="#DAD4C6"/>
+      </svg>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> the loudest settings on the page:
+      <code>crumple.amplitude_um 30</code> at <code>scale_mm 14</code> for a sheet that was
+      screwed up and flattened, three hard <code>folds</code>,
+      <code>deckle_px 13</code>, and <code>light.altitude_deg 40</code> so the crazing casts
+      without blowing out (<code>spec_intensity 0.28</code>: crumple plus a hot specular is
+      where legibility dies).
+      The <code>SPIKED</code> stamp is a CSS box run through an inline
+      <code>feTurbulence</code> displacement filter, which is what stops it looking laser
+      printed. The spindle is inline SVG; the hole is a ground-coloured div.</p>
+  </section>
+
+  <!-- ══ 20 ══════════════════════════════════════════════════════════════ -->
+  <section class="sec" id="s20">
+    <header class="sec-head">
+      <span class="num">20</span>
+      <h2>See also</h2>
+    </header>
+    <p class="sec-sub">The cross-reference card that closes the folder</p>
+
+    <div class="stage" style="display:flex;gap:44px;align-items:flex-start;flex-wrap:wrap">
+      <div class="sheet seealso"
+           data-paper="paper" data-paper-seed="280" data-paper-dpi="150"
+           data-paper-params='{"tone":{"paper":[0.965,0.93,0.845]},
+             "fade":{"amount":0.65,"scale_mm":36},
+             "edge":{"radius_px":3,"wobble_px":4,"deckle_px":3},
+             "shadow":{"offset_px":8,"blur_px":14,"darkness":0.62}}'>
+        <h4>See also</h4>
+        <ul>
+          <li><span class="idx">HAL 4.2</span><a href="#s06">Halloway Chemical Works</a></li>
+          <li><span class="idx">WAT 11</span><a href="#s14">Water quality, city testing</a></li>
+          <li><span class="idx">PET 2</span><a href="#s05">Pettibone, R., works manager</a></li>
+          <li><span class="idx">COR 9</span><a href="#s18">Corrections and clarifications</a></li>
+          <li><span class="idx">SPK 1</span><a href="#s19">Held and killed copy, 1974</a></li>
+        </ul>
+        <div class="rulehair"></div>
+        <p class="tw" style="margin:0;font-size:12.5px">Folder 3 closed 4 Feb 2026.
+          Two items recorded as missing.</p>
+      </div>
+
+      <div class="stamp round" style="transform:rotate(-9deg);margin-top:26px">
+        <span><span class="big">Filed</span>Ledger-Chronicle<br>04 Feb 2026</span>
+      </div>
+    </div>
+
+    <p class="cap"><b>paperweb ·</b> a quiet closer: plain <code>paper</code> at
+      <code>dpi:150</code> with <code>edge.radius_px 3</code> so the sheet follows the card's
+      rounded corners, and a small <code>deckle_px 3</code> so the rounding still reads as
+      cut rather than die-stamped. The links keep visible focus rings, because a papered
+      surface is still a page.</p>
+  </section>
+
+  <footer class="colophon">
+    <p>Twenty components, twenty-seven papered surfaces, one WebGL2 context. Every sheet is a
+      real render: cockle relief, formation grain, Kubelka-Munk ink, contact-hardened cast
+      shadow. No images, no webfonts, no CDN. The tape, staples, stamps, redaction bars,
+      punched holes, spindle and paperclip rust are CSS and inline SVG.</p>
+    <p>The Ledger-Chronicle, Cedar Reservoir, Halloway Chemical Works and every person named
+      here are fictional. This is a demo of paperweb, not a record of anything.</p>
+  </footer>
+
+</div>
+
+<script type="module">
+  import { scan } from '../../src/index.js';
+  scan();
+</script>
+</body>
+</html>

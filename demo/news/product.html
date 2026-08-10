@@ -1,0 +1,1426 @@
+<!doctype html>
+<html lang="en" data-theme="day">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Ledger: a paper-native news product</title>
+<style>
+/* ───────────────────────────────────────────────────────────── tokens ── */
+:root{
+  --ground:#1B1815; --ground-deep:#100E0C; --ground-lift:#241F1A;
+  --ink:#14110D; --ink-soft:#564E43; --ink-faint:#8A7F6D;
+  --rule:rgba(20,17,13,.14); --rule-2:rgba(20,17,13,.28);
+  --wash:rgba(20,17,13,.055);
+  --red:#A8362B; --ochre:#96702C; --blue:#2E4756; --sage:#546449;
+  --on-ground:#F2E9D8; --on-ground-soft:#BFB3A0; --on-ground-faint:#8B8072;
+  --focus:#C8A06A;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r-sm:6px; --r-md:10px; --r-lg:14px;
+}
+html[data-theme="lamp"]{
+  --ground:#0B0A09; --ground-deep:#040404; --ground-lift:#141110;
+  --ink:#EFE6D4; --ink-soft:#B9AC97; --ink-faint:#8B8071;
+  --rule:rgba(239,230,212,.16); --rule-2:rgba(239,230,212,.32);
+  --wash:rgba(239,230,212,.06);
+  --red:#E08472; --ochre:#DCBB86; --blue:#8FB3C6; --sage:#9CB09A;
+}
+
+/* ─────────────────────────────────────────────────────────────── base ── */
+html{overflow-x:clip;}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--ground); color:var(--on-ground);
+  font-family:var(--sans); font-size:16px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(120% 70% at 50% -12%,var(--ground-lift) 0%,var(--ground) 52%,var(--ground-deep) 100%);
+  background-attachment:fixed;
+  transition:background-color .35s ease;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 120px;}
+h1,h2,h3,h4{margin:0; font-weight:600; letter-spacing:-.012em;}
+p{margin:0;}
+a{color:inherit;}
+button,input,select,textarea{font:inherit; color:inherit;}
+button{background:none; border:0; padding:0; cursor:pointer;}
+:focus-visible{outline:2px solid var(--focus); outline-offset:3px; border-radius:3px;}
+
+/* everything that sits on a sheet inherits paper ink */
+.sheet{color:var(--ink); position:relative;}
+
+/* ────────────────────────────────────────────────────── showcase chrome ── */
+.demo{margin:0 0 84px;}
+.demo-head{display:grid; grid-template-columns:52px 1fr; gap:0 16px; margin:0 0 22px;
+  padding-top:16px; border-top:1px solid rgba(242,233,216,.16);}
+.demo-head .num{grid-row:1/3; font:600 12.5px/1.6 var(--mono); letter-spacing:.06em;
+  color:var(--on-ground-faint); padding-top:3px;}
+.demo-head h2{font-size:15.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--on-ground);}
+.cap{font-size:13.5px; line-height:1.6; color:var(--on-ground-soft); max-width:62ch; margin-top:5px;}
+.cap code{font-family:var(--mono); font-size:12.5px; color:var(--focus);
+  background:rgba(200,160,106,.10); padding:1px 5px; border-radius:4px; white-space:nowrap;}
+.row{display:grid; grid-template-columns:1fr 1fr; gap:24px 72px;}
+.row.wide-left{grid-template-columns:1.28fr 1fr;}
+/* grid items default to min-width:auto, so one wide scroller blows out its column */
+.row>*{min-width:0;}
+/* the share popover is absolutely positioned, so its row has to reserve the room */
+.row.has-popover{margin-bottom:236px;}
+@media (max-width:900px){ .row,.row.wide-left{grid-template-columns:1fr;} }
+
+/* micro type used on paper */
+.kicker{font:600 11.5px/1.4 var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--red);}
+.meta{font:500 12.5px/1.5 var(--mono); letter-spacing:.02em; color:var(--ink-faint);}
+.hed{font-family:var(--serif); font-weight:600; letter-spacing:-.018em; line-height:1.12;}
+.dek{font-family:var(--serif); color:var(--ink-soft); line-height:1.5;}
+.rule{height:1px; background:var(--rule); border:0; margin:0;}
+
+/* tinted action buttons, never big solid fills */
+.btn{display:inline-flex; align-items:center; gap:8px; font:600 13px/1 var(--sans);
+  letter-spacing:.01em; padding:10px 15px; border-radius:var(--r-sm);
+  border:1px solid var(--rule-2); background:var(--wash); color:var(--ink);
+  transition:background-color .16s ease, border-color .16s ease, transform .16s ease;}
+.btn:hover{background:rgba(20,17,13,.10); border-color:rgba(20,17,13,.42);}
+html[data-theme="lamp"] .btn:hover{background:rgba(239,230,212,.13); border-color:rgba(239,230,212,.45);}
+.btn:active{transform:translateY(1px);}
+.btn.primary{border-color:color-mix(in srgb,var(--red) 78%,transparent); color:var(--red);
+  background:color-mix(in srgb,var(--red) 12%,transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--red) 16%,transparent);}
+.btn.primary:hover{background:color-mix(in srgb,var(--red) 19%,transparent);}
+.btn[aria-pressed="true"]{border-color:color-mix(in srgb,var(--ochre) 70%,transparent);
+  color:var(--ochre); background:color-mix(in srgb,var(--ochre) 14%,transparent);}
+.btn.sm{padding:7px 11px; font-size:12.5px;}
+.btn.icon{padding:8px; border-radius:var(--r-sm);}
+.btn:disabled{opacity:.42; cursor:default;}
+svg{display:block;}
+.vh{position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap;}
+
+/* ─────────────────────────────────────────────────────────── masthead ── */
+.masthead{position:sticky; top:12px; z-index:60; margin:20px 0 14px;
+  display:flex; align-items:center; gap:20px; padding:14px 22px; border-radius:var(--r-lg);}
+.wordmark{font-family:var(--serif); font-size:23px; font-weight:600; letter-spacing:-.03em;
+  color:var(--ink); white-space:nowrap;}
+.wordmark span{color:var(--red);}
+.masthead nav{display:flex; gap:2px; margin-left:6px; flex:1; min-width:0;}
+.masthead nav a{font:600 12.5px/1 var(--sans); letter-spacing:.07em; text-transform:uppercase;
+  color:var(--ink-soft); text-decoration:none; padding:9px 11px; border-radius:var(--r-sm);}
+.masthead nav a:hover{color:var(--ink); background:var(--wash);}
+.masthead nav a[aria-current]{color:var(--ink); box-shadow:inset 0 -2px 0 var(--red);}
+.mast-tools{display:flex; align-items:center; gap:8px;}
+.mast-progress{position:absolute; left:14px; right:14px; bottom:6px; height:2px;
+  background:var(--rule); border-radius:2px; overflow:hidden;}
+.mast-progress i{display:block; height:100%; width:100%; background:var(--red);
+  transform:scaleX(0); transform-origin:0 50%;}
+@media (max-width:820px){ .masthead nav{display:none;} }
+
+/* ───────────────────────────────────────────────────────────── intro ── */
+.intro{padding:56px 0 64px; max-width:74ch;}
+.intro .eyebrow{font:600 11.5px/1.4 var(--mono); letter-spacing:.2em; text-transform:uppercase;
+  color:var(--focus); margin-bottom:20px;}
+.intro h1{font-family:var(--serif); font-size:clamp(38px,5.2vw,64px); line-height:1.02;
+  letter-spacing:-.03em; color:var(--on-ground);}
+.intro p{margin-top:20px; font-size:17.5px; color:var(--on-ground-soft); line-height:1.62;}
+.legend{display:flex; flex-wrap:wrap; gap:8px; margin-top:28px;}
+.legend span{font:500 12px/1 var(--mono); letter-spacing:.04em; color:var(--on-ground-soft);
+  border:1px solid rgba(242,233,216,.20); padding:7px 11px; border-radius:999px;}
+
+/* ─────────────────────────────────────────────── 02 daylight / lamplight ── */
+.stocks{display:grid; grid-template-columns:1fr 1fr; gap:64px;}
+.stock{padding:26px 24px 22px; border-radius:var(--r-md); min-height:186px;}
+.stock h3{font-family:var(--serif); font-size:20px; line-height:1.2;}
+.stock p{margin-top:9px; font-size:13.5px; line-height:1.55;}
+.stock .tag{font:600 11.5px/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; display:block; margin-bottom:12px;}
+.stock.day{color:#14110D;} .stock.day .tag{color:#96702C;} .stock.day p{color:#564E43;}
+.stock.lamp{color:#EFE6D4;} .stock.lamp .tag{color:#DCBB86;} .stock.lamp p{color:#B9AC97;}
+
+/* ───────────────────────────────────────────────────────── 03 ticker ── */
+.ticker{display:flex; align-items:center; gap:14px; padding:12px 14px 12px 12px; border-radius:var(--r-md);}
+.flag{flex:none; font:700 11.5px/1 var(--sans); letter-spacing:.14em; text-transform:uppercase;
+  color:#FBF3E4; background:var(--red); padding:8px 10px; border-radius:5px;}
+html[data-theme="lamp"] .flag{color:#1A0F0C;}
+.ticker-view{position:relative; flex:1; min-width:0; height:36px; overflow:hidden;}
+.ticker-item{position:absolute; inset:0; display:flex; align-items:center; gap:10px;
+  font-size:14.5px; color:var(--ink); opacity:0; transform:translateX(28%);
+  transition:opacity .5s ease, transform .5s cubic-bezier(.2,.7,.3,1);}
+.ticker-item.on{opacity:1; transform:translateX(0);}
+.ticker-item.off{opacity:0; transform:translateX(-28%);}
+.ticker-item b{font:600 12px/1 var(--mono); letter-spacing:.04em; color:var(--ink-faint); flex:none;}
+.ticker-item span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.dots{display:flex; gap:5px; flex:none;}
+.dots i{width:5px; height:5px; border-radius:50%; background:var(--rule-2);}
+.dots i.on{background:var(--red);}
+
+/* ────────────────────────────────────────────────────── 04 market strip ── */
+.market{padding:16px 20px; border-radius:var(--r-md);}
+.market header{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+.market h3{font:600 11.5px/1 var(--sans); letter-spacing:.15em; text-transform:uppercase; color:var(--ink-soft);}
+.live-dot{display:inline-flex; align-items:center; gap:7px; font:600 11.5px/1 var(--mono);
+  letter-spacing:.09em; text-transform:uppercase; color:var(--sage);}
+.live-dot i{width:7px; height:7px; border-radius:50%; background:var(--sage); animation:breathe 2.4s ease-in-out infinite;}
+@keyframes breathe{0%,100%{opacity:1; transform:scale(1);} 50%{opacity:.35; transform:scale(.78);}}
+.market table{width:100%; border-collapse:collapse;}
+.market td{padding:7px 0; font-size:13.5px; border-bottom:1px solid var(--rule);}
+.market tr:last-child td{border-bottom:0;}
+.market td.sym{font:600 12.5px/1.4 var(--mono); letter-spacing:.03em; color:var(--ink);}
+.market td.val{text-align:right; font:500 13.5px/1.4 var(--mono); color:var(--ink); font-variant-numeric:tabular-nums;}
+.market td.chg{text-align:right; width:88px; font:500 12.5px/1.4 var(--mono); font-variant-numeric:tabular-nums;}
+.up{color:var(--sage);} .down{color:var(--red);}
+.flash{animation:flash .9s ease-out;}
+@keyframes flash{from{background:color-mix(in srgb,var(--ochre) 30%,transparent);} to{background:transparent;}}
+
+/* ─────────────────────────────────────────────────────── 05 section nav ── */
+.secnav{display:flex; align-items:center; gap:6px; padding:9px 12px; border-radius:999px; flex-wrap:wrap;}
+.secnav button{font:600 12.5px/1 var(--sans); letter-spacing:.06em; text-transform:uppercase;
+  color:var(--ink-soft); padding:9px 14px; border-radius:999px; transition:color .16s ease, background-color .16s ease;}
+.secnav button:hover{color:var(--ink); background:var(--wash);}
+.secnav button[aria-pressed="true"]{color:#FBF3E4; background:var(--blue);}
+html[data-theme="lamp"] .secnav button[aria-pressed="true"]{color:#0B0A09; background:var(--blue);}
+.secnav .count{margin-left:auto; font:500 12px/1 var(--mono); color:var(--ink-faint); padding-right:8px;}
+
+/* ────────────────────────────────────────────────────────── 06 grid ── */
+.grid{display:grid; grid-template-columns:repeat(4,1fr); gap:44px;}
+@media (max-width:900px){ .grid{grid-template-columns:1fr 1fr;} }
+.card{display:flex; flex-direction:column; gap:9px; padding:18px 18px 20px; border-radius:var(--r-md);
+  min-height:230px; text-align:left; transition:transform .22s cubic-bezier(.2,.7,.3,1);}
+.card:hover,.card:focus-visible{transform:translateY(-5px);}
+.card .thumb{height:74px; border-radius:5px; overflow:hidden;}
+.card h3{font-family:var(--serif); font-size:18px; line-height:1.16; letter-spacing:-.02em;}
+.card .dek{font-size:13px; flex:1;}
+.card .meta{font-size:11.5px;}
+.card[hidden]{display:none;}
+
+/* ────────────────────────────────────────────────────────── 07 search ── */
+.search{padding:18px 20px 20px; border-radius:var(--r-md);}
+.search-field{display:flex; align-items:center; gap:11px; padding:0 0 11px; border-bottom:1.5px solid var(--rule-2);}
+.search-field input{flex:1; min-width:0; background:none; border:0; outline:0;
+  font-family:var(--serif); font-size:20px; letter-spacing:-.01em; color:var(--ink);}
+.search-field input::placeholder{color:var(--ink-faint); opacity:1;}
+.search-field:focus-within{border-bottom-color:var(--red);}
+.search-results{list-style:none; margin:14px 0 0; padding:0; max-height:206px; overflow-y:auto;}
+.search-results li{border-bottom:1px solid var(--rule);}
+.search-results li:last-child{border-bottom:0;}
+.search-results a{display:flex; align-items:baseline; gap:12px; padding:11px 4px; text-decoration:none;
+  border-radius:var(--r-sm);}
+.search-results a:hover{background:var(--wash);}
+.search-results .t{flex:1; font-family:var(--serif); font-size:15.5px; color:var(--ink);}
+.search-results .s{font:600 11.5px/1 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);}
+.search-results mark{background:color-mix(in srgb,var(--ochre) 34%,transparent); color:inherit; border-radius:2px;}
+.search-empty{padding:16px 4px; font-size:13.5px; color:var(--ink-faint);}
+.search-hint{margin-top:12px; font-size:12px; color:var(--ink-faint);}
+kbd{font:600 11.5px/1 var(--mono); border:1px solid var(--rule-2); border-bottom-width:2px;
+  border-radius:4px; padding:3px 5px; color:var(--ink-soft);}
+
+/* ─────────────────────────────────────────────────────── 08 status bar ── */
+.statusbar{display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:26px;}
+.pill{display:inline-flex; align-items:center; gap:6px; font:600 11.5px/1 var(--sans);
+  letter-spacing:.04em; padding:7px 10px; border-radius:999px; border:1px solid var(--rule-2);
+  color:var(--ink-soft); white-space:nowrap;}
+.pill.developing{color:var(--red); border-color:color-mix(in srgb,var(--red) 55%,transparent);}
+.pill.developing i{width:7px; height:7px; border-radius:50%; background:var(--red); position:relative;}
+.pill.developing i::after{content:""; position:absolute; inset:-4px; border-radius:50%;
+  border:1.5px solid var(--red); animation:ping 1.9s cubic-bezier(.2,.7,.3,1) infinite;}
+@keyframes ping{0%{transform:scale(.5); opacity:.9;} 70%,100%{transform:scale(1.5); opacity:0;}}
+.statusbar .sep{width:1px; height:18px; background:var(--rule); flex:none;}
+.statusbar .by{font-family:var(--serif); font-size:14px; color:var(--ink); white-space:nowrap;}
+.statusbar .by b{font-weight:600;}
+.statusbar time{font:500 12px/1 var(--mono); color:var(--ink-faint); margin-left:auto; white-space:nowrap;}
+
+/* ───────────────────────────────────────────────────────── 09 progress ── */
+.progress{padding:16px 20px 18px; border-radius:var(--r-md);}
+.progress .top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:11px;}
+.progress .lab{font:600 11.5px/1 var(--sans); letter-spacing:.15em; text-transform:uppercase; color:var(--ink-soft);}
+.progress .num{font:500 13px/1 var(--mono); color:var(--ink); font-variant-numeric:tabular-nums;}
+.track{height:6px; border-radius:3px; background:var(--rule); overflow:hidden;}
+.track i{display:block; height:100%; width:100%; background:var(--red); border-radius:3px;
+  transform:scaleX(0); transform-origin:0 50%;}
+.progress .foot{display:flex; justify-content:space-between; margin-top:10px; font-size:12px; color:var(--ink-faint);}
+
+/* ───────────────────────────────────────────────── 10 bookmark / 11 share ── */
+.actionbar{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:16px 18px; border-radius:var(--r-md);}
+.actionbar .label{flex:1; min-width:120px;}
+.actionbar .label b{display:block; font-family:var(--serif); font-size:16px; color:var(--ink);}
+.actionbar .label span{font-size:12.5px; color:var(--ink-faint);}
+.sharewrap{position:relative;}
+.sharesheet{position:absolute; z-index:20; top:calc(100% + 14px); right:0; width:266px;
+  padding:16px; border-radius:var(--r-md);}
+.sharesheet[hidden]{display:none;}
+.sharesheet h4{font:600 11.5px/1 var(--sans); letter-spacing:.15em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:12px;}
+.sharesheet ul{list-style:none; margin:0; padding:0; display:grid; gap:2px;}
+.sharesheet button{display:flex; align-items:center; gap:11px; width:100%; padding:10px 10px;
+  border-radius:var(--r-sm); font-size:14px; color:var(--ink); text-align:left;}
+.sharesheet button:hover{background:var(--wash);}
+.sharesheet .copied{margin-top:11px; font:600 12px/1.4 var(--mono); color:var(--sage);}
+.sharesheet .copied[hidden]{display:none;}
+
+/* ────────────────────────────────────────────────────── 12 live blog ── */
+.liveblog{padding:20px 22px 22px; border-radius:var(--r-md);}
+.liveblog header{display:flex; align-items:center; gap:12px; margin-bottom:4px;}
+.liveblog h3{font-family:var(--serif); font-size:22px; letter-spacing:-.02em; flex:1;}
+.lb-scroll{max-height:330px; overflow-y:auto; margin-top:14px; padding-right:8px;
+  -webkit-mask-image:linear-gradient(to bottom,#000 84%,transparent 100%);
+  mask-image:linear-gradient(to bottom,#000 84%,transparent 100%);}
+.lb-entry{padding:16px 0; border-top:1px solid var(--rule);}
+.lb-entry:first-child{border-top:0; padding-top:6px;}
+.lb-entry .row2{display:flex; align-items:center; gap:9px; margin-bottom:6px;}
+.lb-entry time{font:600 12px/1 var(--mono); letter-spacing:.05em; color:var(--ink-faint);}
+.lb-entry .new{font:700 10.5px/1 var(--sans); letter-spacing:.13em; text-transform:uppercase;
+  color:var(--red); border:1px solid color-mix(in srgb,var(--red) 55%,transparent);
+  padding:4px 7px; border-radius:4px;}
+.lb-entry h4{font-family:var(--serif); font-size:16.5px; line-height:1.24; margin-bottom:5px;}
+.lb-entry p{font-size:13.5px; line-height:1.6; color:var(--ink-soft);}
+.lb-enter{animation:lbin .5s cubic-bezier(.2,.7,.3,1);}
+@keyframes lbin{from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:none;}}
+
+/* ───────────────────────────────────────────────────────────── 13 poll ── */
+.poll{padding:22px; border-radius:var(--r-md);}
+.poll h3{font-family:var(--serif); font-size:19px; line-height:1.24; margin-bottom:4px;}
+.poll .sub{font-size:12.5px; color:var(--ink-faint); margin-bottom:16px;}
+.poll ul{list-style:none; margin:0; padding:0; display:grid; gap:9px;}
+.poll .opt{position:relative; width:100%; display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border-radius:var(--r-sm); border:1px solid var(--rule-2);
+  font-size:14px; color:var(--ink); overflow:hidden; text-align:left;}
+.poll .opt:hover:not(:disabled){background:var(--wash);}
+.poll .opt .bar{position:absolute; inset:0 0 0 0; transform:scaleX(0); transform-origin:0 50%;
+  background:color-mix(in srgb,var(--blue) 22%,transparent);
+  transition:transform .7s cubic-bezier(.2,.7,.3,1);}
+.poll .opt.mine{border-color:color-mix(in srgb,var(--blue) 65%,transparent);}
+.poll .opt.mine .bar{background:color-mix(in srgb,var(--blue) 34%,transparent);}
+.poll .opt .txt{position:relative; flex:1;}
+.poll .opt .pct{position:relative; font:600 13px/1 var(--mono); font-variant-numeric:tabular-nums;
+  opacity:0; transition:opacity .4s ease .15s;}
+.poll.voted .pct{opacity:1;}
+.poll .tally{margin-top:14px; font-size:12.5px; color:var(--ink-faint);}
+
+/* ───────────────────────────────────────────────────── 14 newsletter ── */
+.newsletter{padding:24px 22px; border-radius:var(--r-md);}
+.newsletter .kicker{margin-bottom:9px;}
+.newsletter h3{font-family:var(--serif); font-size:23px; line-height:1.16; letter-spacing:-.02em;}
+.newsletter p.dek{font-size:14px; margin-top:8px;}
+.newsletter form{display:flex; gap:9px; margin-top:18px; flex-wrap:wrap;}
+.newsletter input{flex:1; min-width:170px; background:none; border:0; border-bottom:1.5px solid var(--rule-2);
+  padding:9px 2px; font-size:15px; color:var(--ink); outline:0;}
+.newsletter input::placeholder{color:var(--ink-faint); opacity:1;}
+.newsletter input:focus{border-bottom-color:var(--red);}
+.newsletter input[aria-invalid="true"]{border-bottom-color:var(--red);}
+.formmsg{margin-top:12px; font-size:13px; min-height:1.2em;}
+.formmsg.err{color:var(--red);} .formmsg.ok{color:var(--sage);}
+
+/* ─────────────────────────────────────────────────────── 15 paywall ── */
+.paywrap{position:relative;}
+.article{padding:30px 34px 44px; border-radius:var(--r-lg);}
+.article .kicker{margin-bottom:11px;}
+.article h3{font-family:var(--serif); font-size:clamp(26px,3.3vw,38px); line-height:1.08;
+  letter-spacing:-.028em; max-width:20ch;}
+.article .body{margin-top:18px; max-width:62ch; font-family:var(--serif); font-size:16.5px;
+  line-height:1.66; color:var(--ink); position:relative;}
+.pullquote{position:absolute; top:96px; right:34px; width:280px; padding-left:20px;
+  border-left:2px solid var(--red); font-family:var(--serif); font-size:21px; line-height:1.28;
+  letter-spacing:-.015em; color:var(--ink);}
+.pullquote cite{display:block; margin-top:12px; font:600 11.5px/1.4 var(--sans);
+  letter-spacing:.13em; text-transform:uppercase; font-style:normal; color:var(--ink-faint);}
+@media (max-width:980px){ .pullquote{position:static; width:auto; margin:22px 0 0; } }
+.article .body p+p{margin-top:14px; text-indent:1.4em;}
+.article .body.locked{max-height:172px; overflow:hidden;
+  -webkit-mask-image:linear-gradient(to bottom,#000 46%,transparent 100%);
+  mask-image:linear-gradient(to bottom,#000 46%,transparent 100%);}
+.offer{position:relative; z-index:2; margin:-34px 34px 0; padding:24px 26px; border-radius:var(--r-md);
+  display:grid; gap:16px; grid-template-columns:1fr auto; align-items:center;}
+.offer h4{font-family:var(--serif); font-size:20px; line-height:1.2;}
+.offer p{font-size:13.5px; color:var(--ink-soft); margin-top:6px; max-width:46ch;}
+.offer .plans{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
+.offer .plan{border:1px solid var(--rule-2); border-radius:var(--r-sm); padding:10px 13px;
+  font-size:13px; color:var(--ink); text-align:left;}
+.offer .plan b{display:block; font:600 12px/1 var(--mono); letter-spacing:.06em; text-transform:uppercase;
+  color:var(--ink-faint); margin-bottom:5px;}
+.offer .plan[aria-pressed="true"]{border-color:color-mix(in srgb,var(--blue) 65%,transparent);
+  background:color-mix(in srgb,var(--blue) 10%,transparent);}
+@media (max-width:760px){ .offer{grid-template-columns:1fr;} }
+
+/* ───────────────────────────────────────────────────── 16 audio player ── */
+.player{padding:20px 22px; border-radius:var(--r-md); display:grid;
+  grid-template-columns:auto 1fr; gap:18px; align-items:center;}
+.cover{width:96px; height:96px; border-radius:var(--r-sm); overflow:hidden; flex:none;}
+.player .who{font:600 11.5px/1 var(--mono); letter-spacing:.13em; text-transform:uppercase; color:var(--ochre);}
+.player h3{font-family:var(--serif); font-size:19px; line-height:1.2; margin-top:8px;}
+.wave{display:flex; align-items:center; gap:2px; height:34px; margin-top:12px;}
+.wave i{flex:1; border-radius:1px; background:var(--rule-2); transition:background-color .2s ease;}
+.wave i.done{background:var(--blue);}
+.pcontrols{display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap;}
+.pcontrols .time{font:500 12.5px/1 var(--mono); color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+.scrub{flex:1; min-width:120px; accent-color:var(--red); background:none;}
+.player .dek{font-size:13.5px; margin-top:7px;}
+.chapters{display:flex; gap:8px; margin-top:14px; padding-top:13px; border-top:1px solid var(--rule); flex-wrap:wrap;}
+.chapters button{display:flex; align-items:baseline; gap:8px; padding:7px 11px; border-radius:var(--r-sm);
+  border:1px solid var(--rule); font-size:13px; color:var(--ink-soft); text-align:left;}
+.chapters button:hover{border-color:var(--rule-2); color:var(--ink); background:var(--wash);}
+.chapters button[aria-current="true"]{border-color:color-mix(in srgb,var(--blue) 60%,transparent);
+  color:var(--ink); background:color-mix(in srgb,var(--blue) 10%,transparent);}
+.chapters b{font:500 11.5px/1 var(--mono); color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+.railfoot{display:flex; align-items:center; gap:12px; margin-top:2px;}
+.railfoot .hint{font-size:12.5px; color:var(--on-ground-faint);}
+
+/* ────────────────────────────────────────────────── 17 photo essay ── */
+.contact{padding:20px 22px 22px; border-radius:var(--r-md);}
+.contact .kicker{margin-bottom:10px;}
+.contact h3{font-family:var(--serif); font-size:21px; line-height:1.2;}
+.frames{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:16px;}
+@media (max-width:760px){ .frames{grid-template-columns:1fr 1fr;} }
+.frame{display:block; width:100%; border-radius:5px; overflow:hidden; position:relative;
+  border:1px solid var(--rule); transition:transform .2s cubic-bezier(.2,.7,.3,1);}
+.frame:hover,.frame:focus-visible{transform:translateY(-3px);}
+.frame figcaption{font-size:11.5px; line-height:1.4; color:var(--ink-faint); padding:7px 2px 0; text-align:left;}
+dialog.lightbox{border:0; padding:0; background:none; max-width:min(760px,92vw);}
+dialog.lightbox::backdrop{background:rgba(8,7,6,.82);}
+.lbpanel{padding:20px; border-radius:var(--r-md);}
+.lbpanel .stage{border-radius:5px; overflow:hidden;}
+.lbpanel .lbbar{display:flex; align-items:center; gap:14px; margin-top:14px;}
+.lbpanel .lbcap{flex:1; font-size:13.5px; color:var(--ink-soft);}
+.lbpanel .lbnum{font:500 12.5px/1 var(--mono); color:var(--ink-faint);}
+
+/* ────────────────────────────────────────────────── 18 related rail ── */
+.railwrap{position:relative;}
+.rail{display:flex; gap:16px; overflow-x:auto; scroll-snap-type:x mandatory;
+  padding:4px 0 14px; scrollbar-width:thin;
+  -webkit-mask-image:linear-gradient(to right,#000 88%,transparent 100%);
+  mask-image:linear-gradient(to right,#000 88%,transparent 100%);}
+.rail::-webkit-scrollbar{height:6px;}
+.rail::-webkit-scrollbar-thumb{background:rgba(242,233,216,.22); border-radius:3px;}
+.rcard{flex:none; width:290px; scroll-snap-align:start; border-radius:var(--r-sm);
+  display:flex; flex-direction:column; text-align:left;}
+.rcard .inner{padding:4px 6px 8px; display:flex; flex-direction:column; gap:7px; flex:1;}
+.rcard .thumb{height:92px; border-radius:4px; overflow:hidden;}
+.rcard .dek{font-size:12.5px; line-height:1.5; flex:1;}
+.rcard h4{font-family:var(--serif); font-size:15.5px; line-height:1.2;}
+.rcard .meta{font-size:11.5px;}
+.railnav{display:flex; gap:8px; margin-top:2px;}
+
+/* ─────────────────────────────────────────────────── 19 comment thread ── */
+.thread{padding:22px; border-radius:var(--r-md);}
+.thread h3{font-family:var(--serif); font-size:20px; line-height:1.2;}
+.thread .sub{font-size:12.5px; color:var(--ink-faint); margin-top:4px; margin-bottom:16px;}
+.cmt{padding-top:15px; border-top:1px solid var(--rule);}
+.cmt:first-of-type{border-top:0; padding-top:0;}
+.cmt .who{display:flex; align-items:baseline; gap:9px; margin-bottom:6px;}
+.cmt .who b{font-size:13.5px; color:var(--ink);}
+.cmt .who time{font:500 11.5px/1 var(--mono); color:var(--ink-faint);}
+.cmt p{font-size:14px; line-height:1.6; color:var(--ink-soft);}
+.cmt .acts{display:flex; gap:8px; margin-top:9px; align-items:center;}
+.reply{margin:14px 0 0 22px; padding:15px 16px; border-radius:var(--r-sm);}
+.reply[hidden]{display:none;}
+.reply .who b{font-size:13px;}
+
+/* ───────────────────────────────────────────────────── 20 imprint ── */
+.imprint{padding:30px 32px; border-radius:var(--r-lg);
+  display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:28px;}
+@media (max-width:820px){ .imprint{grid-template-columns:1fr 1fr;} }
+.imprint h4{font:600 11.5px/1 var(--sans); letter-spacing:.15em; text-transform:uppercase;
+  color:var(--ink-faint); margin-bottom:11px;}
+.imprint ul{list-style:none; margin:0; padding:0; display:grid; gap:7px;}
+.imprint a{font-size:13.5px; color:var(--ink-soft); text-decoration:none;}
+.imprint a:hover{color:var(--ink); text-decoration:underline; text-underline-offset:3px;}
+.imprint .col1 .wordmark{font-size:21px;}
+.imprint .col1 p{font-size:13px; line-height:1.6; color:var(--ink-faint); margin-top:10px; max-width:34ch;}
+.colophon{margin-top:22px; font:500 11.5px/1.6 var(--mono); color:var(--ink-faint);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ═══════════════════════════════════ 01 ═══ sticky masthead ═══ -->
+<header class="masthead sheet" id="masthead"
+  data-paper="subtle" data-paper-dpi="150" data-paper-light="pointer"
+  data-paper-params='{"edge":{"radius_px":14,"wobble_px":2},"shadow":{"offset_px":6,"blur_px":16,"darkness":0.72,"contact":0.8},"formation":{"amplitude":0.012},"cockle":{"amplitude_um":10}}'>
+  <div class="wordmark">The&nbsp;Ledger<span>.</span></div>
+  <nav aria-label="Sections">
+    <a href="#d06" aria-current="page">Today</a>
+    <a href="#d12">Live</a>
+    <a href="#d16">Audio</a>
+    <a href="#d17">Photo</a>
+    <a href="#d19">Opinion</a>
+  </nav>
+  <div class="mast-tools">
+    <button class="btn sm icon" id="jumpSearch" aria-label="Search The Ledger">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.4 10.4 14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <button class="btn sm" id="themeBtn" aria-pressed="false">
+      <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" id="themeIcon"><circle cx="8" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.5"/><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7 13 13M13 3l-1.3 1.3M4.3 11.7 3 13"/></g></svg>
+      <span id="themeLabel">Daylight</span>
+    </button>
+  </div>
+  <div class="mast-progress" aria-hidden="true"><i id="mastFill"></i></div>
+</header>
+<div class="demo-head" style="margin-top:34px"><span class="num">01</span>
+  <h2>Sticky masthead</h2>
+  <p class="cap">The header stays a <em>sheet</em> when it pins, casting its own shadow onto the page
+    as it passes. <code>subtle</code> · <code>dpi 150</code> · <code>light:'pointer'</code> ·
+    <code>edge.radius_px 14</code> · <code>overhang:'grow'</code>, which is safe here because the
+    column has a wider gutter than the shadow margin.</p></div>
+
+<!-- ═══════════════════════════════════════════ intro ═══ -->
+<section class="intro">
+  <p class="eyebrow">paperweb · demo/news/product.html</p>
+  <h1>Paper as the material, not the theme.</h1>
+  <p>Twenty pieces of interactive furniture a news product actually needs: header, ticker,
+  live blog, paywall, player, poll, thread. Every surface a real WebGL2 sheet with cockle
+  relief, formation grain and a contact-hardened cast shadow. Nothing here is retro. Move the
+  cursor across the header, the section nav, the lead story, the search field or the player and
+  watch the light rake across the buckling.</p>
+  <div class="legend">
+    <span>30 papered surfaces</span><span>no images, no webfonts</span>
+    <span>keyboard reachable throughout</span><span>prefers-reduced-motion honoured</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ 02 ═══ daylight / lamplight ═══ -->
+<section class="demo" id="d02">
+  <div class="demo-head"><span class="num">02</span>
+    <h2>Daylight &amp; lamplight</h2>
+    <p class="cap">Dark mode for paper is not "invert the page". A sheet has no black state.
+      The honest answer is a dimmer, warmer sheet under a lower, harder lamp: <code>tone.paper</code>
+      scaled to 30% and pushed warm, <code>light.altitude_deg 30</code>, <code>spec_intensity 0.9</code>,
+      relief exaggerated harder so the grain survives the loss of luminance, and the ink inverted in CSS.
+      The toggle in the masthead calls <code>paper.set()</code> on all 30 surfaces at once. These two
+      swatches are pinned to their own stock so the comparison holds in either mode.</p></div>
+  <div class="stocks">
+    <div class="stock day sheet" data-paper="paper" data-paper-dpi="120" data-fixed-tone
+      data-paper-params='{"edge":{"radius_px":10},"shadow":{"offset_px":7,"blur_px":12}}'>
+      <span class="tag">Daylight stock</span>
+      <h3>#FFF3DE at full luminance</h3>
+      <p>The default sheet. Warm highlights, cool shadows, duotone 0.5. Comfortable in a lit room and
+      brutal at 1&nbsp;a.m.</p>
+    </div>
+    <div class="stock lamp sheet" data-paper="paper" data-paper-dpi="120" data-fixed-tone
+      data-paper-params='{"edge":{"radius_px":10},"shadow":{"offset_px":7,"blur_px":12,"darkness":0.85},"tone":{"paper":[0.30,0.266,0.213],"highlight":[1.08,1.0,0.88],"shadow":[0.84,0.90,1.0]},"light":{"altitude_deg":30,"spec_intensity":0.9,"relief_exaggerate":9}}'>
+      <span class="tag">Lamplight stock</span>
+      <h3>Same sheet, 30% of the light</h3>
+      <p>Not a dark rectangle: still paper, still buckled, lit from lower down so the cockle reads by
+      raking light instead of by brightness.</p>
+    </div>
+  </div>
+</section>
+
+<div class="row">
+<!-- ═══════════════════════════════════ 03 ═══ breaking ticker ═══ -->
+<section class="demo" id="d03" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">03</span>
+    <h2>Breaking ticker</h2>
+    <p class="cap">A shuttle, not a marquee: one headline in the DOM at a time, cross-faded and
+      slid. Pausable, and under <code>prefers-reduced-motion</code> it steps without sliding.
+      <code>subtle</code> · <code>dpi 170</code> · inner viewport is <code>overflow:hidden</code>,
+      so the <em>sheet</em> is the parent and keeps <code>overhang:'grow'</code>.</p></div>
+  <div class="ticker sheet" data-paper="subtle" data-paper-dpi="170"
+    data-paper-params='{"edge":{"radius_px":10,"wobble_px":2},"shadow":{"offset_px":5,"blur_px":11},"cockle":{"amplitude_um":11}}'>
+    <span class="flag">Breaking</span>
+    <div class="ticker-view" id="tickerView" aria-live="polite" aria-atomic="true"></div>
+    <div class="dots" id="tickerDots" aria-hidden="true"></div>
+    <button class="btn sm icon" id="tickerToggle" aria-pressed="false" aria-label="Pause the ticker">
+      <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true" id="tickerIcon"><rect x="2" y="1.5" width="2.7" height="9" fill="currentColor"/><rect x="7.3" y="1.5" width="2.7" height="9" fill="currentColor"/></svg>
+    </button>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ 04 ═══ live market strip ═══ -->
+<section class="demo" id="d04" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">04</span>
+    <h2>Live market strip</h2>
+    <p class="cap">Numbers that change under you, with a one-shot tint flash rather than a
+      colour that sticks. Tabular figures so nothing shifts.
+      <code>subtle</code> · <code>dpi 160</code> · small <code>shadow.offset_px 5</code> keeps the
+      canvas inside the column gutter.</p></div>
+  <div class="market sheet" data-paper="subtle" data-paper-dpi="160"
+    data-paper-params='{"edge":{"radius_px":10,"wobble_px":2},"shadow":{"offset_px":5,"blur_px":11},"cockle":{"amplitude_um":11}}'>
+    <header>
+      <h3>Markets</h3>
+      <span class="live-dot"><i></i>Live</span>
+    </header>
+    <table id="mkt">
+      <caption class="vh">Index levels, updating live</caption>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+</div>
+
+<!-- ═══════════════════════════════════ 05 ═══ section nav ═══ -->
+<section class="demo" id="d05">
+  <div class="demo-head"><span class="num">05</span>
+    <h2>Section nav with an active state</h2>
+    <p class="cap">A pill rail that really filters the grid below and announces the result count.
+      <code>subtle</code> · <code>dpi 190</code> so the grain stays fine at 46px tall ·
+      <code>edge.radius_px 24</code> to follow the CSS pill · <code>light:'pointer'</code>.</p></div>
+  <div class="secnav sheet" id="secnav" role="group" aria-label="Filter Today by section"
+    data-paper="subtle" data-paper-dpi="190" data-paper-light="pointer"
+    data-paper-params='{"edge":{"radius_px":24,"wobble_px":2},"shadow":{"offset_px":5,"blur_px":11},"cockle":{"amplitude_um":10},"formation":{"amplitude":0.012}}'>
+    <button aria-pressed="true" data-sec="all">All</button>
+    <button aria-pressed="false" data-sec="city">City</button>
+    <button aria-pressed="false" data-sec="climate">Climate</button>
+    <button aria-pressed="false" data-sec="business">Business</button>
+    <button aria-pressed="false" data-sec="culture">Culture</button>
+    <span class="count" id="secCount" role="status">4 stories</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ 06 ═══ card grid ═══ -->
+<section class="demo" id="d06">
+  <div class="demo-head"><span class="num">06</span>
+    <h2>Card grid with a hover lift</h2>
+    <p class="cap">The lift is CSS; the <em>brightening</em> is real: <code>paper.set()</code> mixes
+      <code>tone.paper</code> toward a cooler, whiter stock on pointer-enter and focus, so the sheet
+      itself catches more light. The lead card also runs <code>light:'pointer'</code>.
+      <code>dpi 150</code> · <code>edge.radius_px 10</code> · gap 44px so neighbouring cast shadows
+      never overlap.</p></div>
+  <div class="grid" id="grid"></div>
+</section>
+
+<div class="row wide-left">
+<!-- ═══════════════════════════════════ 07 ═══ search ═══ -->
+<section class="demo" id="d07" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">07</span>
+    <h2>Search with live results</h2>
+    <p class="cap">Filters as you type, highlights the match, and announces the count to a screen
+      reader. <code>light:'pointer'</code> plus <code>dpi 175</code>: the fine grain is what stops a
+      large empty sheet reading as a flat beige rectangle. The result list scrolls inside the sheet,
+      so the <em>parent</em> carries the paper.</p></div>
+  <div class="search sheet" data-paper="paper" data-paper-dpi="175" data-paper-light="pointer"
+    data-paper-params='{"edge":{"radius_px":10,"wobble_px":3},"shadow":{"offset_px":7,"blur_px":14},"formation":{"amplitude":0.016}}'>
+    <div class="search-field">
+      <svg width="19" height="19" viewBox="0 0 16 16" aria-hidden="true" style="color:var(--ink-faint)"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.4 10.4 14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <label class="vh" for="q">Search The Ledger</label>
+      <input id="q" type="search" placeholder="Search the archive" autocomplete="off" spellcheck="false">
+      <button class="btn sm" id="qClear" hidden>Clear</button>
+    </div>
+    <ul class="search-results" id="qResults"></ul>
+    <p class="search-hint">Press <kbd>/</kbd> anywhere on the page to jump here.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ 08 ═══ status bar ═══ -->
+<section class="demo" id="d08" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">08</span>
+    <h2>Story status bar</h2>
+    <p class="cap">Developing badge, reading time, byline and last-updated stamp on one pill of
+      paper. <code>dpi 200</code> is the point: at 44px tall a coarse sheet looks like a smudge,
+      and a fine one looks like an index card. <code>edge.radius_px 22</code> follows the CSS pill.
+      The ping ring is CSS and stops under reduced motion.</p></div>
+  <div class="statusbar sheet" data-paper="subtle" data-paper-dpi="200"
+    data-paper-params='{"edge":{"radius_px":22,"wobble_px":2},"shadow":{"offset_px":5,"blur_px":10},"cockle":{"amplitude_um":9},"formation":{"amplitude":0.011}}'>
+    <span class="pill developing"><i aria-hidden="true"></i>Developing</span>
+    <span class="pill">6 min read</span>
+    <span class="sep" aria-hidden="true"></span>
+    <span class="by">By <b>Ines Karam</b></span>
+    <time datetime="2026-08-10T14:20">Updated 14:20</time>
+  </div>
+</section>
+</div>
+
+<!-- ═══════════════════════════════════ 09 ═══ progress ═══ -->
+<section class="demo" id="d09">
+  <div class="demo-head"><span class="num">09</span>
+    <h2>Reading progress</h2>
+    <p class="cap">Driven by real page scroll, so it is honest: scroll this page and both this rail
+      and the hairline in the masthead fill. The paper never re-renders. The fill is ink drawn on
+      top with <code>transform:scaleX()</code>, which is the right division of labour: paper is
+      expensive, ink is free.</p></div>
+  <div class="progress sheet" data-paper="subtle" data-paper-dpi="150"
+    data-paper-params='{"edge":{"radius_px":10,"wobble_px":2},"shadow":{"offset_px":6,"blur_px":12},"cockle":{"amplitude_um":12}}'>
+    <div class="top"><span class="lab">You are here</span><span class="num" id="progNum">0%</span></div>
+    <div class="track" role="progressbar" aria-label="Page read" aria-valuemin="0" aria-valuemax="100"
+      aria-valuenow="0" id="progBar"><i id="progFill"></i></div>
+    <div class="foot"><span>The Ledger, Monday edition</span><span id="progLeft">9 min left</span></div>
+  </div>
+</section>
+
+<div class="row has-popover">
+<!-- ═══════════════════════════════════ 10 ═══ bookmark ═══ -->
+<section class="demo" id="d10" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">10</span>
+    <h2>Save control with a stock change</h2>
+    <p class="cap">Saving does not just tint a button: <code>paper.set()</code> pushes
+      <code>tone.paper</code> from cream to an aged ochre stock, so the sheet itself becomes the
+      state. Press it. <code>aria-pressed</code> carries the same fact to assistive tech.</p></div>
+  <div class="actionbar sheet" id="saveBar" data-paper="paper" data-paper-dpi="160"
+    data-paper-params='{"edge":{"radius_px":10,"wobble_px":3},"shadow":{"offset_px":6,"blur_px":12}}'>
+    <span class="label"><b>The river crossing, in full</b><span>Long read, 4,200 words</span></span>
+    <button class="btn" id="saveBtn" aria-pressed="false">
+      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" id="saveIcon"><path d="M3 1.4h8v11.2L7 9.6l-4 3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      <span id="saveLabel">Save</span>
+    </button>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ 11 ═══ share sheet ═══ -->
+<section class="demo" id="d11" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">11</span>
+    <h2>Share sheet</h2>
+    <p class="cap">A second, smaller sheet laid on the first. Toggling moves focus into it,
+      <kbd>Esc</kbd> closes and returns focus to the button. Shown open here because a papered
+      surface inside a <code>display:none</code> box never renders.
+      <code>dpi 180</code> · <code>edge.radius_px 10</code> · its own cast shadow separates the layers.</p></div>
+  <div class="actionbar sheet" data-paper="paper" data-paper-dpi="160"
+    data-paper-params='{"edge":{"radius_px":10,"wobble_px":3},"shadow":{"offset_px":6,"blur_px":12}}'>
+    <span class="label"><b>Send this story</b><span>Three ways out of the page</span></span>
+    <div class="sharewrap">
+      <button class="btn" id="shareBtn" aria-expanded="true" aria-controls="shareSheet">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 9.5V1.8M7 1.8 4.2 4.6M7 1.8l2.8 2.8M2.2 8.4v3.4h9.6V8.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Share
+      </button>
+      <div class="sharesheet sheet" id="shareSheet" role="group" aria-label="Share options"
+        data-paper="paper" data-paper-dpi="180"
+        data-paper-params='{"edge":{"radius_px":10,"wobble_px":3},"shadow":{"offset_px":8,"blur_px":13,"darkness":0.75},"tone":{"opacity":0.99}}'>
+        <h4>Share</h4>
+        <ul>
+          <li><button data-share="link"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5a3 3 0 0 0 4.2 0l2-2a3 3 0 1 0-4.2-4.2l-1 1M9.5 6.5a3 3 0 0 0-4.2 0l-2 2a3 3 0 1 0 4.2 4.2l1-1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Copy link</button></li>
+          <li><button data-share="mail"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.6" y="3.4" width="12.8" height="9.2" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m2.2 4.4 5.8 4 5.8-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>Email the desk</button></li>
+          <li><button data-share="quote"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 12V8.4c0-2.4 1.3-3.9 3.4-4.4M9 12V8.4c0-2.4 1.3-3.9 3.4-4.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Quote a passage</button></li>
+        </ul>
+        <p class="copied" id="shareMsg" role="status" hidden>Link copied to the clipboard.</p>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- ═══════════════════════════════════ 12 ═══ live blog ═══ -->
+<section class="demo" id="d12">
+  <div class="demo-head"><span class="num">12</span>
+    <h2>Live blog, newest first</h2>
+    <p class="cap">New posts land at the top with a NEW flag that ages out after twelve seconds,
+      and the whole thing is one sheet: entries are ink, so nothing re-renders when the story moves.
+      <code>reading</code> at <code>dpi 155</code> with <code>fade.amount 0.38</code>, because a big sheet at full fade reads as a dirty photocopy rather than a reading surface
+      under body copy. The scroller is a child, not the papered element.</p></div>
+  <div class="liveblog sheet" data-paper="reading" data-paper-dpi="155"
+    data-paper-params='{"edge":{"radius_px":12,"wobble_px":4},"shadow":{"offset_px":9,"blur_px":16},"fade":{"amount":0.38},"cockle":{"amplitude_um":17}}'>
+    <header>
+      <h3>Council votes on the river crossing</h3>
+      <button class="btn sm primary" id="lbLoad">Load 1 newer</button>
+    </header>
+    <p class="meta">Live coverage from the chamber. All times MDT.</p>
+    <div class="lb-scroll" id="lbScroll" tabindex="0" role="region" aria-label="Live updates, newest first"></div>
+  </div>
+</section>
+
+<div class="row">
+<!-- ═══════════════════════════════════ 13 ═══ poll ═══ -->
+<section class="demo" id="d13" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">13</span>
+    <h2>Reader poll with results</h2>
+    <p class="cap">Vote and the bars grow, the percentages fade in, your choice is marked and the
+      buttons go inert. Bars are <code>scaleX</code> on ink, never a re-render of the sheet.
+      <code>paper</code> at <code>dpi 145</code>.</p></div>
+  <div class="poll sheet" id="poll" data-paper="paper" data-paper-dpi="145"
+    data-paper-params='{"edge":{"radius_px":12,"wobble_px":3},"shadow":{"offset_px":7,"blur_px":13}}'>
+    <h3>Should the city fund the third river crossing?</h3>
+    <p class="sub">One vote per reader. Results update live.</p>
+    <ul id="pollList"></ul>
+    <p class="tally" id="pollTally" role="status">4,812 votes so far.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ 14 ═══ newsletter ═══ -->
+<section class="demo" id="d14" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">14</span>
+    <h2>Newsletter sign-up</h2>
+    <p class="cap">Inline validation on submit, with the message wired to <code>aria-live</code> and
+      the field marked <code>aria-invalid</code>. A slightly aged stock
+      (<code>tone.paper [0.98,0.93,0.83]</code>) separates the offer from the editorial sheets
+      around it without introducing a new colour.</p></div>
+  <div class="newsletter sheet" data-paper="paper" data-paper-dpi="140"
+    data-paper-params='{"edge":{"radius_px":12,"wobble_px":3},"shadow":{"offset_px":7,"blur_px":13},"tone":{"paper":[0.98,0.93,0.83]}}'>
+    <p class="kicker">Every weekday, 6 a.m.</p>
+    <h3>The Ledger Morning File</h3>
+    <p class="dek">One editor, ten minutes, the six things that will actually matter by lunch.</p>
+    <form id="nlForm" novalidate>
+      <label class="vh" for="nlEmail">Email address</label>
+      <input id="nlEmail" type="email" placeholder="you@example.com" autocomplete="email">
+      <button class="btn primary" type="submit">Subscribe</button>
+    </form>
+    <p class="formmsg" id="nlMsg" role="status"></p>
+  </div>
+</section>
+</div>
+
+<!-- ═══════════════════════════════════ 15 ═══ paywall interlude ═══ -->
+<section class="demo" id="d15">
+  <div class="demo-head"><span class="num">15</span>
+    <h2>Paywall interlude</h2>
+    <p class="cap">Two sheets, deliberately overlapped. The article stock is
+      <code>reading</code> at <code>dpi 140</code>, the offer is a slightly warmer, more opaque sheet
+      laid on top with <code>tone.opacity 0.97</code> and its own cast shadow, which is what makes
+      the overlap read as two objects rather than one box. The text fades under a CSS mask, never a
+      papered overlay, so the ink stays selectable. Unlock expands the rest.</p></div>
+  <div class="paywrap">
+    <article class="article sheet" data-paper="reading" data-paper-dpi="140"
+      data-paper-params='{"edge":{"radius_px":14,"wobble_px":5},"shadow":{"offset_px":9,"blur_px":17},"fade":{"amount":0.4},"cockle":{"amplitude_um":18}}'>
+      <p class="kicker">The crossing, part three</p>
+      <h3>The bridge the city has been not-building for forty years</h3>
+      <blockquote class="pullquote">“Eleven words have moved this file further than four decades of
+        consultation.”<cite>Councillor D. Reyes, in the chamber</cite></blockquote>
+      <div class="body locked" id="payBody">
+        <p>The first drawings were filed in 1984, on paper this colour, by an engineer who has since
+        died twice over in the record: once in the register, once in the footnotes of a report that
+        got the span wrong by nine metres and was never corrected.</p>
+        <p>Every council since has voted on some version of it. Four have voted yes. None of the
+        four had the money at the same time as the votes, which is the whole story of the crossing
+        and, most weeks, the whole story of the city.</p>
+        <p>What changed this spring was not the engineering. It was a federal transfer with a clause
+        in it: spend by 2029, or send it back. The clause is eleven words long and it has done more
+        to move the file than four decades of consultation.</p>
+        <p>The chamber knows this. That is why Monday's vote, procedurally a formality about a
+        feasibility envelope, drew the largest public gallery since the arena.</p>
+      </div>
+    </article>
+    <div class="offer sheet" id="offerPanel" data-paper="paper" data-paper-dpi="150"
+      data-paper-params='{"edge":{"radius_px":10,"wobble_px":3},"shadow":{"offset_px":9,"blur_px":15,"darkness":0.78},"tone":{"paper":[0.985,0.945,0.875],"opacity":0.97}}'>
+      <div>
+        <h4 id="offerHead">Keep reading, 2,900 words to go</h4>
+        <p>Local reporting is the only kind nobody else will do for you. Cancel any time, and the
+        Monday File is included.</p>
+        <div class="plans" role="group" aria-label="Choose a plan">
+          <button class="plan" data-plan="month" aria-pressed="true"><b>Monthly</b>$6 a month</button>
+          <button class="plan" data-plan="year" aria-pressed="false"><b>Yearly</b>$54, two months free</button>
+        </div>
+      </div>
+      <button class="btn primary" id="unlockBtn">Unlock this story</button>
+    </div>
+  </div>
+</section>
+
+<div class="row wide-left">
+<!-- ═══════════════════════════════════ 16 ═══ audio player ═══ -->
+<section class="demo" id="d16" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">16</span>
+    <h2>Podcast player</h2>
+    <p class="cap">Play, scrub, change speed. The waveform fills as it plays and the range input is
+      the real control, so arrow keys scrub. <code>light:'pointer'</code> at <code>dpi 165</code>:
+      a control surface is exactly where a raking light earns its cost, because the cursor is
+      already there.</p></div>
+  <div class="player sheet" data-paper="paper" data-paper-dpi="165" data-paper-light="pointer"
+    data-paper-params='{"edge":{"radius_px":12,"wobble_px":3},"shadow":{"offset_px":7,"blur_px":14}}'>
+    <div class="cover" id="podCover"></div>
+    <div>
+      <p class="who">The Ledger Daily · Ep. 412</p>
+      <h3>Eleven words, four decades, one bridge</h3>
+      <p class="dek">Ines Karam on the clause that finally moved a file the city had been losing on
+      purpose since 1984.</p>
+      <div class="wave" id="wave" aria-hidden="true"></div>
+      <div class="pcontrols">
+        <button class="btn icon" id="playBtn" aria-pressed="false" aria-label="Play the episode">
+          <svg width="15" height="15" viewBox="0 0 14 14" aria-hidden="true" id="playIcon"><path d="M3.4 1.8 11.6 7l-8.2 5.2z" fill="currentColor"/></svg>
+        </button>
+        <span class="time" id="podNow">0:00</span>
+        <label class="vh" for="scrub">Seek within the episode</label>
+        <input class="scrub" id="scrub" type="range" min="0" max="1482" value="0" step="1">
+        <span class="time" id="podDur">24:42</span>
+        <button class="btn sm" id="speedBtn" aria-label="Playback speed">1.0&times;</button>
+      </div>
+      <div class="chapters" id="chapters" role="group" aria-label="Chapters"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ 17 ═══ photo essay ═══ -->
+<section class="demo" id="d17" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">17</span>
+    <h2>Photo essay with a lightbox</h2>
+    <p class="cap">The contact strip is one sheet; the lightbox is a native <code>&lt;dialog&gt;</code>
+      whose sheet is bound on <em>first open</em> with <code>new Paper(el, {lazy:false})</code>.
+      That is the pattern worth stealing: a surface inside a hidden box measures zero and renders
+      nothing, so bind it when it first has a size. Arrow keys move between frames.</p></div>
+  <div class="contact sheet" data-paper="textured" data-paper-dpi="145"
+    data-paper-params='{"edge":{"radius_px":12,"wobble_px":4,"deckle_px":0},"shadow":{"offset_px":7,"blur_px":14},"formation":{"source":0,"amplitude":0.022}}'>
+    <p class="kicker">Photo essay</p>
+    <h3>Six mornings on the east bank</h3>
+    <div class="frames" id="frames"></div>
+  </div>
+</section>
+</div>
+
+<div class="row wide-left">
+<!-- ═══════════════════════════════════ 18 ═══ related rail ═══ -->
+<section class="demo" id="d18" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">18</span>
+    <h2>Related stories rail</h2>
+    <p class="cap">A scroll-snap rail whose cards are papered with <code>overhang:'inset'</code>,
+      because a <code>'grow'</code> canvas is clipped by the scroller and drags a horizontal
+      scrollbar in with it. Inset shrinks the sheet and pads the element instead, which is the
+      correct trade inside any <code>overflow</code> container.</p></div>
+  <div class="railwrap">
+    <div class="rail" id="rail" tabindex="0" role="region" aria-label="Related stories"></div>
+    <div class="railfoot">
+      <button class="btn sm icon" data-rail="-1" aria-label="Scroll related stories left">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.6 1.6 3.2 6l4.4 4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn sm icon" data-rail="1" aria-label="Scroll related stories right">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.4 1.6 8.8 6l-4.4 4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <p class="hint">Four parts. Drag, scroll or tab through them; each card snaps.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ 19 ═══ comment thread ═══ -->
+<section class="demo" id="d19" style="margin-bottom:0">
+  <div class="demo-head"><span class="num">19</span>
+    <h2>Comment thread</h2>
+    <p class="cap">Nesting shown as a physical layer: the reply is its own smaller sheet at
+      <code>tone.paper</code> multiplied to 0.94 and <code>tone.opacity 0.96</code>, so it sits
+      slightly darker and slightly translucent on the parent. Replies expand, the upvote toggles,
+      both keyboard reachable.</p></div>
+  <div class="thread sheet" data-paper="reading" data-paper-dpi="155"
+    data-paper-params='{"edge":{"radius_px":12,"wobble_px":4},"shadow":{"offset_px":8,"blur_px":15},"fade":{"amount":0.42}}'>
+    <h3>What readers are saying</h3>
+    <p class="sub">412 comments · moderated until 22:00</p>
+    <div class="cmt">
+      <div class="who"><b>M. Okonkwo</b><time datetime="2026-08-10T13:04">13:04</time></div>
+      <p>The eleven-word clause is the actual news here. Everything else is forty years of the same
+      meeting. Would like to see the transfer agreement published in full.</p>
+      <div class="acts">
+        <button class="btn sm" data-vote aria-pressed="false">
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.8 10.2 7H7.6v3.4H4.4V7H1.8z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          <span data-votecount>48</span>
+        </button>
+        <button class="btn sm" id="repliesBtn" aria-expanded="true" aria-controls="reply1">Hide 1 reply</button>
+      </div>
+      <div class="reply sheet" id="reply1" data-paper="reading" data-paper-dpi="170"
+        data-paper-params='{"edge":{"radius_px":8,"wobble_px":2},"shadow":{"offset_px":5,"blur_px":9},"tone":{"opacity":0.96},"cockle":{"amplitude_um":14}}'>
+        <div class="who"><b>Ledger newsroom</b><time datetime="2026-08-10T13:31">13:31</time></div>
+        <p>It is published, as an appendix to Monday's agenda. We have linked the PDF at the foot of
+        the live blog and pulled the clause out in part two.</p>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- ═══════════════════════════════════ 20 ═══ imprint ═══ -->
+<section class="demo" id="d20">
+  <div class="demo-head"><span class="num">20</span>
+    <h2>Footer imprint</h2>
+    <p class="cap">The last sheet on the page, and the quietest: <code>subtle</code> at
+      <code>dpi 110</code> so the buckle is broad and slow under a large surface, with the cast
+      shadow softened. Chrome that must not shout is exactly what the <code>subtle</code> preset is
+      for.</p></div>
+  <footer class="imprint sheet" data-paper="subtle" data-paper-dpi="110"
+    data-paper-params='{"edge":{"radius_px":14,"wobble_px":4},"shadow":{"offset_px":8,"blur_px":18,"darkness":0.6},"cockle":{"amplitude_um":16,"wavelength_mm":34},"fade":{"amount":0.45}}'>
+    <div class="col1">
+      <div class="wordmark">The&nbsp;Ledger<span>.</span></div>
+      <p>Independent local reporting since 1971. Printed on paper that no longer exists, rendered on
+      paper that never did.</p>
+      <p class="colophon">Stock: #FFF3DE · cockle 30 mm / 22 µm · formation 2.5 mm<br>
+      30 surfaces · WebGL2 · no images</p>
+    </div>
+    <div><h4>Sections</h4><ul>
+      <li><a href="#d06">Today</a></li><li><a href="#d12">Live</a></li>
+      <li><a href="#d16">Audio</a></li><li><a href="#d17">Photo</a></li></ul></div>
+    <div><h4>The paper</h4><ul>
+      <li><a href="#d02">Masthead</a></li><li><a href="#d15">Subscribe</a></li>
+      <li><a href="#d14">Newsletters</a></li><li><a href="#d19">Letters</a></li></ul></div>
+    <div><h4>Legal</h4><ul>
+      <li><a href="#d20">Privacy</a></li><li><a href="#d20">Terms</a></li>
+      <li><a href="#d20">Corrections</a></li><li><a href="#d20">Contact the desk</a></li></ul></div>
+  </footer>
+</section>
+
+<dialog class="lightbox" id="lightbox" aria-label="Photo essay viewer">
+  <div class="lbpanel sheet" id="lbPanel">
+    <div class="stage" id="lbStage"></div>
+    <div class="lbbar">
+      <p class="lbcap" id="lbCap"></p>
+      <span class="lbnum" id="lbNum"></span>
+      <button class="btn sm icon" id="lbPrev" aria-label="Previous photograph">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><path d="M7.6 1.6 3.2 6l4.4 4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="btn sm icon" id="lbNext" aria-label="Next photograph">
+        <svg width="13" height="13" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.4 1.6 8.8 6l-4.4 4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="btn sm" id="lbClose">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script type="module">
+import { Paper, scan } from '../../src/index.js';
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const RM = matchMedia('(prefers-reduced-motion: reduce)');
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+
+/* ── duotone "photographs", drawn as inline SVG ─────────────────────────── */
+const DUO = [
+  ['#2E4756','#E4D6BC'], ['#564E43','#EFE2C6'], ['#5F6F5E','#EDE3CB'],
+  ['#7A3B2E','#F0DEC4'], ['#3A3630','#E9DCC0'], ['#4A5B66','#EDE0C6'],
+];
+const SHAPES = [
+  (a,b)=>`<path d="M0 42h100" stroke="${b}" stroke-width="1.6"/><path d="M10 42V22l11-8 11 8v20M58 42V22l11-8 11 8v20" fill="none" stroke="${b}" stroke-width="1.4"/><path d="M0 30q50 20 100 0" fill="none" stroke="${b}" stroke-width="1.4"/>`,
+  (a,b)=>`<circle cx="72" cy="20" r="11" fill="${b}" opacity=".9"/><path d="M0 46q22-16 40-4t60-8v26H0z" fill="${b}" opacity=".55"/>`,
+  (a,b)=>`<g fill="${b}"><rect x="8" y="26" width="12" height="34"/><rect x="24" y="16" width="9" height="44" opacity=".8"/><rect x="37" y="32" width="14" height="28" opacity=".6"/><rect x="55" y="10" width="10" height="50" opacity=".85"/><rect x="69" y="24" width="16" height="36" opacity=".65"/></g>`,
+  (a,b)=>`<ellipse cx="50" cy="26" rx="17" ry="20" fill="${b}" opacity=".85"/><path d="M22 60c4-14 14-20 28-20s24 6 28 20z" fill="${b}" opacity=".55"/>`,
+  (a,b)=>`<g stroke="${b}" fill="none" stroke-width="1.3"><path d="M-2 50q26-10 52 0t52 0"/><path d="M-2 40q26-10 52 0t52 0" opacity=".7"/><path d="M-2 30q26-10 52 0t52 0" opacity=".45"/><path d="M-2 20q26-10 52 0t52 0" opacity=".25"/></g>`,
+  (a,b)=>`<path d="M0 60 30 18l18 24 14-12 38 30z" fill="${b}" opacity=".7"/><circle cx="20" cy="14" r="7" fill="${b}"/>`,
+];
+function art(i, ratio = '100 60') {
+  const [a, b] = DUO[i % DUO.length];
+  return `<svg viewBox="0 0 ${ratio}" preserveAspectRatio="xMidYMid slice" width="100%" height="100%"
+    role="img" aria-hidden="true"><rect width="100%" height="100%" fill="${a}"/>${SHAPES[i % SHAPES.length](a, b)}</svg>`;
+}
+
+/* ── 06 card grid ───────────────────────────────────────────────────────── */
+const STORIES = [
+  { sec:'city', kick:'City hall', hed:'Council clears the way for a third river crossing',
+    dek:'A 9-4 vote sends the feasibility envelope to the province.', meta:'4 min · 12:40' },
+  { sec:'climate', kick:'Climate', hed:'The valley has had eleven days above 33°C',
+    dek:'Twice the ten-year average, and the season is not over.', meta:'6 min · 11:05' },
+  { sec:'business', kick:'Business', hed:'Two grain terminals, one buyer, no announcement',
+    dek:'The paperwork went through in March. Nobody told the growers.', meta:'8 min · 09:20' },
+  { sec:'culture', kick:'Culture', hed:'The projectionist who kept the last reel',
+    dek:'Forty-one years in the booth, and one film he never sent back.', meta:'5 min · 08:00' },
+];
+$('#grid').innerHTML = STORIES.map((s, i) => `
+  <a class="card sheet" href="#d06" data-sec="${s.sec}"
+     data-paper="paper" data-paper-dpi="150"${i === 0 ? ' data-paper-light="pointer"' : ''}
+     data-paper-params='{"edge":{"radius_px":10,"wobble_px":3},"shadow":{"offset_px":4,"blur_px":8}}'
+     style="text-decoration:none">
+    <span class="thumb">${art(i)}</span>
+    <span class="kicker">${s.kick}</span>
+    <h3>${s.hed}</h3>
+    <span class="dek">${s.dek}</span>
+    <span class="meta">${s.meta}</span>
+  </a>`).join('');
+
+/* ── 18 related rail ────────────────────────────────────────────────────── */
+const RELATED = [
+  { k:'Part one', h:'How the 1984 drawings lost nine metres', d:'A transcription error, repeated in every report since.', m:'7 min' },
+  { k:'Part two', h:'Eleven words in a federal transfer', d:'The clause that moved the file after four decades.', m:'5 min' },
+  { k:'Explainer', h:'What a feasibility envelope buys', d:'Not a bridge. Not yet. Here is what it does cover.', m:'3 min' },
+  { k:'Archive', h:'The 1998 vote, and why it went nowhere', d:'Same chamber, same motion, no money behind it.', m:'9 min' },
+];
+$('#rail').innerHTML = RELATED.map((r, i) => `
+  <a class="rcard sheet" href="#d18"
+     data-paper="paper" data-paper-overhang="inset" data-paper-dpi="165"
+     data-paper-params='{"edge":{"radius_px":8,"wobble_px":2},"shadow":{"offset_px":3,"blur_px":6}}'
+     style="text-decoration:none">
+    <span class="inner">
+      <span class="thumb">${art(i + 2)}</span>
+      <span class="kicker">${r.k}</span>
+      <h4>${r.h}</h4>
+      <span class="dek">${r.d}</span>
+      <span class="meta">${r.m}</span>
+    </span>
+  </a>`).join('');
+
+/* ── 17 contact strip ───────────────────────────────────────────────────── */
+const PHOTOS = [
+  ['Low water, 05:40', 'Low water at 05:40. The gravel bar has not been this wide since 2011.'],
+  ['The east abutment', 'The east abutment, poured in 1991 and never built on.'],
+  ['Temporary span', 'Commuters on the temporary span, seven minutes before it closes for the night.'],
+  ['A survey stake', 'A survey stake, re-driven four times in four decades, always within a metre.'],
+  ['The gallery, full', 'The chamber gallery, full for the first time since the arena vote.'],
+  ['Last light, 21:14', 'Last light on the west bank at 21:14, from the unfinished pier.'],
+];
+$('#frames').innerHTML = PHOTOS.map(([short], i) => `
+  <figure style="margin:0">
+    <button class="frame" data-frame="${i}" aria-label="Open photograph ${i + 1} of 6">
+      <span style="display:block;aspect-ratio:3/2">${art(i)}</span>
+    </button>
+    <figcaption>${i + 1} · ${short}</figcaption>
+  </figure>`).join('');
+$('#podCover').innerHTML = art(3, '100 100');
+
+/* ── bind every declared surface, and remember each sheet's own stock ───── */
+const papers = scan();
+for (const p of papers) {
+  p.__base = {
+    paper: p.params.tone.paper.slice(),
+    alt:   p.params.light.altitude_deg,
+    spec:  p.params.light.spec_intensity,
+    exag:  p.params.light.relief_exaggerate,
+    dark:  p.params.shadow.darkness,
+    fixed: p.el.hasAttribute('data-fixed-tone'),
+  };
+}
+
+/* ── 02 daylight / lamplight ────────────────────────────────────────────── */
+const LAMP = { scale: 0.30, warm: [1, 0.95, 0.86] };
+let theme = 'day';
+const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const stockOf = (p, lift = 0) => {
+  const base = theme === 'lamp'
+    ? p.__base.paper.map((v, i) => clamp(v * LAMP.scale * LAMP.warm[i]))
+    : p.__base.paper.slice();
+  return lift ? mix(base, theme === 'lamp' ? [0.42, 0.38, 0.31] : [1, 1, 0.97], lift) : base;
+};
+function applyTheme(next) {
+  theme = next;
+  document.documentElement.dataset.theme = next;
+  const lamp = next === 'lamp';
+  $('#themeBtn').setAttribute('aria-pressed', String(lamp));
+  $('#themeLabel').textContent = lamp ? 'Lamplight' : 'Daylight';
+  $('#themeIcon').innerHTML = lamp
+    ? '<path d="M13.4 9.6A5.8 5.8 0 0 1 6.4 2.6a5.9 5.9 0 1 0 7 7z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>'
+    : '<circle cx="8" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.5"/><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7 13 13M13 3l-1.3 1.3M4.3 11.7 3 13"/></g>';
+  for (const p of papers) {
+    if (p.__base.fixed) continue;
+    p.set({
+      tone:   { paper: stockOf(p), highlight: lamp ? [1.08, 1, 0.88] : [1.02, 1, 0.96],
+                shadow: lamp ? [0.84, 0.90, 1.0] : [0.90, 0.92, 0.98] },
+      light:  { altitude_deg: lamp ? 30 : p.__base.alt,
+                spec_intensity: lamp ? 0.9 : p.__base.spec,
+                relief_exaggerate: lamp ? p.__base.exag + 2.5 : p.__base.exag },
+      shadow: { darkness: lamp ? 0.86 : p.__base.dark },
+    });
+  }
+}
+$('#themeBtn').addEventListener('click', () => applyTheme(theme === 'day' ? 'lamp' : 'day'));
+
+/* ── 03 breaking ticker ─────────────────────────────────────────────────── */
+const FLASHES = [
+  ['12:41', 'Council votes 9-4 to fund the third river crossing'],
+  ['12:18', 'Province confirms the transfer deadline will not move'],
+  ['11:52', 'Eleventh day above 33°C recorded at the valley station'],
+  ['11:04', 'Grain terminal sale cleared without notice to growers'],
+];
+const tView = $('#tickerView'), tDots = $('#tickerDots');
+tDots.innerHTML = FLASHES.map(() => '<i></i>').join('');
+let tIdx = -1, tTimer = null, tPlaying = !RM.matches;
+function tickerShow(n) {
+  const prev = tView.firstElementChild;
+  if (prev) { prev.classList.replace('on', 'off'); setTimeout(() => prev.remove(), 520); }
+  tIdx = (n + FLASHES.length) % FLASHES.length;
+  const [time, text] = FLASHES[tIdx];
+  const el = document.createElement('p');
+  el.className = 'ticker-item';
+  el.innerHTML = `<b>${time}</b><span>${text}</span>`;
+  tView.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('on'));
+  $$('i', tDots).forEach((d, i) => d.classList.toggle('on', i === tIdx));
+}
+function tickerRun(on) {
+  tPlaying = on;
+  clearInterval(tTimer);
+  if (on) tTimer = setInterval(() => tickerShow(tIdx + 1), 4200);
+  const b = $('#tickerToggle');
+  b.setAttribute('aria-pressed', String(!on));
+  b.setAttribute('aria-label', on ? 'Pause the ticker' : 'Resume the ticker');
+  $('#tickerIcon').innerHTML = on
+    ? '<rect x="2" y="1.5" width="2.7" height="9" fill="currentColor"/><rect x="7.3" y="1.5" width="2.7" height="9" fill="currentColor"/>'
+    : '<path d="M2.8 1.4 10.4 6l-7.6 4.6z" fill="currentColor"/>';
+}
+tickerShow(0);
+tickerRun(tPlaying);
+$('#tickerToggle').addEventListener('click', () => tickerRun(!tPlaying));
+
+/* ── 04 live market strip ───────────────────────────────────────────────── */
+const MKT = [
+  { s:'TSX',   v:24186.4, d:0.42 }, { s:'S&P/TSX Energy', v:412.08, d:-0.31 },
+  { s:'CAD/USD', v:0.7318, d:0.11 }, { s:'WCS spread', v:-12.75, d:-0.64 },
+];
+const mktBody = $('#mkt tbody');
+function drawMarket(hot = -1) {
+  mktBody.innerHTML = MKT.map((m, i) => `
+    <tr${i === hot && !RM.matches ? ' class="flash"' : ''}>
+      <td class="sym">${m.s}</td>
+      <td class="val">${m.v.toFixed(m.v < 10 && m.v > -10 ? 4 : 2)}</td>
+      <td class="chg ${m.d >= 0 ? 'up' : 'down'}">${m.d >= 0 ? '▲' : '▼'} ${Math.abs(m.d).toFixed(2)}%</td>
+    </tr>`).join('');
+}
+drawMarket();
+setInterval(() => {
+  const i = Math.floor(Math.random() * MKT.length);
+  const step = (Math.random() - 0.48) * (Math.abs(MKT[i].v) < 10 ? 0.004 : 0.9);
+  MKT[i].v += step;
+  MKT[i].d = clamp(MKT[i].d + step * (Math.abs(MKT[i].v) < 10 ? 12 : 0.08), -3, 3);
+  drawMarket(i);
+}, 3200);
+
+/* ── 05 section nav filters 06 ──────────────────────────────────────────── */
+$('#secnav').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-sec]');
+  if (!b) return;
+  $$('#secnav button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  const sec = b.dataset.sec;
+  let n = 0;
+  for (const card of $$('#grid .card')) {
+    const on = sec === 'all' || card.dataset.sec === sec;
+    card.hidden = !on;
+    if (on) n++;
+  }
+  $('#secCount').textContent = `${n} ${n === 1 ? 'story' : 'stories'}`;
+});
+
+/* ── 06 hover lifts the sheet toward a whiter stock ─────────────────────── */
+for (const card of $$('#grid .card')) {
+  const p = papers.find((x) => x.el === card);
+  if (!p) continue;
+  const lift = (on) => p.set({ tone: { paper: stockOf(p, on ? 0.34 : 0) } });
+  card.addEventListener('pointerenter', () => lift(true));
+  card.addEventListener('pointerleave', () => lift(false));
+  card.addEventListener('focus', () => lift(true));
+  card.addEventListener('blur', () => lift(false));
+}
+
+/* ── 07 search ──────────────────────────────────────────────────────────── */
+const ARCHIVE = [
+  ['The bridge the city has been not-building for forty years', 'City'],
+  ['Eleven words in a federal transfer agreement', 'City'],
+  ['Eleven days above 33°C, and the season is not over', 'Climate'],
+  ['Two grain terminals, one buyer, no announcement', 'Business'],
+  ['The projectionist who kept the last reel', 'Culture'],
+  ['What a feasibility envelope actually buys', 'Explainer'],
+  ['The 1998 vote, and why it went nowhere', 'Archive'],
+  ['Low water on the east bank, in six photographs', 'Photo'],
+];
+const qIn = $('#q'), qOut = $('#qResults'), qClear = $('#qClear');
+function runSearch() {
+  const term = qIn.value.trim();
+  qClear.hidden = !term;
+  const rx = term ? new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig') : null;
+  const hits = term ? ARCHIVE.filter(([t]) => t.toLowerCase().includes(term.toLowerCase())) : ARCHIVE;
+  qOut.innerHTML = hits.length
+    ? hits.slice(0, 6).map(([t, s]) => `<li><a href="#d07"><span class="t">${
+        rx ? t.replace(rx, '<mark>$1</mark>') : t}</span><span class="s">${s}</span></a></li>`).join('')
+    : `<li><p class="search-empty">Nothing in the archive matches “${term}”.</p></li>`;
+  qOut.setAttribute('aria-label', `${hits.length} result${hits.length === 1 ? '' : 's'}`);
+}
+runSearch();
+qIn.addEventListener('input', runSearch);
+qClear.addEventListener('click', () => { qIn.value = ''; runSearch(); qIn.focus(); });
+$('#jumpSearch').addEventListener('click', () => { qIn.focus(); qIn.scrollIntoView({ block: 'center' }); });
+addEventListener('keydown', (e) => {
+  if (e.key === '/' && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) {
+    e.preventDefault(); qIn.focus(); qIn.scrollIntoView({ block: 'center' });
+  }
+});
+
+/* ── 09 reading progress, page-driven ───────────────────────────────────── */
+const progFill = $('#progFill'), mastFill = $('#mastFill'),
+      progNum = $('#progNum'), progBar = $('#progBar'), progLeft = $('#progLeft');
+function onScroll() {
+  const max = document.documentElement.scrollHeight - innerHeight;
+  const t = max > 0 ? clamp(scrollY / max) : 0;
+  progFill.style.transform = `scaleX(${t})`;
+  mastFill.style.transform = `scaleX(${t})`;
+  const pct = Math.round(t * 100);
+  progNum.textContent = `${pct}%`;
+  progBar.setAttribute('aria-valuenow', String(pct));
+  progLeft.textContent = `${Math.max(0, Math.round(9 * (1 - t)))} min left`;
+}
+addEventListener('scroll', onScroll, { passive: true });
+addEventListener('resize', onScroll);
+onScroll();
+
+/* ── 10 save changes the stock ──────────────────────────────────────────── */
+const saveBtn = $('#saveBtn'), saveP = papers.find((p) => p.el === $('#saveBar'));
+saveBtn.addEventListener('click', () => {
+  const on = saveBtn.getAttribute('aria-pressed') !== 'true';
+  saveBtn.setAttribute('aria-pressed', String(on));
+  $('#saveLabel').textContent = on ? 'Saved' : 'Save';
+  $('#saveIcon').innerHTML = on
+    ? '<path d="M3 1.4h8v11.2L7 9.6l-4 3z" fill="currentColor"/>'
+    : '<path d="M3 1.4h8v11.2L7 9.6l-4 3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>';
+  if (saveP) {
+    const aged = theme === 'lamp' ? [0.32, 0.26, 0.17] : [0.955, 0.875, 0.705];
+    saveP.set({ tone: { paper: on ? aged : stockOf(saveP) } });
+  }
+});
+
+/* ── 11 share sheet ─────────────────────────────────────────────────────── */
+const shareBtn = $('#shareBtn'), shareSheet = $('#shareSheet'), shareMsg = $('#shareMsg');
+function setShare(open) {
+  shareBtn.setAttribute('aria-expanded', String(open));
+  shareSheet.hidden = !open;
+  if (open) $('.sharesheet button').focus();
+}
+shareBtn.addEventListener('click', () => setShare(shareBtn.getAttribute('aria-expanded') !== 'true'));
+shareSheet.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { setShare(false); shareBtn.focus(); }
+});
+shareSheet.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-share]');
+  if (!b) return;
+  shareMsg.hidden = false;
+  shareMsg.textContent = { link:'Link copied to the clipboard.', mail:'Opening a message to the desk.',
+                           quote:'Select a passage, then share again.' }[b.dataset.share];
+  if (b.dataset.share === 'link' && navigator.clipboard) {
+    navigator.clipboard.writeText(location.href).catch(() => {});
+  }
+});
+
+/* ── 12 live blog ───────────────────────────────────────────────────────── */
+const POSTS = [
+  ['12:41','Motion carries, 9-4','The chamber applauds. The mayor asks for order twice, then gives up and lets it run.'],
+  ['12:33','Councillor Reyes moves to amend','A friendly amendment ties the envelope to a quarterly report. Accepted without debate.'],
+  ['12:12','Public gallery at capacity','Overflow seating opened in the annex. Roughly 240 people, by our count.'],
+  ['11:58','The clause, read into the record','“Funds unexpended by 31 March 2029 shall be returned.” Eleven words, as promised.'],
+  ['11:40','Session opens','Item 7 moved up the agenda at the clerk’s request.'],
+];
+const QUEUE = [
+  ['12:52','Province responds','A statement from the transport ministry calls the vote “the first real step in a decade.”'],
+  ['13:07','Cost estimate tabled','$412m, in 2026 dollars, excluding the approach roads. The number has doubled since 2019.'],
+];
+const lbScroll = $('#lbScroll'), lbLoad = $('#lbLoad');
+function entryHTML(p, fresh) {
+  return `<article class="lb-entry${fresh ? ' lb-enter' : ''}">
+    <div class="row2"><time datetime="2026-08-10T${p[0]}">${p[0]}</time>${fresh ? '<span class="new">New</span>' : ''}</div>
+    <h4>${p[1]}</h4><p>${p[2]}</p></article>`;
+}
+lbScroll.innerHTML = POSTS.map((p) => entryHTML(p, false)).join('');
+lbLoad.addEventListener('click', () => {
+  const p = QUEUE.shift();
+  if (!p) return;
+  lbScroll.insertAdjacentHTML('afterbegin', entryHTML(p, true));
+  lbScroll.scrollTop = 0;
+  const flag = lbScroll.querySelector('.new');
+  setTimeout(() => flag && flag.remove(), 12000);
+  lbLoad.textContent = QUEUE.length ? `Load ${QUEUE.length} newer` : 'You are up to date';
+  lbLoad.disabled = !QUEUE.length;
+});
+
+/* ── 13 poll ────────────────────────────────────────────────────────────── */
+const POLL = [['Yes, and start now', 41], ['Yes, but not at this price', 27],
+              ['No, fix the existing spans', 24], ['Undecided', 8]];
+const pollEl = $('#poll'), pollList = $('#pollList');
+pollList.innerHTML = POLL.map(([t], i) => `<li><button class="opt" data-opt="${i}">
+  <span class="bar"></span><span class="txt">${t}</span><span class="pct"></span></button></li>`).join('');
+pollList.addEventListener('click', (e) => {
+  const b = e.target.closest('.opt');
+  if (!b || pollEl.classList.contains('voted')) return;
+  pollEl.classList.add('voted');
+  $$('.opt', pollList).forEach((o, i) => {
+    o.disabled = true;
+    o.classList.toggle('mine', o === b);
+    o.querySelector('.bar').style.transform = `scaleX(${POLL[i][1] / 100})`;
+    o.querySelector('.pct').textContent = `${POLL[i][1]}%`;
+  });
+  $('#pollTally').textContent = '4,813 votes so far. Your vote is counted.';
+});
+
+/* ── 14 newsletter ──────────────────────────────────────────────────────── */
+$('#nlForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const f = $('#nlEmail'), msg = $('#nlMsg');
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.value.trim());
+  f.setAttribute('aria-invalid', String(!ok));
+  msg.className = `formmsg ${ok ? 'ok' : 'err'}`;
+  msg.textContent = ok
+    ? 'Confirmed. The first Morning File lands at 6 a.m.'
+    : 'That address does not look right. Check for a missing dot or @.';
+  if (ok) f.value = '';
+});
+
+/* ── 15 paywall ─────────────────────────────────────────────────────────── */
+$('.offer .plans').addEventListener('click', (e) => {
+  const b = e.target.closest('.plan');
+  if (!b) return;
+  $$('.offer .plan').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+});
+$('#unlockBtn').addEventListener('click', () => {
+  const body = $('#payBody');
+  const open = body.classList.toggle('locked');
+  $('#unlockBtn').textContent = open ? 'Unlock this story' : 'Collapse';
+  $('#offerHead').textContent = open ? 'Keep reading, 2,900 words to go' : 'Reading in full';
+});
+
+/* ── 16 podcast player ──────────────────────────────────────────────────── */
+const BARS = Array.from({ length: 56 }, (_, i) =>
+  6 + Math.round(26 * Math.abs(Math.sin(i * 0.7) * Math.cos(i * 0.23) * Math.sin(i * 0.11 + 1))));
+const wave = $('#wave');
+wave.innerHTML = BARS.map((h) => `<i style="height:${h}px"></i>`).join('');
+const scrub = $('#scrub'), playBtn = $('#playBtn'), speedBtn = $('#speedBtn');
+const DUR = 1482;
+const CHAPTERS = [[0, 'The clause'], [412, 'Nine metres'], [905, 'Monday, 11:58']];
+$('#chapters').innerHTML = CHAPTERS.map(([s, t], i) =>
+  `<button data-seek="${s}" aria-current="${i === 0}"><b>${Math.floor(s / 60)}:${
+    String(s % 60).padStart(2, '0')}</b>${t}</button>`).join('');
+let t = 0, playing = false, speed = 1, ptimer = null;
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function drawPlayer() {
+  $('#podNow').textContent = mmss(t);
+  scrub.value = String(Math.round(t));
+  const n = Math.round((t / DUR) * BARS.length);
+  $$('i', wave).forEach((b, i) => b.classList.toggle('done', i < n));
+  let cur = 0;
+  CHAPTERS.forEach(([s], i) => { if (t >= s) cur = i; });
+  $$('#chapters button').forEach((b, i) => b.setAttribute('aria-current', String(i === cur)));
+}
+$('#chapters').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-seek]');
+  if (b) { t = Number(b.dataset.seek); drawPlayer(); }
+});
+function setPlaying(on) {
+  playing = on;
+  clearInterval(ptimer);
+  playBtn.setAttribute('aria-pressed', String(on));
+  playBtn.setAttribute('aria-label', on ? 'Pause the episode' : 'Play the episode');
+  $('#playIcon').innerHTML = on
+    ? '<rect x="3" y="2" width="3" height="10" fill="currentColor"/><rect x="8" y="2" width="3" height="10" fill="currentColor"/>'
+    : '<path d="M3.4 1.8 11.6 7l-8.2 5.2z" fill="currentColor"/>';
+  if (on) ptimer = setInterval(() => {
+    t = Math.min(DUR, t + 0.5 * speed);
+    if (t >= DUR) setPlaying(false);
+    drawPlayer();
+  }, 500);
+}
+playBtn.addEventListener('click', () => setPlaying(!playing));
+scrub.addEventListener('input', () => { t = Number(scrub.value); drawPlayer(); });
+speedBtn.addEventListener('click', () => {
+  speed = { 1: 1.25, 1.25: 1.5, 1.5: 1 }[speed];
+  speedBtn.textContent = `${speed.toFixed(2).replace(/0$/, '')}×`;
+  if (playing) setPlaying(true);
+});
+drawPlayer();
+
+/* ── 17 lightbox, papered on first open ─────────────────────────────────── */
+const dlg = $('#lightbox');
+let lbPaper = null, lbIdx = 0;
+function lbDraw() {
+  $('#lbStage').innerHTML = `<span style="display:block;aspect-ratio:16/9">${art(lbIdx, '160 90')}</span>`;
+  $('#lbCap').textContent = PHOTOS[lbIdx][1];
+  $('#lbNum').textContent = `${lbIdx + 1} / ${PHOTOS.length}`;
+}
+function lbOpen(i) {
+  lbIdx = i; lbDraw();
+  if (!dlg.open) dlg.showModal();
+  if (!lbPaper) {
+    lbPaper = new Paper($('#lbPanel'), {
+      preset: 'paper', dpi: 130, lazy: false,
+      params: { edge: { radius_px: 10, wobble_px: 3 }, shadow: { offset_px: 10, blur_px: 18 },
+                tone: { paper: stockOf({ __base: { paper: [1, 0.953, 0.871] } }) } },
+    });
+    lbPaper.__base = { paper: [1, 0.953, 0.871], alt: 50, spec: 0.5, exag: 7, dark: 0.65, fixed: false };
+    papers.push(lbPaper);
+    if (theme === 'lamp') applyTheme('lamp');
+  }
+}
+$('#frames').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-frame]');
+  if (b) lbOpen(Number(b.dataset.frame));
+});
+$('#lbPrev').addEventListener('click', () => { lbIdx = (lbIdx + PHOTOS.length - 1) % PHOTOS.length; lbDraw(); });
+$('#lbNext').addEventListener('click', () => { lbIdx = (lbIdx + 1) % PHOTOS.length; lbDraw(); });
+$('#lbClose').addEventListener('click', () => dlg.close());
+dlg.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') { lbIdx = (lbIdx + PHOTOS.length - 1) % PHOTOS.length; lbDraw(); }
+  if (e.key === 'ArrowRight') { lbIdx = (lbIdx + 1) % PHOTOS.length; lbDraw(); }
+});
+
+/* ── 18 rail buttons ────────────────────────────────────────────────────── */
+const rail = $('#rail');
+$$('[data-rail]').forEach((b) => b.addEventListener('click', () => {
+  rail.scrollBy({ left: Number(b.dataset.rail) * 306, behavior: RM.matches ? 'auto' : 'smooth' });
+}));
+
+/* ── 19 comment thread ──────────────────────────────────────────────────── */
+const repliesBtn = $('#repliesBtn'), reply1 = $('#reply1');
+repliesBtn.addEventListener('click', () => {
+  const open = repliesBtn.getAttribute('aria-expanded') !== 'true';
+  repliesBtn.setAttribute('aria-expanded', String(open));
+  repliesBtn.textContent = open ? 'Hide 1 reply' : 'Show 1 reply';
+  reply1.hidden = !open;
+});
+$$('[data-vote]').forEach((b) => b.addEventListener('click', () => {
+  const on = b.getAttribute('aria-pressed') !== 'true';
+  b.setAttribute('aria-pressed', String(on));
+  const c = b.querySelector('[data-votecount]');
+  c.textContent = String(Number(c.textContent) + (on ? 1 : -1));
+}));
+</script>
+</body>
+</html>
