@@ -10,19 +10,42 @@
     "./params": "./src/params.js",
     "./presets": "./src/presets.js"
   },
-  "files": ["src", "presets", "README.md"],
+  "files": [
+    "src",
+    "presets",
+    "README.md"
+  ],
   "scripts": {
     "test": "node --test 'test/unit/*.test.js'",
     "test:browser": "node test/browser/run.mjs",
     "test:all": "npm test && npm run test:browser",
-    "demo": "node tools/serve.mjs"
+    "demo": "node tools/serve.mjs",
+    "thumbs": "node tools/thumbs.mjs"
   },
   "peerDependencies": {
     "react": ">=18"
   },
   "peerDependenciesMeta": {
-    "react": { "optional": true }
+    "react": {
+      "optional": true
+    }
   },
-  "keywords": ["paper", "texture", "webgl", "shader", "cockle", "kubelka-munk"],
-  "license": "MIT"
+  "keywords": [
+    "paper",
+    "texture",
+    "webgl",
+    "shader",
+    "cockle",
+    "kubelka-munk"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0JEA/paperweb.git"
+  },
+  "homepage": "https://github.com/0JEA/paperweb",
+  "author": "John Andres",
+  "devDependencies": {
+    "playwright-core": "^1.49.0"
+  }
 }

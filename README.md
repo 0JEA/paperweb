@@ -214,6 +214,58 @@ it.
 - Rasterisation failure: falls back to `content: 'behind'` and reports via
   `onError`.
 
+## Showcase: a news site made of paper
+
+`demo/news/` is 80 components across four directions, built to see how far the
+library goes on real editorial furniture. Open `demo/news/` after `npm run demo`.
+
+| page | direction |
+|---|---|
+| `desk.html` | the physical newsroom: pinned leads, a spike, index cards, carbon flimsies, fanfold wire copy, a marked page proof |
+| `broadsheet.html` | print typography: front page above the fold, crossword, TV grid, agate, halftone photo, rasterized ink |
+| `archive.html` | time and evidence: taped cuttings, redacted FOI, photocopy of a photocopy, tissue over a front page |
+| `product.html` | contemporary interface: sticky masthead, ticker, live blog, paywall, poll, podcast player, dark mode for paper |
+
+`demo/news/BRIEF.md` is the brief they were built from and doubles as a
+practical guide to the API. Recipes worth knowing that came out of building them:
+
+- **`clip-path` on the host clips the canvas too**, which is how you get a folder
+  tab or a cut tag corner from one surface. Pair it with `overhang: 'clip'` and a
+  CSS `drop-shadow()`, since a grown cast shadow gets sliced by the same path.
+- **A child painted in the page's ground colour reads as a punched hole**,
+  because the sheet genuinely is behind it.
+- **`mix-blend-mode: multiply` children blend against the paper render**, because
+  the host gets `isolation: isolate`. Highlighter, coffee rings and ink washes
+  just work.
+- **The element's own `background` is invisible** for the same reason: the canvas
+  sits above it at `z-index: -1`. Ruled lines and shading must be child elements.
+- **Legibility on crumpled stock dies from gloss, not relief.**
+  `light.spec_intensity 0.28-0.32` with `spec_power ~50` keeps the creases and
+  stops ridges blowing out to white.
+- **Grid gaps must exceed twice the shadow margin** (`offset_px + 2 x blur_px`)
+  or neighbouring cast shadows overlap and double-darken.
+- **Rotation and sizing fight.** paperweb measures from `getBoundingClientRect`,
+  which for a rotated element is the rotated bounding box, so a 6 degree tilt
+  makes the sheet oversized and off-centre. Render first, let the ResizeObserver
+  settle, then apply the tilt. Do not put `light: 'pointer'` on a tilted sheet.
+- **A surface inside `display: none` measures zero and renders nothing**, and
+  stays that way. Bind it with `{ lazy: false }` when the container first opens.
+
+## Tools
+
+```
+node tools/checkpage.mjs <page>   render on the real GPU; fail on console errors,
+                                  blank surfaces, overflow, illegible text
+node tools/crop.mjs <page> <y>... 1:1 slices for judging detail
+node tools/thumbs.mjs             gallery thumbnails for demo/news
+```
+
+All three drive Chromium through ANGLE/Vulkan rather than SwiftShader, on
+purpose: part of paperweb's relief character comes from how the shader compiler
+quantises the noise hash, and software rasterisers do not reproduce it. A
+SwiftShader capture is not evidence of what a page looks like. Screenshots go to
+`screenshots/`, override with `PAPERWEB_SHOTS`.
+
 ## Tests
 
 ```

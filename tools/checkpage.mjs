@@ -8,7 +8,8 @@
 
 import { chromium } from 'playwright-core';
 import { serve } from './serve.mjs';
-import { basename, extname } from 'node:path';
+import { SHOTS } from './shots.mjs';
+import { basename, extname, join } from 'node:path';
 
 const target = process.argv[2];
 if (!target) {
@@ -16,7 +17,7 @@ if (!target) {
   process.exit(2);
 }
 const name = basename(target, extname(target));
-const shot = `/home/john/screenshots/2026-08-09-paperweb-news/${name}.png`;
+const shot = join(SHOTS, `${name}.png`);
 
 const { server, url } = await serve(0);
 const browser = await chromium.launch({

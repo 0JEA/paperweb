@@ -1,6 +1,8 @@
 // Capture 1:1 slices of a showcase page on the real GPU.
 import { chromium } from 'playwright-core';
 import { serve } from './serve.mjs';
+import { SHOTS } from './shots.mjs';
+import { join } from 'node:path';
 const [target, ...ys] = process.argv.slice(2);
 const { server, url } = await serve(0);
 const b = await chromium.launch({ headless: true, args: ['--use-gl=angle','--use-angle=vulkan','--enable-features=Vulkan'] });
@@ -16,7 +18,7 @@ const name = target.split('/').pop().replace('.html','');
 for (const y of ys) {
   await p.evaluate((yy) => window.scrollTo(0, yy), Number(y));
   await p.waitForTimeout(700);
-  await p.screenshot({ path: `/home/john/screenshots/2026-08-09-paperweb-news/${name}-y${y}.png` });
+  await p.screenshot({ path: join(SHOTS, `${name}-y${y}.png`) });
   console.log('  slice y=' + y);
 }
 await b.close(); server.close();
