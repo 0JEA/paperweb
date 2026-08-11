@@ -95,10 +95,10 @@ export const presets = {
       "margin_mm": 16
     },
     "scratches": {
-      "density": 0.08699999749660492,
+      "density": 0.07,
       "enabled": true,
       "lightness": 0.1599999964237213,
-      "scale_mm": 8,
+      "scale_mm": 12.5,
       "seed": 5
     },
     "shadow": {
@@ -436,8 +436,9 @@ export const presets = {
     },
     "scratches": {
       "enabled": true,
-      "density": 0.06,
-      "lightness": 0.2
+      "density": 0.05,
+      "lightness": 0.2,
+      "scale_mm": 11
     },
     "tone": {
       "duotone": 0.6
@@ -558,9 +559,9 @@ export const presets = {
     },
     "scratches": {
       "enabled": true,
-      "density": 0.04,
+      "density": 0.036,
       "lightness": 0.15,
-      "scale_mm": 3
+      "scale_mm": 11.94
     },
     "shadow": {
       "enabled": true,

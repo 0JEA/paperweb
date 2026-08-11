@@ -37,9 +37,9 @@
   },
   "scratches": {
     "enabled": true,
-    "density": 0.04,
+    "density": 0.036,
     "lightness": 0.15,
-    "scale_mm": 3.0
+    "scale_mm": 11.94
   },
   "shadow": {
     "enabled": true,

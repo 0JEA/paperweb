@@ -127,7 +127,6 @@ void main() {
         // Each fold is a straight crease line; its height profile is a signed
         // ridge. Sharp = narrow (pressed fold), broad = wide (crumple ridge).
         vec2 sheet_mm = u_res / u_px_per_mm;
-        float width_mm = mix(6.0, 0.6, clamp(u_fold_sharpness, 0.0, 1.0));
         for (int i = 0; i < 8; ++i) {
             if (float(i) >= u_fold_count) break;
             vec2 r1 = hash22(vec2(float(i) * 3.7 + u_fold_seed, 1.3));
@@ -138,8 +137,30 @@ void main() {
             vec2 p0 = r1.y * sheet_mm + 0.2 * sheet_mm;
             float d = dot(mm_sheet - p0, nrm);
             float sgn = (r2.x < 0.5) ? -1.0 : 1.0;
-            float profile = exp(-(d * d) / (width_mm * width_mm));
-            h_um += sgn * u_fold_depth * 150.0 * profile;   // 0.15mm max -> 150um
+
+            // A fold has TWO parts at very different scales, and paperlab's
+            // single Gaussian collapses them into one.
+            //
+            // Measured against the preset defaults, that Gaussian puts 68 um of
+            // relief across 2.76 mm: a slope of 0.0245, which is 13.5x steeper
+            // than cockle and tilts each face 11 degrees once relief_exaggerate
+            // is applied. Two 11-degree facets render as two flat bands of
+            // uniform tone with a hard line between, which is a roof, not a
+            // sheet of paper that was folded once.
+            //
+            // What a relaxed fold actually looks like:
+            //   BROAD  the halves never lie quite flat again, so they sit at
+            //          slightly different angles over a centimetre or two, at an
+            //          amplitude comparable to the cockle around it.
+            //   CREASE a narrow line where the fibres actually broke, well under
+            //          a millimetre, and this is the part that catches light.
+            float broad = 1.0 - abs(clamp(d / 14.0, -1.0, 1.0));
+            // Clamp the crease to about a texel and a half. Narrower than that
+            // and it falls between samples and aliases into a dashed line.
+            float crease_mm = max(mix(1.8, 0.5, clamp(u_fold_sharpness, 0.0, 1.0)),
+                                  1.5 / max(u_px_per_mm, 0.5));
+            float crease = exp(-(d * d) / (crease_mm * crease_mm));
+            h_um += sgn * u_fold_depth * (28.0 * broad + 15.0 * crease);
         }
     }
 
@@ -172,15 +193,31 @@ void main() {
                              fbm(wp + vec2(9.3, 1.9), 3, 0.5, 2.0)) - 0.5;
             cp += warp * u_crumple_irregularity * 2.2;
         }
-        float lump = 0.0, amp = 1.0, fr = 1.0, tot = 0.0;
-        for (int i = 0; i < 4; ++i) {
-            lump += amp * worleyF1F2(cp * fr).x;
-            tot += amp; amp *= 0.5; fr *= 2.0;
-        }
-        lump = lump / tot - 0.35;
-        vec2 F = worleyF1F2(cp);
-        float crease = (1.0 - smoothstep(0.0, 0.14, F.y - F.x)) - 0.2;
-        float field = mix(lump * 1.4, crease, clamp(u_crumple_crease, 0.0, 1.0));
+        // FACETS, not a crack network.
+        //
+        // paperlab builds this from fbm(F1) plus an F2-F1 ridge. Both terms are
+        // functions of DISTANCE to the feature point, so every cell boundary is
+        // treated identically and the result is a uniform polygon mesh: dried
+        // mud, not paper. Worse, fbm(F1) inherits F1's kinked gradient at the
+        // boundaries, so even at crease 0 the network shows.
+        //
+        // A crumpled sheet is a polyhedron. Each facet is FLAT and sits at its
+        // own random tilt; the creases are wherever two facets happen to meet,
+        // so they vary in prominence for free rather than all being drawn the
+        // same. Giving each Worley cell its own plane produces that directly.
+        vec4 W = worleyCell(cp);
+        vec2 cell = W.zw;
+        vec2 feat = cell + hash22(cell);
+        vec2 tilt = hash22(cell + vec2(17.3, 5.9)) * 2.0 - 1.0;
+        float lift = hash21(cell + vec2(3.7, 11.1)) - 0.5;
+        // The plane, in cell units. Kept shallow: a facet that tilts more than a
+        // couple of degrees stops reading as paper and starts reading as rock.
+        float facet = dot(cp - feat, tilt) * 0.42 + lift * 0.30;
+
+        // The crease term is kept as a blendable extra rather than the default,
+        // because a sharply creased network is a real look, just not the baseline.
+        float crease = (1.0 - smoothstep(0.0, 0.14, W.y - W.x)) - 0.2;
+        float field = mix(facet, crease, clamp(u_crumple_crease, 0.0, 1.0));
         h_um += field * u_crumple_amp_um;
     }
 
@@ -281,6 +318,7 @@ uniform float u_diffuse_gain;
 uniform int   u_spec_on;
 uniform float u_spec_intensity;
 uniform float u_spec_power;
+uniform float u_highlight_ceiling;
 
 void main() {
     vec3 N = normalize(texture(u_normal, uv).xyz);
@@ -304,6 +342,24 @@ void main() {
     if (u_cavity_on == 1) {
         float dH = texture(u_cavity, uv).r;
         shade -= u_cavity_lambda * max(dH, 0.0);   // darken valleys, not peaks
+    }
+
+    // HIGHLIGHT SHOULDER.
+    //
+    // Measured with the default light: a facet aligned to the half-vector takes
+    // diffuse to +0.234 and specular to +0.459, so shade peaks near 1.69. On a
+    // #FFF3DE sheet that clips to pure white, and everything inside the
+    // highlight flattens to the same value: a fold stops being paper catching
+    // the light and becomes a painted white bar.
+    //
+    // Rolling off exponentially toward a ceiling keeps the ORDERING of values
+    // inside the highlight, so the crease stays legible. The curve is very close
+    // to linear for small excursions, so ordinary cockle sheen is untouched;
+    // only the extremes are compressed.
+    if (shade > 1.0) {
+        float over = shade - 1.0;
+        float head = max(u_highlight_ceiling - 1.0, 1e-3);
+        shade = 1.0 + head * (1.0 - exp(-over / head));
     }
 
     frag_out = vec4(shade, 0.0, 0.0, 1.0);
@@ -465,47 +521,81 @@ void main() {
         albedo *= (1.0 + u_mould_amount * mould * (1.0 - 0.55 * fade));
     }
 
-    // --- sparse scratches (mostly light fibre-lift, a fraction dark) ---
+    // --- sparse blemishes: scratches, pits, marks ---------------------------
+    // Every one of these scans the 3x3 CELL NEIGHBOURHOOD rather than only the
+    // pixel's own cell.
+    //
+    // Testing just the own cell clips any feature whose extent crosses a cell
+    // boundary, so a pit near an edge renders as a hard SQUARE and a scratch is
+    // chopped at the cell wall. paperlab has this bug; the zathura port fixed it
+    // and calls it the "bounding box artifact". Neighbours must contribute.
+    //
+    // Falloff is linear rather than smoothstep, also following zathura: a
+    // smoothstepped scratch has no crisp core and reads as a smudge.
+
+    // Scratches: LONG and thin. paperlab's 3 mm cell with a 0.28-0.48 half-length
+    // makes marks about 1 mm long at a 10:1 aspect, which reads as lint rather
+    // than fibre lift. zathura's tuned values are a ~12 mm cell at 25:1, giving
+    // scratches several millimetres long. Mostly light, because lifted fibre
+    // catches the light; a minority are dark, from pressed lines and dirt.
     if (u_scr_on == 1) {
-        vec2 cell_mm = mm / max(u_scr_scale_mm, 0.2);
-        vec2 cell = floor(cell_mm);
-        float exists = step(1.0 - u_scr_density, hash21(cell * 1.7 + u_scr_seed));
-        if (exists > 0.5) {
-            vec2 f = fract(cell_mm) - 0.5;
-            float ang = hash21(cell * 3.1 + u_scr_seed + 11.0) * 3.14159;
-            vec2 dir = vec2(cos(ang), sin(ang));
-            float perp = f.x * -dir.y + f.y * dir.x;
-            float len = 0.28 + 0.2 * hash21(cell * 4.3 + u_scr_seed);
-            float wid = 0.02 + 0.03 * hash21(cell * 6.1 + u_scr_seed);
-            float along = f.x * dir.x + f.y * dir.y;
-            float line = (1.0 - smoothstep(0.0, wid, abs(perp))) *
-                         (1.0 - smoothstep(len, len + 0.15, abs(along)));
-            float dark = step(hash21(cell * 8.9 + u_scr_seed), u_scr_dark_frac);
-            float sgn = mix(1.0, -1.0, dark);
-            albedo *= (1.0 + sgn * u_scr_lightness * line * (1.0 - fade));
+        float cell_sz = max(u_scr_scale_mm, 0.5);
+        vec2 cm = mm / cell_sz;
+        vec2 base = floor(cm);
+        for (int j = -1; j <= 1; ++j)
+        for (int i = -1; i <= 1; ++i) {
+            vec2 g = base + vec2(float(i), float(j));
+            if (hash21(g * 1.7 + u_scr_seed) >= u_scr_density) continue;
+            vec2 o = hash22(g * 2.3 + u_scr_seed + 5.0);
+            float ang = hash21(g * 3.1 + u_scr_seed + 11.0) * 3.14159265;
+            float ca = cos(ang), sa = sin(ang);
+            vec2 d = cm - (g + o);
+            float perp  = d.x * -sa + d.y * ca;
+            float along = d.x *  ca + d.y * sa;
+            float len = 0.30 + 0.45 * hash21(g * 4.3 + u_scr_seed);
+            float wid = 0.010 + 0.020 * hash21(g * 6.1 + u_scr_seed);
+            if (abs(perp) >= wid || abs(along) >= len) continue;
+            float fall = (1.0 - abs(perp) / wid) * (1.0 - abs(along) / len);
+            float sgn = (hash21(g * 8.9 + u_scr_seed) < u_scr_dark_frac) ? -1.0 : 1.0;
+            albedo *= (1.0 + sgn * u_scr_lightness * fall * (1.0 - fade));
         }
     }
 
-    // --- sparse VARIED imperfections: pits + rarer larger marks ---
     if (u_imp_on == 1) {
-        vec2 pm = mm / max(u_pit_scale_mm, 0.5);
-        vec2 pc = floor(pm);
-        if (hash21(pc * 1.9 + u_imp_seed + 31.0) < u_pit_density) {
-            vec2 ctr = hash22(pc * 2.3 + u_imp_seed + 7.0);
-            float rad = 0.06 + 0.12 * hash21(pc * 3.7 + u_imp_seed);
-            float pit = 1.0 - smoothstep(0.0, rad, length(fract(pm) - ctr));
-            float d = u_pit_depth * (0.5 + 0.5 * hash21(pc * 5.1 + u_imp_seed));
-            albedo *= (1.0 - d * pit * (1.0 - 0.5 * fade));
+        // Pits: small dark dents from fibre pull and impressions.
+        float pcell = max(u_pit_scale_mm, 0.5);
+        vec2 pm = mm / pcell;
+        vec2 pbase = floor(pm);
+        for (int j = -1; j <= 1; ++j)
+        for (int i = -1; i <= 1; ++i) {
+            vec2 g = pbase + vec2(float(i), float(j));
+            if (hash21(g * 1.9 + u_imp_seed + 31.0) >= u_pit_density) continue;
+            vec2 ctr = hash22(g * 2.3 + u_imp_seed + 7.0);
+            float rad = 0.06 + 0.12 * hash21(g * 3.7 + u_imp_seed);
+            float dist = length(pm - (g + ctr));
+            if (dist >= rad) continue;
+            float m = 1.0 - dist / rad;
+            float dep = u_pit_depth * (0.5 + 0.5 * hash21(g * 5.1 + u_imp_seed));
+            albedo *= (1.0 - dep * m * (1.0 - 0.5 * fade));
         }
-        vec2 kk = mm / max(u_mark_scale_mm, 1.0);
-        vec2 kc = floor(kk);
-        if (hash21(kc * 1.3 + u_imp_seed + 71.0) < u_mark_density) {
-            vec2 ctr = hash22(kc * 2.9 + u_imp_seed + 13.0);
-            float rad = 0.12 + 0.28 * hash21(kc * 4.1 + u_imp_seed);
-            float m = 1.0 - smoothstep(0.0, rad, length(fract(kk) - ctr));
+
+        // Marks: rarer, larger, light OR dark blotches. Squared falloff keeps
+        // them soft-edged so they read as stains rather than as discs.
+        float kcell = max(u_mark_scale_mm, 1.0);
+        vec2 km = mm / kcell;
+        vec2 kbase = floor(km);
+        for (int j = -1; j <= 1; ++j)
+        for (int i = -1; i <= 1; ++i) {
+            vec2 g = kbase + vec2(float(i), float(j));
+            if (hash21(g * 1.3 + u_imp_seed + 71.0) >= u_mark_density) continue;
+            vec2 ctr = hash22(g * 2.9 + u_imp_seed + 13.0);
+            float rad = 0.12 + 0.20 * hash21(g * 4.1 + u_imp_seed);
+            float dist = length(km - (g + ctr));
+            if (dist >= rad) continue;
+            float m = 1.0 - dist / rad;
             m *= m;
-            float sgn = (hash21(kc * 6.7 + u_imp_seed) < 0.5) ? -1.0 : 1.0;
-            float str = u_mark_strength * (0.5 + 0.5 * hash21(kc * 9.2 + u_imp_seed));
+            float sgn = (hash21(g * 6.7 + u_imp_seed) < 0.5) ? -1.0 : 1.0;
+            float str = u_mark_strength * (0.5 + 0.5 * hash21(g * 9.2 + u_imp_seed));
             albedo *= (1.0 + sgn * str * m);
         }
     }
@@ -544,9 +634,18 @@ uniform float u_radius_px;   // web addition: rounded corners, to match CSS boxe
 //   carrier  0.35 /px x 2.95 px/mm = 1.03 cycles/mm  (individual fibres, ~1 mm)
 //   envelope 0.045/px x 2.95 px/mm = 0.133 cycles/mm (tuft clusters, ~7.5 mm)
 float deckle(float t_mm, float seed) {
-    float carrier  = fbm(vec2(t_mm * 1.03, seed), 3, 0.5, 2.0) - 0.5;
-    float envelope = fbm(vec2(t_mm * 0.133, seed + 11.0), 2, 0.5, 2.0);
-    return carrier * 2.0 * envelope * u_deckle_px;
+    // The TUFT envelope carries the displacement; the FIBRE carrier only
+    // modulates it.
+    //
+    // paperlab multiplies the two, which makes the fine carrier set the full
+    // amplitude. At a 1 cycle/mm carrier that is an oscillation every ~3.8 px
+    // swinging the whole deckle_px, so an 11 px deckle becomes a 3.8 px-pitch
+    // comb: against a dark page it reads as a row of black teeth rather than a
+    // torn edge. A real deckle is a slow wander of the edge with fine fibres
+    // riding on top, so the two are summed with the slow term dominant.
+    float env = fbm(vec2(t_mm * 0.133, seed + 11.0), 2, 0.5, 2.0) - 0.5;
+    float car = fbm(vec2(t_mm * 1.03, seed), 3, 0.5, 2.0) - 0.5;
+    return (env * 1.55 + car * 0.42) * u_deckle_px;
 }
 
 void main() {
@@ -571,7 +670,11 @@ void main() {
     float corner = smoothstep(0.6, 1.0, max(abs(rel.x), abs(rel.y)));
     float curl_in = u_curl * corner * 0.04 * (hi.x - lo.x);
 
-    float aa = 1.0 + u_deckle_px * 0.6;
+    // Feather the silhouette in proportion to how far it is being displaced.
+    // A 1 px transition on an edge that wanders 8 px reads as a stair, because
+    // the displacement changes faster than the feather can hide. The wobble term
+    // is what stops a plain non-rectangular sheet looking pixelated.
+    float aa = 1.0 + u_deckle_px * 0.5 + u_wobble_px * 0.14;
 
     float inside;
     if (u_radius_px > 0.5) {
@@ -636,6 +739,7 @@ uniform vec3  u_km_b;
 uniform vec3  u_km_S;
 uniform float u_ink_thickness;
 uniform float u_ink_gran;
+uniform float u_ink_coverage;
 
 uniform vec3  u_hi_tint;
 uniform vec3  u_lo_tint;
@@ -691,13 +795,32 @@ void main() {
         // Granulation: pigment pools in the relief valleys (cavity > 0), so ink is
         // denser there and thinner on the peaks.
         float gran = 1.0 + u_ink_gran * texture(u_cavity, uv).r;
-        float x = (1.0 - c) * u_ink_thickness * max(gran, 0.0);
+        float cover = 1.0 - c;
+
+        // COVERAGE vs THICKNESS. A mid-grey in the content texture means two
+        // completely different things depending on where it came from, and
+        // paperlab only models one of them.
+        //
+        //   thickness  a wash or a halftone: the ink layer covers the whole
+        //              pixel but is thinner, so drive optical depth by the grey.
+        //   coverage   an antialiased glyph edge: full-strength ink covers PART
+        //              of the pixel, so keep the layer at full thickness and
+        //              blend by area.
+        //
+        // Kubelka-Munk is strongly nonlinear, so the difference is not subtle.
+        // Measured against the default ink, a half-covered edge (c = 0.5) comes
+        // out at 0.273 under the thickness reading and 0.521 under coverage.
+        // Every glyph therefore gains a dark rim and rasterized text reads bold.
+        // Text is the common case for content:'rasterize', so coverage is the
+        // default; drop u_ink_coverage to 0 for scanned washes and photographs.
+        float x = u_ink_thickness * max(gran, 0.0) * mix(cover, 1.0, u_ink_coverage);
         vec3 bSx = u_km_b * u_km_S * x;
         vec3 sh = sinh(bSx), ch = cosh(bSx);
         vec3 cc = u_km_a * sh + u_km_b * ch;
         vec3 Rink = sh / cc;
         vec3 Tink = u_km_b / cc;
-        sheet = Rink + Tink * Tink * paper / max(1.0 - Rink * paper, vec3(1e-3));
+        vec3 inked = Rink + Tink * Tink * paper / max(1.0 - Rink * paper, vec3(1e-3));
+        sheet = mix(inked, mix(paper, inked, cover), u_ink_coverage);
     } else {
         // Legacy lerp + luminance gate (kept for A/B).
         vec3 base = mix(u_ink, u_tone, c);

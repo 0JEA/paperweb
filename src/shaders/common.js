@@ -145,6 +145,27 @@ float gaborNoise(vec2 mm, float F0, float a, float seed) {
 // One feature point per cell, 3x3 search. Returns (F1, F2) = distance to nearest
 // and 2nd-nearest. fbm(F1) is Worley's own "crumpled paper" bump; F2 - F1 is ~0 on
 // the Voronoi boundaries, giving a crease/ridge network.
+// Worley variant that also reports WHICH cell won, so a caller can give each
+// cell its own plane. Crumpled paper is a polyhedron: flat facets at random
+// tilts meeting along creases. Shading the crease network alone (which is all
+// F2-F1 gives you) treats every boundary identically and reads as dried mud.
+// Returns (F1, F2, cell.x, cell.y).
+vec4 worleyCell(vec2 x) {
+    vec2 n = floor(x), f = fract(x);
+    float F1 = 1e30, F2 = 1e30;
+    vec2 best = n;
+    for (int j = -1; j <= 1; ++j)
+    for (int i = -1; i <= 1; ++i) {
+        vec2 g = vec2(float(i), float(j));
+        vec2 o = hash22(n + g);
+        vec2 r = g + o - f;
+        float d = dot(r, r);
+        if (d < F1) { F2 = F1; F1 = d; best = n + g; }
+        else if (d < F2) { F2 = d; }
+    }
+    return vec4(sqrt(F1), sqrt(F2), best);
+}
+
 vec2 worleyF1F2(vec2 x) {
     vec2 n = floor(x), f = fract(x);
     float F1 = 1e30, F2 = 1e30;

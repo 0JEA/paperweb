@@ -64,6 +64,10 @@ export function defaults() {
       // Granulation (Curtis et al. 1997 S4.5): pigment pools in the paper's
       // relief valleys, so ink is denser where the sheet dips. 0 = flat ink.
       granulation: 0.0,
+      // 1 = treat content grey as AREA COVERAGE (right for antialiased text),
+      // 0 = treat it as ink THICKNESS (right for washes and halftones, and what
+      // paperlab does). See the long note in the composite shader.
+      coverage: 1.0,
       // Legacy lerp+gate path (kubelka_munk = false), kept for A/B comparison.
       color: [0.06, 0.06, 0.06],
       gate_lo: 0.55,
@@ -82,6 +86,10 @@ export function defaults() {
       specular: true,           // cockle's signal IS gloss off the peaks
       spec_intensity: 0.5,
       spec_power: 40,
+      // Ceiling the shade rolls off toward, so a fold facet cannot clip to pure
+      // white and flatten the relief inside its own highlight. 1.0 disables all
+      // sheen; raise it for a glossier stock. See the note in the shade shader.
+      highlight_ceiling: 1.22,
       diffuse_gain: 1.0,        // web-only knob on the N.L term
     },
 
@@ -151,10 +159,15 @@ export function defaults() {
     scratches: {
       // Sparse, and they read LIGHT (fibre lift), not dark. A fraction are dark
       // (embedded dirt / pressed lines). Wear-correlated rather than stacked.
+      // Tuned values carried over from the zathura port, which is where this
+      // layer was matured. paperlab's 3 mm cell was authored against an
+      // own-cell-only test that clipped every scratch at the cell wall, so its
+      // marks were ~1 mm at a 10:1 aspect: lint, not fibre lift. A ~12 mm cell
+      // at 25:1 gives scratches several millimetres long.
       enabled: false,
-      density: 0.03,
+      density: 0.036,
       lightness: 0.15,
-      scale_mm: 3.0,
+      scale_mm: 11.94,
       dark_frac: 0.3,
       seed: 5.0,
     },
@@ -164,13 +177,16 @@ export function defaults() {
       // the texture reading procedural. Pits are small dark dents; marks are
       // rarer, larger light-or-dark blotches. Each instance randomises size and
       // strength so no two look alike.
+      // Also zathura's tuned values. Pit density is HALF paperlab's: with the
+      // 3x3 scan each pit now renders whole instead of being clipped to its
+      // cell, so the same density reads as roughly twice as busy.
       enabled: false,
-      pit_density: 0.03,
+      pit_density: 0.015,
       pit_depth: 0.35,
       pit_scale_mm: 9.0,
-      mark_density: 0.02,
-      mark_strength: 0.16,
-      mark_scale_mm: 24.0,
+      mark_density: 0.15,
+      mark_strength: 0.14,
+      mark_scale_mm: 40.0,
       seed: 2.0,
     },
 

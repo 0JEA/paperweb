@@ -288,6 +288,7 @@ export class Pipeline {
         u_spec_on: { i: p.light.specular ? 1 : 0 },
         u_spec_intensity: p.light.spec_intensity,
         u_spec_power: p.light.spec_power,
+        u_highlight_ceiling: p.light.highlight_ceiling,
       });
       drawFullscreen();
     }
@@ -407,6 +408,7 @@ export class Pipeline {
           u_km_S: km.S,
           u_ink_thickness: p.ink.thickness,
           u_ink_gran: p.cavity.enabled ? p.ink.granulation : 0,
+          u_ink_coverage: p.ink.coverage,
           u_hi_tint: p.tone.highlight,
           u_lo_tint: p.tone.shadow,
           u_duotone: p.tone.duotone,
