@@ -489,9 +489,10 @@ footer.colophon{
            data-paper-params='{"tone":{"paper":[0.93,0.865,0.715],"duotone":0.62},
              "fade":{"amount":0.95,"scale_mm":70},
              "edge":{"deckle_px":9,"wobble_px":9},
-             "imperfect":{"enabled":true,"pit_density":0.05,"mark_density":0.03},
-             "folds":{"enabled":true,"count":2,"depth":0.28,"sharpness":0.45},
-             "light":{"relief_exaggerate":7,"spec_intensity":0.3,"spec_power":52},
+             "imperfect":{"enabled":true,"pit_density":0.025,"mark_density":0.015},
+             "crumple":{"crease":0.12,"amplitude_um":40},
+             "folds":{"enabled":true,"count":2,"depth":0.75,"sharpness":0.45},
+             "light":{"relief_exaggerate":9,"spec_power":52},
              "shadow":{"offset_px":14,"blur_px":26,"darkness":0.78}}'>
         <div>
           <p class="kicker">Accession 1971.048 · Ledger-Chronicle morgue</p>
@@ -529,10 +530,10 @@ footer.colophon{
              "fade":{"amount":0.9,"scale_mm":48},
              "edge":{"deckle_px":14,"wobble_px":11},
              "scratches":{"enabled":true,"density":0.06,"lightness":0.18},
-             "imperfect":{"enabled":true,"pit_density":0.06,"mark_density":0.035},
-             "crumple":{"enabled":true,"scale_mm":15,"amplitude_um":22,"crease":0.18},
-             "folds":{"enabled":true,"count":2,"depth":0.3,"sharpness":0.5},
-             "light":{"relief_exaggerate":8,"spec_intensity":0.32,"spec_power":48}}'>
+             "imperfect":{"enabled":true,"pit_density":0.03,"mark_density":0.018},
+             "crumple":{"enabled":true,"scale_mm":15,"amplitude_um":28,"crease":0.14},
+             "folds":{"enabled":true,"count":2,"depth":0.8,"sharpness":0.5},
+             "light":{"relief_exaggerate":9,"spec_power":48}}'>
         <p class="kicker">The Ledger-Chronicle · Tuesday 12 March 1974 · Page one</p>
         <h3>Cedar Reservoir Closed<br>After Fish Kill</h3>
         <p class="byline">By Marta Quill · Staff reporter</p>
@@ -557,7 +558,10 @@ footer.colophon{
 
     <p class="cap"><b>paperweb ·</b> <code>worn</code> at
       <code>edge.deckle_px 14 / wobble_px 11</code> for a hand-torn silhouette, plus a light
-      <code>crumple</code> (<code>amplitude_um 22</code>) for handling. The bottom tear is a
+      <code>crumple</code> (<code>amplitude_um 28</code> at <code>crease 0.14</code>) for
+      handling: crumple is facets now, and the crease term is what pulls it back toward a
+      crack network, so the depth comes from amplitude and the crease stays low. The bottom
+      tear is a
       CSS <code>clip-path</code> in the ground colour laid over the last line, so the tear
       genuinely runs through a word. Tape is CSS gradient + <code>clip-path</code>.</p>
   </section>
@@ -577,8 +581,8 @@ footer.colophon{
              data-paper="worn" data-paper-seed="110" data-paper-dpi="130"
              data-paper-params='{"tone":{"paper":[0.895,0.805,0.615]},
                "fade":{"amount":0.85,"scale_mm":40},"edge":{"deckle_px":10,"wobble_px":8},
-               "light":{"spec_intensity":0.32},"folds":{"depth":0.3},
-               "imperfect":{"enabled":true,"pit_density":0.07,"mark_density":0.04}}'>
+               "folds":{"depth":0.75},"crumple":{"crease":0.14},
+               "imperfect":{"enabled":true,"pit_density":0.035,"mark_density":0.02}}'>
           <div class="pin" style="left:50%;top:-7px;margin-left:-7px"></div>
           <p class="d">12 Mar 1974</p>
           <h4>Reservoir closed after fish kill</h4>
@@ -590,8 +594,8 @@ footer.colophon{
              data-paper="worn" data-paper-seed="111" data-paper-dpi="130"
              data-paper-params='{"tone":{"paper":[0.935,0.87,0.705]},
                "fade":{"amount":0.8,"scale_mm":45},"edge":{"deckle_px":8,"wobble_px":7},
-               "light":{"spec_intensity":0.32},"folds":{"depth":0.3},
-               "imperfect":{"enabled":true,"pit_density":0.04,"mark_density":0.025}}'>
+               "folds":{"depth":0.75},"crumple":{"crease":0.14},
+               "imperfect":{"enabled":true,"pit_density":0.02,"mark_density":0.012}}'>
           <div class="pin" style="left:50%;top:-7px;margin-left:-7px"></div>
           <p class="d">4 Sept 1989</p>
           <h4>"Nothing was ever discharged"</h4>
@@ -632,7 +636,7 @@ footer.colophon{
            data-paper="reading" data-paper-light="pointer" data-paper-seed="120" data-paper-dpi="110"
            data-paper-params='{"tone":{"paper":[0.955,0.935,0.885],"duotone":0.45},
              "fade":{"amount":0.55,"scale_mm":75},
-             "imperfect":{"enabled":true,"pit_density":0.02,"mark_density":0.02},
+             "imperfect":{"enabled":true,"pit_density":0.01,"mark_density":0.01},
              "edge":{"wobble_px":4},"mould":{"enabled":true,"laid_pitch_mm":0.55,
              "chain_pitch_mm":0.55,"chain_ratio":0.5,"amount":0.016}}'>
         <div class="letterhead">
@@ -689,9 +693,9 @@ footer.colophon{
            data-paper-params='{"tone":{"paper":[0.925,0.925,0.9],"duotone":0.3},
              "formation":{"source":1,"amplitude":0.045,"scale_mm":1.5,"gsm_amount":0.85},
              "fade":{"amount":0.6,"scale_mm":44},
-             "scratches":{"enabled":true,"density":0.09,"lightness":0.16,"scale_mm":5},
-             "imperfect":{"enabled":true,"pit_density":0.09,"mark_density":0.025,"mark_strength":0.12},
-             "light":{"spec_intensity":0.25,"relief_exaggerate":5},
+             "scratches":{"enabled":true,"density":0.055,"lightness":0.16,"scale_mm":12},
+             "imperfect":{"enabled":true,"pit_density":0.045,"mark_density":0.013,"mark_strength":0.12},
+             "light":{"spec_intensity":0.35,"relief_exaggerate":8},
              "edge":{"wobble_px":3,"deckle_px":0},"cockle":{"amplitude_um":12}}'>
         <div class="skewed">
           <p class="kicker">Gen. 4 copy · from the file of M. Quill · not for publication</p>
@@ -713,8 +717,11 @@ footer.colophon{
     <p class="cap"><b>paperweb ·</b> the copier look is
       <code>formation.source:1</code> (Gabor, band-limited and toothy) pushed to
       <code>amplitude 0.045</code> at <code>scale_mm 1.5</code>, plus heavy
-      <code>scratches</code> and <code>imperfect</code> for toner speckle, on a cool near-grey
-      <code>tone.paper [0.925,0.925,0.9]</code> with <code>duotone 0.3</code>.
+      <code>scratches</code> at <code>scale_mm 12</code> and <code>imperfect</code> for toner
+      speckle, on a cool near-grey
+      <code>tone.paper [0.925,0.925,0.9]</code> with <code>duotone 0.3</code>. This is the one
+      sheet held deliberately matte (<code>spec_intensity 0.35</code>): copier bond is
+      uncoated and should not catch the light the way the aged stock does.
       <code>cockle.amplitude_um 12</code> keeps the sheet flat like a copier feed. The black
       lid gap and the <code>skewY(-0.55deg)</code> misfeed are pure CSS.</p>
   </section>
@@ -774,7 +781,7 @@ footer.colophon{
            data-paper="paper" data-paper-seed="150" data-paper-dpi="105"
            data-paper-params='{"tone":{"paper":[0.945,0.925,0.855],"duotone":0.4},
              "fade":{"amount":0.7},"edge":{"wobble_px":4},
-             "imperfect":{"enabled":true,"pit_density":0.03,"mark_density":0.02}}'>
+             "imperfect":{"enabled":true,"pit_density":0.015,"mark_density":0.01}}'>
         <div class="sprockets" aria-hidden="true">
           <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
           <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
@@ -821,8 +828,9 @@ footer.colophon{
       <div class="sheet side claim"
            data-paper="worn" data-paper-seed="160" data-paper-dpi="115"
            data-paper-params='{"tone":{"paper":[0.925,0.855,0.685]},
-             "fade":{"amount":0.88,"scale_mm":44},"edge":{"deckle_px":11,"wobble_px":9},
-             "imperfect":{"enabled":true,"pit_density":0.05,"mark_density":0.03}}'>
+             "fade":{"amount":0.88,"scale_mm":44},"edge":{"deckle_px":13,"wobble_px":9},
+             "crumple":{"crease":0.14},"folds":{"depth":1.1},
+             "imperfect":{"enabled":true,"pit_density":0.025,"mark_density":0.015}}'>
         <h4>The claim · 4 September 1989</h4>
         <blockquote>“<mark class="hl">Nothing was ever discharged from that outfall
           except storm water.</mark> There is no record of anything else, because there
@@ -848,7 +856,7 @@ footer.colophon{
 
     <p class="cap"><b>paperweb ·</b> the whole argument is carried by the stock. Aged
       <code>worn</code> at <code>[0.925,0.855,0.685]</code> with a torn
-      <code>deckle_px 11</code> edge for the claim; clean <code>reading</code> at
+      <code>deckle_px 13</code> edge for the claim; clean <code>reading</code> at
       <code>[0.972,0.955,0.905]</code> with a straight <code>wobble_px 4</code> edge for the
       record. The highlighter is a CSS gradient with <code>mix-blend-mode:multiply</code>,
       which blends against paperweb's own canvas because the host is an isolated stacking
@@ -869,7 +877,7 @@ footer.colophon{
            data-paper-params='{"tone":{"paper":[0.945,0.885,0.755]},
              "fade":{"amount":0.85,"scale_mm":52},
              "scratches":{"enabled":true,"density":0.035,"lightness":0.14},
-             "imperfect":{"enabled":true,"pit_density":0.045,"mark_density":0.03},
+             "imperfect":{"enabled":true,"pit_density":0.022,"mark_density":0.015},
              "edge":{"wobble_px":6,"deckle_px":5}}'>
         <svg class="rust" viewBox="0 0 60 92" width="46" height="70" style="left:16px;top:12px" aria-hidden="true">
           <path d="M30 84 V26 a16 16 0 0 1 32 0 V72" fill="none" stroke="#96562A" stroke-width="4"
@@ -966,9 +974,10 @@ footer.colophon{
            data-paper-params='{"tone":{"paper":[0.9,0.815,0.625],"duotone":0.65},
              "fade":{"amount":0.95,"scale_mm":85},
              "edge":{"deckle_px":10,"wobble_px":10},
-             "ink":{"thickness":1.35,"granulation":0.85},
-             "imperfect":{"enabled":true,"pit_density":0.06,"mark_density":0.04},
-             "folds":{"enabled":true,"count":1,"depth":0.5,"sharpness":0.8}}'>
+             "ink":{"thickness":1.5,"granulation":0.85},
+             "crumple":{"crease":0.1,"amplitude_um":40},
+             "imperfect":{"enabled":true,"pit_density":0.03,"mark_density":0.02},
+             "folds":{"enabled":true,"count":1,"depth":1.3,"sharpness":0.8}}'>
         <div class="name">The Ledger-Chronicle</div>
         <div class="dateline">Tuesday 12 March 1974 · City edition · Ten cents</div>
         <div class="ruledouble"></div>
@@ -1011,24 +1020,29 @@ footer.colophon{
 
       <div class="tissue"
            data-paper="subtle" data-paper-seed="191" data-paper-dpi="160"
-           data-paper-params='{"tone":{"paper":[0.985,0.975,0.945],"opacity":0.26,"duotone":0.2},
+           data-paper-params='{"tone":{"paper":[0.985,0.975,0.945],"opacity":0.15,"duotone":0.2},
              "cockle":{"amplitude_um":34,"wavelength_mm":14,"anisotropy":1.2,"irregularity":1},
              "formation":{"amplitude":0.008,"scale_mm":1.2},
-             "crumple":{"enabled":true,"scale_mm":8,"amplitude_um":26,"crease":0.15},
+             "crumple":{"enabled":true,"scale_mm":8,"amplitude_um":34,"crease":0.12},
              "fade":{"amount":0.4},
              "edge":{"wobble_px":9,"deckle_px":6,"curl":0.25},
-             "light":{"spec_intensity":0.22},
+             "light":{"spec_intensity":0.6},
              "shadow":{"offset_px":4,"blur_px":16,"darkness":0.3}}'></div>
     </div>
 
     <p class="cap"><b>paperweb ·</b> the showpiece.
       <code>content:'rasterize'</code> bakes the front page optically <em>into</em> the sheet
       through Kubelka-Munk, so the ink takes the paper's shading and its one hard
-      <code>fold</code>; <code>ink.thickness 1.35</code> and
+      <code>fold</code> at <code>depth 1.3</code>; <code>ink.thickness 1.5</code> and
       <code>granulation 0.85</code> pool the ink in the relief valleys the way old newsprint
-      does. The interleaf on top is a second surface at
-      <code>tone.opacity 0.26</code> with a fine, tight <code>cockle</code> and a light
-      <code>crumple</code>. Rasterized text is baked, so it is not selectable, and that is the
+      does. Ink is area-blended now rather than driven off the content grey, so a glyph edge
+      no longer gains a dark rim and the type sits at its true weight. The interleaf on top
+      is a second surface at
+      <code>tone.opacity 0.15</code> with a fine, tight <code>cockle</code> and a light
+      <code>crumple</code>. It used to need <code>0.26</code> to read as a sheet at all; now
+      that the specular is back at <code>0.6</code> the tissue is carried by its own sheen
+      instead of by how much it veils, which is what lets the front page underneath stay
+      readable. Rasterized text is baked, so it is not selectable, and that is the
       trade, and the reason to use it once. One gotcha worth knowing: CSS multicol does
       not fragment inside the <code>foreignObject</code> snapshot, so the three columns
       here are explicit flex children.</p>
@@ -1133,7 +1147,7 @@ footer.colophon{
              "fade":{"amount":0.7,"scale_mm":50},
              "formation":{"amplitude":0.016},
              "edge":{"wobble_px":5},
-             "imperfect":{"enabled":true,"pit_density":0.025,"mark_density":0.02}}'>
+             "imperfect":{"enabled":true,"pit_density":0.012,"mark_density":0.01}}'>
         <table>
           <caption>Records Branch form R-9 · custody record · pink copy retained by branch</caption>
           <thead>
@@ -1176,11 +1190,11 @@ footer.colophon{
       <div class="sheet memo"
            data-paper="worn" data-paper-light="pointer" data-paper-seed="230" data-paper-dpi="82"
            data-paper-params='{"tone":{"paper":[0.94,0.885,0.755],"duotone":0.6},
-             "folds":{"enabled":true,"count":4,"depth":0.72,"sharpness":0.85},
-             "crumple":{"enabled":true,"scale_mm":13,"amplitude_um":26,"crease":0.3,"irregularity":0.95},
+             "folds":{"enabled":true,"count":4,"depth":2.4,"sharpness":0.7},
+             "crumple":{"enabled":true,"scale_mm":13,"amplitude_um":36,"crease":0.16,"irregularity":0.95},
              "cockle":{"amplitude_um":28,"wavelength_mm":24},
              "fade":{"amount":0.75,"scale_mm":48},
-             "light":{"relief_exaggerate":8,"altitude_deg":40,"spec_intensity":0.3,"spec_power":50},
+             "light":{"relief_exaggerate":9,"altitude_deg":40,"spec_power":50},
              "edge":{"deckle_px":7,"wobble_px":9},
              "shadow":{"offset_px":13,"blur_px":22,"darkness":0.75}}'>
         <h4>Note found in the coat pocket, folder 3</h4>
@@ -1201,11 +1215,17 @@ footer.colophon{
     </div>
 
     <p class="cap"><b>paperweb ·</b> the physics component.
-      <code>folds {count:4, depth:0.72, sharpness:0.85}</code> presses four hard creases into
-      the height field and <code>crumple {scale_mm:13, amplitude_um:26}</code> adds the
-      all-over crazing a refolded sheet gets. <code>light.altitude_deg 40</code> lowers the
-      sun so the creases throw longer shade, and <code>spec_intensity 0.3</code> keeps the
-      ridges from blowing out,
+      <code>folds {count:4, depth:2.4, sharpness:0.7}</code> presses four hard creases into
+      the height field and <code>crumple {scale_mm:13, amplitude_um:36, crease:0.16}</code>
+      adds the all-over handling a refolded sheet gets: the depth comes from amplitude,
+      because <code>crease</code> is the term that blends back toward a crack network and
+      anything much above <code>0.2</code> reads as crazing rather than paper. A fold is a
+      broad tilt over about
+      <code>14mm</code> plus a crease line well under a millimetre, so the depth number has to
+      be large to read as a fold and not as a lump, and <code>sharpness</code> has to stay off
+      its maximum or the crease line falls to a couple of pixels and disappears into the
+      crumple. <code>light.altitude_deg 40</code> lowers
+      the sun so the creases throw longer shade,
       and <code>light:'pointer'</code> lets you sweep the light across, and only two of the
       twelve passes re-run, so it stays cheap. Reduced-motion users get the static light.</p>
   </section>
@@ -1223,7 +1243,8 @@ footer.colophon{
            data-paper="worn" data-paper-seed="240" data-paper-dpi="125"
            data-paper-params='{"tone":{"paper":[0.915,0.845,0.665]},
              "fade":{"amount":0.9,"scale_mm":38},"edge":{"deckle_px":12,"wobble_px":10},
-             "imperfect":{"enabled":true,"pit_density":0.06,"mark_density":0.04}}'>
+             "crumple":{"crease":0.14},"folds":{"depth":1.0},
+             "imperfect":{"enabled":true,"pit_density":0.03,"mark_density":0.02}}'>
         <h4>“It ran yellow twice since Christmas”</h4>
         <p>Cedar Flats residents, quoted 12 March 1974. The quote appears in no later
           story until 2026.</p>
@@ -1236,9 +1257,9 @@ footer.colophon{
              "formation":{"source":1,"amplitude":0.03,"scale_mm":2},
              "fade":{"amount":0.8,"scale_mm":90},
              "scratches":{"enabled":true,"density":0.05,"lightness":0.16},
-             "imperfect":{"enabled":true,"pit_density":0.05,"mark_density":0.04},
-             "folds":{"enabled":true,"count":1,"depth":0.16,"sharpness":0.9},
-             "light":{"spec_intensity":0.28,"relief_exaggerate":6},
+             "imperfect":{"enabled":true,"pit_density":0.025,"mark_density":0.02},
+             "folds":{"enabled":true,"count":1,"depth":0.5,"sharpness":0.9},
+             "light":{"relief_exaggerate":8},
              "edge":{"wobble_px":5,"deckle_px":3}}'>
         <p class="tabtext">Ced 3.1</p>
         <p class="fname">Cedar Reservoir / Halloway · cuttings, correspondence, one fax</p>
@@ -1308,7 +1329,7 @@ footer.colophon{
              "fade":{"amount":0.75,"scale_mm":50},
              "formation":{"amplitude":0.024},
              "edge":{"wobble_px":6,"deckle_px":4},
-             "imperfect":{"enabled":true,"pit_density":0.03,"mark_density":0.02}}'>
+             "imperfect":{"enabled":true,"pit_density":0.015,"mark_density":0.01}}'>
         <p class="kicker">Galley 4 · edition 2 · corrected for edition 3</p>
         <h3 style="font-size:24px;line-height:1.14">Council accepts assurance on outfall</h3>
         <div class="ruledouble"></div>
@@ -1355,12 +1376,12 @@ footer.colophon{
       <article class="sheet spiked"
            data-paper="worn" data-paper-seed="270" data-paper-dpi="86"
            data-paper-params='{"tone":{"paper":[0.915,0.85,0.685],"duotone":0.62},
-             "crumple":{"enabled":true,"scale_mm":14,"amplitude_um":30,"crease":0.3,"irregularity":0.95},
-             "folds":{"enabled":true,"count":3,"depth":0.42,"sharpness":0.7},
+             "crumple":{"enabled":true,"scale_mm":14,"amplitude_um":44,"crease":0.18,"irregularity":0.95},
+             "folds":{"enabled":true,"count":3,"depth":1.1,"sharpness":0.7},
              "fade":{"amount":0.7,"scale_mm":44},
-             "scratches":{"enabled":true,"density":0.08,"lightness":0.16},
-             "imperfect":{"enabled":true,"pit_density":0.06,"mark_density":0.03},
-             "light":{"relief_exaggerate":8,"altitude_deg":40,"spec_intensity":0.28,"spec_power":50},
+             "scratches":{"enabled":true,"density":0.05,"lightness":0.16},
+             "imperfect":{"enabled":true,"pit_density":0.03,"mark_density":0.015},
+             "light":{"relief_exaggerate":9,"altitude_deg":40,"spec_power":50},
              "edge":{"deckle_px":13,"wobble_px":12},
              "shadow":{"offset_px":15,"blur_px":25,"darkness":0.8}}'>
         <div class="hole" style="left:220px;top:20px"></div>
@@ -1385,11 +1406,16 @@ footer.colophon{
     </div>
 
     <p class="cap"><b>paperweb ·</b> the loudest settings on the page:
-      <code>crumple.amplitude_um 30</code> at <code>scale_mm 14</code> for a sheet that was
-      screwed up and flattened, three hard <code>folds</code>,
+      <code>crumple.amplitude_um 44</code> at <code>scale_mm 14</code> and
+      <code>crease 0.18</code> for a sheet that was screwed up and flattened. Crumple is
+      facets now rather than a crack network, so the loudness has to come from amplitude:
+      buying it with <code>crease</code> instead just brings back the dried-mud tiling.
+      Three hard <code>folds</code> at <code>depth 1.1</code>,
       <code>deckle_px 13</code>, and <code>light.altitude_deg 40</code> so the crazing casts
-      without blowing out (<code>spec_intensity 0.28</code>: crumple plus a hot specular is
-      where legibility dies).
+      long shade across the sheet. The specular runs at the preset's full
+      <code>0.55</code>: the highlight shoulder rolls off at
+      <code>light.highlight_ceiling</code>, so a crumple facet catches the light without
+      clipping to white and taking the text with it.
       The <code>SPIKED</code> stamp is a CSS box run through an inline
       <code>feTurbulence</code> displacement filter, which is what stops it looking laser
       printed. The spindle is inline SVG; the hole is a ground-coloured div.</p>

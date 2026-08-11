@@ -27,12 +27,12 @@
     "enabled": true,
     "scale_mm": 13.0,
     "amplitude_um": 34.0,
-    "crease": 0.2
+    "crease": 0.07
   },
   "folds": {
     "enabled": true,
     "count": 3,
-    "depth": 0.45,
+    "depth": 1.2,
     "sharpness": 0.6
   },
   "scratches": {

@@ -476,10 +476,16 @@ dialog.lightbox::backdrop{background:rgba(8,7,6,.82);}
     <h2>Daylight &amp; lamplight</h2>
     <p class="cap">Dark mode for paper is not "invert the page". A sheet has no black state.
       The honest answer is a dimmer, warmer sheet under a lower, harder lamp: <code>tone.paper</code>
-      scaled to 30% and pushed warm, <code>light.altitude_deg 30</code>, <code>spec_intensity 0.9</code>,
-      relief exaggerated harder so the grain survives the loss of luminance, and the ink inverted in CSS.
-      The toggle in the masthead calls <code>paper.set()</code> on all 30 surfaces at once. These two
-      swatches are pinned to their own stock so the comparison holds in either mode.</p></div>
+      scaled to 30% and pushed warm, <code>light.altitude_deg 30</code>, and the ink inverted in CSS.
+      The two numbers that carry it are less obvious. Dimming the stock also divides the
+      <em>absolute</em> contrast of the relief by three, so <code>relief_exaggerate</code> doubles to
+      put most of it back; and a lamp this low sits 30° off the sheet, where a 40-power specular lobe
+      is never hit, so <code>spec_power</code> drops to 22 — which is what finally lets
+      <code>spec_intensity 0.9</code> mean anything. <code>highlight_ceiling 1.95</code> then adds
+      about 7% more range in the crests: a fine adjustment, not the fix. The toggle in the masthead
+      calls <code>paper.set()</code> on all 30 surfaces at once. These two swatches are pinned to their
+      own stock — the right one pushed harder, to 24 and 14, because a specimen may shout where a
+      reading sheet may not.</p></div>
   <div class="stocks">
     <div class="stock day sheet" data-paper="paper" data-paper-dpi="120" data-fixed-tone
       data-paper-params='{"edge":{"radius_px":10},"shadow":{"offset_px":7,"blur_px":12}}'>
@@ -489,7 +495,7 @@ dialog.lightbox::backdrop{background:rgba(8,7,6,.82);}
       brutal at 1&nbsp;a.m.</p>
     </div>
     <div class="stock lamp sheet" data-paper="paper" data-paper-dpi="120" data-fixed-tone
-      data-paper-params='{"edge":{"radius_px":10},"shadow":{"offset_px":7,"blur_px":12,"darkness":0.85},"tone":{"paper":[0.30,0.266,0.213],"highlight":[1.08,1.0,0.88],"shadow":[0.84,0.90,1.0]},"light":{"altitude_deg":30,"spec_intensity":0.9,"relief_exaggerate":9}}'>
+      data-paper-params='{"edge":{"radius_px":10},"shadow":{"offset_px":7,"blur_px":12,"darkness":0.85},"tone":{"paper":[0.30,0.266,0.213],"highlight":[1.08,1.0,0.88],"shadow":[0.84,0.90,1.0]},"light":{"altitude_deg":30,"spec_intensity":0.9,"spec_power":14,"relief_exaggerate":24,"highlight_ceiling":1.95}}'>
       <span class="tag">Lamplight stock</span>
       <h3>Same sheet, 30% of the light</h3>
       <p>Not a dark rectangle: still paper, still buckled, lit from lower down so the cockle reads by
@@ -564,8 +570,11 @@ dialog.lightbox::backdrop{background:rgba(8,7,6,.82);}
   <div class="demo-head"><span class="num">06</span>
     <h2>Card grid with a hover lift</h2>
     <p class="cap">The lift is CSS; the <em>brightening</em> is real: <code>paper.set()</code> mixes
-      <code>tone.paper</code> toward a cooler, whiter stock on pointer-enter and focus, so the sheet
-      itself catches more light. The lead card also runs <code>light:'pointer'</code>.
+      <code>tone.paper</code> toward a cooler, whiter stock on pointer-enter and focus. The tempting
+      alternative is <code>light.highlight_ceiling</code> — but on a sheet this flat it is measurably
+      a no-op, because ordinary cockle never drives the shade past about 1.008 and the shoulder that
+      rolls off toward the ceiling is never reached. Changing the stock is the honest signal here.
+      The lead card also runs <code>light:'pointer'</code>.
       <code>dpi 150</code> · <code>edge.radius_px 10</code> · gap 44px so neighbouring cast shadows
       never overlap.</p></div>
   <div class="grid" id="grid"></div>
@@ -635,8 +644,11 @@ dialog.lightbox::backdrop{background:rgba(8,7,6,.82);}
   <div class="demo-head"><span class="num">10</span>
     <h2>Save control with a stock change</h2>
     <p class="cap">Saving does not just tint a button: <code>paper.set()</code> pushes
-      <code>tone.paper</code> from cream to an aged ochre stock, so the sheet itself becomes the
-      state. Press it. <code>aria-pressed</code> carries the same fact to assistive tech.</p></div>
+      <code>tone.paper</code> from cream to an aged ochre stock <em>and creases the sheet</em> —
+      <code>folds.count 1</code> at <code>depth 0.6</code>, <code>sharpness 0.85</code>. You fold a
+      page to keep your place, and a fold is now a broad tilt plus a sub-millimetre crease line rather
+      than two flat bands, so it reads as paper that has been handled. Press it.
+      <code>aria-pressed</code> carries the same fact to assistive tech.</p></div>
   <div class="actionbar sheet" id="saveBar" data-paper="paper" data-paper-dpi="160"
     data-paper-params='{"edge":{"radius_px":10,"wobble_px":3},"shadow":{"offset_px":6,"blur_px":12}}'>
     <span class="label"><b>The river crossing, in full</b><span>Long read, 4,200 words</span></span>
@@ -1031,7 +1043,9 @@ for (const p of papers) {
     paper: p.params.tone.paper.slice(),
     alt:   p.params.light.altitude_deg,
     spec:  p.params.light.spec_intensity,
+    power: p.params.light.spec_power,
     exag:  p.params.light.relief_exaggerate,
+    ceil:  p.params.light.highlight_ceiling,
     dark:  p.params.shadow.darkness,
     fixed: p.el.hasAttribute('data-fixed-tone'),
   };
@@ -1040,6 +1054,10 @@ for (const p of papers) {
 /* ── 02 daylight / lamplight ────────────────────────────────────────────── */
 const LAMP = { scale: 0.30, warm: [1, 0.95, 0.86] };
 let theme = 'day';
+// applyTheme resets every sheet to its base stock, which would silently wipe any
+// surface whose CURRENT stock is a UI state (the saved bar's aged ochre). Those
+// register a callback here and get the last word after each theme change.
+const restate = [];
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 const stockOf = (p, lift = 0) => {
   const base = theme === 'lamp'
@@ -1063,10 +1081,23 @@ function applyTheme(next) {
                 shadow: lamp ? [0.84, 0.90, 1.0] : [0.90, 0.92, 0.98] },
       light:  { altitude_deg: lamp ? 30 : p.__base.alt,
                 spec_intensity: lamp ? 0.9 : p.__base.spec,
-                relief_exaggerate: lamp ? p.__base.exag + 2.5 : p.__base.exag },
+                // A low lamp puts the half-vector ~30 deg off the sheet, and a
+                // 40-power lobe is never hit that far out. Widening it is what
+                // makes spec_intensity 0.9 mean anything at this altitude. 22
+                // rather than the swatch's 14: the big reading sheets craze into
+                // a web of glinting creases if the lobe goes much wider than this.
+                spec_power: lamp ? 22 : p.__base.power,
+                // Only bites once the crests actually get bright; worth a few
+                // percent of extra range in the highlights, not the whole effect.
+                highlight_ceiling: lamp ? 1.95 : p.__base.ceil,
+                // Dimming the stock to 30% divides the relief's absolute contrast
+                // by the same factor. Doubling the exaggeration puts most of it
+                // back without turning a 200 mm sheet into foil.
+                relief_exaggerate: lamp ? p.__base.exag * 2 : p.__base.exag },
       shadow: { darkness: lamp ? 0.86 : p.__base.dark },
     });
   }
+  for (const f of restate) f();
 }
 $('#themeBtn').addEventListener('click', () => applyTheme(theme === 'day' ? 'lamp' : 'day'));
 
@@ -1149,6 +1180,10 @@ $('#secnav').addEventListener('click', (e) => {
 for (const card of $$('#grid .card')) {
   const p = papers.find((x) => x.el === card);
   if (!p) continue;
+  // Measured, not assumed: raising light.highlight_ceiling here is bit-for-bit a
+  // no-op. Ordinary cockle at altitude 50 with a 40-power lobe peaks at a shade
+  // of about 1.008, so the shoulder that rolls off toward the ceiling is never
+  // reached and the ceiling has nothing to compress. A stock change it is.
   const lift = (on) => p.set({ tone: { paper: stockOf(p, on ? 0.34 : 0) } });
   card.addEventListener('pointerenter', () => lift(true));
   card.addEventListener('pointerleave', () => lift(false));
@@ -1208,6 +1243,22 @@ onScroll();
 
 /* ── 10 save changes the stock ──────────────────────────────────────────── */
 const saveBtn = $('#saveBtn'), saveP = papers.find((p) => p.el === $('#saveBar'));
+function drawSaved() {
+  const on = saveBtn.getAttribute('aria-pressed') === 'true';
+  if (!saveP) return;
+  const aged = theme === 'lamp' ? [0.32, 0.26, 0.17] : [0.955, 0.875, 0.705];
+  saveP.set({
+    tone:  { paper: on ? aged : stockOf(saveP) },
+    // The oldest save control there is: you fold the page to keep your place.
+    // ONE crease, which since the fold rewrite is a broad tilt across the bar
+    // plus a narrow line where the fibres actually broke, rather than the two
+    // flat grey bands the old Gaussian produced. Seed 2 puts it behind the
+    // button instead of through the title; depth 0.6 keeps it a crease rather
+    // than a slash. Off again on unsave: paper unfolds badly, UI should not.
+    folds: { enabled: on, count: 1, depth: 0.6, sharpness: 0.85, seed: 2 },
+  });
+}
+restate.push(drawSaved);
 saveBtn.addEventListener('click', () => {
   const on = saveBtn.getAttribute('aria-pressed') !== 'true';
   saveBtn.setAttribute('aria-pressed', String(on));
@@ -1215,10 +1266,7 @@ saveBtn.addEventListener('click', () => {
   $('#saveIcon').innerHTML = on
     ? '<path d="M3 1.4h8v11.2L7 9.6l-4 3z" fill="currentColor"/>'
     : '<path d="M3 1.4h8v11.2L7 9.6l-4 3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>';
-  if (saveP) {
-    const aged = theme === 'lamp' ? [0.32, 0.26, 0.17] : [0.955, 0.875, 0.705];
-    saveP.set({ tone: { paper: on ? aged : stockOf(saveP) } });
-  }
+  drawSaved();
 });
 
 /* ── 11 share sheet ─────────────────────────────────────────────────────── */
@@ -1384,7 +1432,9 @@ function lbOpen(i) {
       params: { edge: { radius_px: 10, wobble_px: 3 }, shadow: { offset_px: 10, blur_px: 18 },
                 tone: { paper: stockOf({ __base: { paper: [1, 0.953, 0.871] } }) } },
     });
-    lbPaper.__base = { paper: [1, 0.953, 0.871], alt: 50, spec: 0.5, exag: 7, dark: 0.65, fixed: false };
+    lbPaper.__base = { paper: [1, 0.953, 0.871], alt: 50, spec: 0.5, exag: 7,
+                       power: lbPaper.params.light.spec_power,
+                       ceil: lbPaper.params.light.highlight_ceiling, dark: 0.65, fixed: false };
     papers.push(lbPaper);
     if (theme === 'lamp') applyTheme('lamp');
   }

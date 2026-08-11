@@ -660,7 +660,7 @@ footer.end{
       data-paper-params='{
         "tone":{"paper":[0.945,0.908,0.828],"duotone":0.55},
         "cockle":{"enabled":true,"wavelength_mm":34,"amplitude_um":27,"anisotropy":2.6,"irregularity":0.95},
-        "folds":{"enabled":true,"count":1,"depth":0.5,"sharpness":0.55},
+        "folds":{"enabled":true,"count":1,"depth":2.2,"sharpness":0.55},
         "formation":{"enabled":true,"amplitude":0.024,"gsm_amount":0.8,"scale_mm":2.6},
         "shadow":{"enabled":true,"offset_px":16,"blur_px":26,"darkness":0.72,"contact":0.75},
         "edge":{"enabled":true,"wobble_px":6},
@@ -724,8 +724,9 @@ footer.end{
     </article>
 
     <p class="cap"><b>The whole sheet is one surface.</b> <b>preset reading</b>, <b>dpi 54</b> so the
-      cockle buckles at broadsheet scale rather than card scale, <b>folds count 1</b> for the single
-      crease across the sheet, <b>tone.paper [0.945,0.908,0.828]</b> newsprint, and
+      cockle buckles at broadsheet scale rather than card scale, <b>folds count 1</b> at
+      <b>depth 2.2</b> for the single crease across the sheet, <b>tone.paper [0.945,0.908,0.828]</b>
+      newsprint, and
       <b>light: pointer</b>, so moving the cursor changes the rake across the fold.
       Type: 3 columns at ~46 characters, 22px baseline, hairline <code>column-rule</code>, drop cap on
       three lines.</p>
@@ -739,7 +740,8 @@ footer.end{
       data-paper="paper" data-paper-dpi="72" data-paper-content="rasterize"
       data-paper-params='{
         "tone":{"paper":[1,0.953,0.871],"duotone":0.5},
-        "ink":{"kubelka_munk":true,"thickness":1.35,"granulation":0.6},
+        "ink":{"kubelka_munk":true,"thickness":1.05,"granulation":4},
+        "cavity":{"enabled":true,"radius_mm":3.0,"lambda":0.3},
         "mould":{"enabled":true,"laid_pitch_mm":0.55,"chain_pitch_mm":0.55,"chain_ratio":0.5,"amount":0.016},
         "cockle":{"enabled":true,"wavelength_mm":26,"amplitude_um":20},
         "shadow":{"enabled":true,"offset_px":12,"blur_px":20,"darkness":0.68},
@@ -752,8 +754,11 @@ footer.end{
 
     <p class="cap"><b>Showpiece one of two: <b>content: 'rasterize'</b>.</b> The nameplate is snapshotted
       and fed in as the content texture, so Kubelka-Munk puts the ink <i>under</i> the paper's own
-      lighting instead of on top of it. The serif stems pick up the cockle shading, and
-      <b>ink.granulation 0.6</b> pools pigment in the relief valleys. <b>mould</b> at 0.55/0.55mm gives the
+      lighting instead of on top of it. <b>ink.coverage</b> stays at its default <b>1</b>: a grey pixel in
+      a rasterised glyph is partial <i>area</i> coverage at full ink strength, not a thinner ink film, so
+      the stems come out at the weight they have in the DOM instead of gaining a dark rim.
+      <b>ink.granulation 4</b> over a widened <b>cavity radius 3mm</b> pools pigment in the relief
+      valleys. <b>mould</b> at 0.55/0.55mm gives the
       wove structure of a quality stock. Cost: this block's text is not selectable, which is why it is
       used on a nameplate and nothing clickable.</p>
   </section>
@@ -767,6 +772,7 @@ footer.end{
       data-paper-params='{
         "tone":{"paper":[0.955,0.918,0.838]},
         "cockle":{"enabled":true,"wavelength_mm":30,"amplitude_um":30,"anisotropy":3.0,"md_angle_deg":4},
+        "folds":{"enabled":true,"count":2,"depth":0.8},
         "shadow":{"enabled":true,"offset_px":13,"blur_px":22,"darkness":0.7},
         "edge":{"enabled":true,"wobble_px":7}}'>
       <p class="kicker">Extra · Eleven minutes past midnight</p>
@@ -781,7 +787,8 @@ footer.end{
       the top deck, hairline below the bottom deck, byline hung under the hairline.
       <b>preset pronounced</b> at <b>dpi 58</b> pushes the relief hard on a wide, shallow strip, and
       <b>cockle.md_angle_deg 4</b> tilts the machine direction so the buckling is not perfectly level with
-      the type.</p>
+      the type. <b>folds depth 0.8</b> is set explicitly rather than inherited: the preset's own 0.4 was
+      authored against the older, three-times-deeper fold model.</p>
   </section>
 
   <!-- ============ 04 ====================================================== -->
@@ -970,12 +977,12 @@ footer.end{
           data-paper-params='{
             "tone":{"paper":[0.978,0.952,0.892],"duotone":0.45},
             "edge":{"enabled":true,"wobble_px":8,"deckle_px":12},
-            "crumple":{"enabled":true,"scale_mm":15,"amplitude_um":20,"crease":0.16},
+            "crumple":{"enabled":true,"scale_mm":15,"amplitude_um":34,"crease":0.06},
             "formation":{"enabled":true,"amplitude":0.018,"gsm_amount":0.7},
             "fade":{"enabled":true,"scale_mm":130,"amount":0.35},
             "scratches":{"enabled":true,"density":0.015,"lightness":0.12},
-            "folds":{"enabled":true,"count":2,"depth":0.26,"sharpness":0.55},
-            "light":{"azimuth_deg":116,"altitude_deg":56,"relief_exaggerate":5},
+            "folds":{"enabled":true,"count":2,"depth":1.0,"sharpness":0.55},
+            "light":{"azimuth_deg":116,"altitude_deg":52,"relief_exaggerate":9},
             "shadow":{"enabled":true,"offset_px":9,"blur_px":15,"darkness":0.68}}'>
           <h3>Corrections</h3>
           <p>An article on Thursday about the Wexford culvert misstated the year the
@@ -987,8 +994,8 @@ footer.end{
         </aside>
       </div>
       <p class="cap"><b>A clipping, not a card.</b> <b>preset worn</b> with <b>edge.deckle_px 12</b>
-        gives the torn fibrous edge, <b>folds count 2</b> creases it, and a −1.3° CSS rotation pins it
-        askew. Note the rotation takes the cast shadow with it, so its direction no longer matches the
+        gives the torn fibrous edge, <b>folds count 2</b> at <b>depth 1.0</b> creases it, and a −1.3° CSS
+        rotation pins it askew. Note the rotation takes the cast shadow with it, so its direction no longer matches the
         page light. Acceptable, and it is what makes the clipping look handled.</p>
     </section>
 
@@ -1294,7 +1301,7 @@ footer.end{
       data-paper="pronounced" data-paper-dpi="52" data-paper-light="pointer"
       data-paper-params='{
         "tone":{"paper":[0.965,0.928,0.845]},
-        "folds":{"enabled":true,"count":2,"depth":0.3,"sharpness":0.5},
+        "folds":{"enabled":true,"count":2,"depth":0.85,"sharpness":0.5},
         "cockle":{"enabled":true,"wavelength_mm":34,"amplitude_um":26,"anisotropy":2.8},
         "shadow":{"enabled":true,"offset_px":14,"blur_px":24,"darkness":0.72},
         "edge":{"enabled":true,"wobble_px":7}}'>
@@ -1311,8 +1318,10 @@ footer.end{
     <p class="cap"><b>Letterspacing as architecture.</b> 52px serif at <b>0.22em</b> tracking between
       two 3px double rules, with a matching <code>text-indent</code> so the optical centring survives
       the trailing letterspace. Paper: <b>preset pronounced</b> at <b>dpi 52</b>, the lowest on the
-      page, so the buckling is broadsheet-sized, plus two shallow <b>folds</b>, because a section
-      front has been folded at least once before you ever see it.</p>
+      page, so the buckling is broadsheet-sized, plus two <b>folds</b> at <b>depth 0.85</b>, because a
+      section front has been folded at least once before you ever see it. A fold is a broad tilt over
+      about 14mm plus a crease line under a millimetre, so peak relief is <b>depth × 43µm</b>: depths
+      above 1 are ordinary.</p>
   </section>
 
   <!-- ============ 18 / 19 ================================================= -->
@@ -1325,8 +1334,8 @@ footer.end{
         data-paper-params='{
           "tone":{"paper":[0.942,0.906,0.822]},
           "edge":{"enabled":true,"wobble_px":7,"deckle_px":10},
-          "crumple":{"enabled":true,"scale_mm":11,"amplitude_um":40,"crease":0.25},
-          "folds":{"enabled":true,"count":2,"depth":0.32,"sharpness":0.5},
+          "crumple":{"enabled":true,"scale_mm":13,"amplitude_um":52,"crease":0.05},
+          "folds":{"enabled":true,"count":2,"depth":0.9,"sharpness":0.5},
           "shadow":{"enabled":true,"offset_px":12,"blur_px":19,"darkness":0.68}}'>
         <p class="jumphead">The Wexford, from Page A1</p>
         <h3>“You cannot phase a river,” councillor tells finance committee</h3>
@@ -1349,8 +1358,10 @@ footer.end{
       </article>
       <p class="cap"><b>The unglamorous page.</b> A jump is a jump line, a shortened head and a
         continuation that begins mid-sentence in lower case. Physically it is the most abused sheet in
-        the paper, so: <b>preset worn</b> with <b>crumple</b> at 11mm and 40µm plus two <b>folds</b> and
-        a <b>deckle</b> edge.</p>
+        the paper, so: <b>preset worn</b> with <b>crumple</b> at 13mm and 52µm plus two <b>folds</b> at
+        <b>depth 0.9</b> and a <b>deckle</b> edge. <b>crumple.crease</b> is held at <b>0.05</b>: the crease
+        term blends back toward the old sharp Voronoi network, and above about 0.1 the sheet stops
+        being crumpled paper and starts being dried mud.</p>
     </section>
 
     <section class="demo" id="c19" style="margin-bottom:0">
@@ -1396,7 +1407,8 @@ footer.end{
         data-paper="paper" data-paper-dpi="150" data-paper-content="rasterize"
         data-paper-params='{
           "tone":{"paper":[1,0.953,0.871]},
-          "ink":{"kubelka_munk":true,"thickness":1.5,"granulation":0.9},
+          "ink":{"kubelka_munk":true,"thickness":0.95,"granulation":8},
+          "cavity":{"enabled":true,"radius_mm":2.5,"lambda":0.35},
           "cockle":{"enabled":true,"wavelength_mm":12,"amplitude_um":16,"irregularity":1},
           "formation":{"enabled":true,"amplitude":0.03,"gsm_amount":0.9},
           "shadow":{"enabled":true,"offset_px":8,"blur_px":14,"darkness":0.66},
@@ -1428,12 +1440,14 @@ footer.end{
       </aside>
     </div>
 
-    <p class="cap"><b>Showpiece two: rasterised ink pushed hard.</b> The stamp uses
-      <b>content: 'rasterize'</b> with <b>ink.thickness 1.5</b> and <b>ink.granulation 0.9</b>, so
-      pigment visibly pools in the relief valleys and the rule box breaks up the way a rubber stamp
-      does. Kept small and rotated −5.5°, because granulation that strong on a large block of text
-      would be unreadable. The slug beside it is ordinary <b>subtle</b> paper at <b>dpi 140</b> with a
-      monospaced ledger set in two ranged columns.</p>
+    <p class="cap"><b>Showpiece two: rasterised ink that did not take evenly.</b> The stamp uses
+      <b>content: 'rasterize'</b> with <b>ink.thickness 0.95</b> and <b>ink.granulation 8</b> over a
+      <b>cavity radius 2.5mm</b>, so pigment pools in the relief valleys, thins on the crests, and the
+      rule box breaks up the way a rubber stamp does. The thickness is deliberately <i>low</i>:
+      Kubelka-Munk saturates, and past about 1.2 the ink is already as dark as it will get, so
+      granulation has nothing left to modulate. Kept small and rotated −5.5°, because pooling this
+      strong on a large block of text would be unreadable. The slug beside it is ordinary
+      <b>subtle</b> paper at <b>dpi 140</b> with a monospaced ledger set in two ranged columns.</p>
   </section>
 
   </main>

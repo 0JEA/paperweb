@@ -472,7 +472,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 
       <article class="sheet spiked tilt" style="--r:-4deg;left:56px;top:118px;width:302px;padding-right:64px;z-index:2"
         data-paper="worn" data-paper-dpi="120"
-        data-paper-params='{"edge":{"deckle_px":7,"wobble_px":7},"folds":{"enabled":true,"count":2,"depth":0.35},"light":{"spec_intensity":0.4},"tone":{"paper":[0.98,0.93,0.83]}}'>
+        data-paper-params='{"edge":{"deckle_px":7,"wobble_px":7},"folds":{"enabled":true,"count":2,"depth":0.9},"tone":{"paper":[0.98,0.93,0.83]}}'>
         <span class="pierce" style="left:285px;top:-4px"></span>
         <p class="stamp stamp--red">Spiked 16:40</p>
         <h3 style="font-size:16px;margin:6px 0 6px">Parking levy “under review”</h3>
@@ -482,7 +482,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 
       <article class="sheet spiked tilt" style="--r:3.2deg;left:314px;top:172px;width:300px;z-index:3"
         data-paper="worn" data-paper-dpi="120"
-        data-paper-params='{"edge":{"deckle_px":9,"wobble_px":8},"light":{"spec_intensity":0.4},"crumple":{"enabled":true,"scale_mm":11,"amplitude_um":46,"crease":0.35}}'>
+        data-paper-params='{"edge":{"deckle_px":9,"wobble_px":8},"crumple":{"enabled":true,"scale_mm":11,"amplitude_um":60,"crease":0.18}}'>
         <span class="pierce" style="left:27px;top:-4px"></span>
         <p class="stamp stamp--red">Spiked 17:05</p>
         <h3 style="font-size:16px;margin:6px 0 6px">Mayor’s dog is named Biscuit</h3>
@@ -504,7 +504,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
   <p class="cap"><b>Idea.</b> Killed copy, impaled. Two badly-handled sheets skewered on a
     desk spindle drawn in SVG; the shaft sits behind the paper, the needle tip in front, and each
     sheet carries a small torn pierce hole where the steel went through.
-    <code>preset worn · dpi 120 · folds · crumple.crease 0.35 · edge.deckle_px 10–13</code></p>
+    <code>preset worn · dpi 120 · folds {count 2, depth 0.9} · crumple {amplitude_um 60, crease 0.18} ·
+    edge.deckle_px 7–9</code>
+    Crumple is a facet model, so <code>crease</code> stays low: it blends toward a sharp Voronoi ridge
+    network, and past about 0.2 the sheet reads as dried mud rather than as paper someone screwed up.</p>
 </section>
 
 <!-- ============================== 03 ================================== -->
@@ -662,7 +665,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
       <!-- the top sheet, half torn away -->
       <article class="sheet tilt" style="--r:-1.6deg;position:absolute;left:15px;top:38px;width:400px;padding:20px 22px 26px;z-index:3"
         data-paper="worn" data-paper-dpi="128"
-        data-paper-params='{"edge":{"deckle_px":9,"wobble_px":6},"folds":{"enabled":true,"count":1,"depth":0.22,"sharpness":0.5},"crumple":{"enabled":false},"scratches":{"enabled":true,"density":0.03},"light":{"spec_intensity":0.32,"relief_exaggerate":7}}'>
+        data-paper-params='{"edge":{"deckle_px":9,"wobble_px":6},"folds":{"enabled":true,"count":1,"depth":0.6,"sharpness":0.5},"crumple":{"enabled":false},"scratches":{"enabled":true,"density":0.03}}'>
         <p class="stamp stamp--red">Breaking &middot; 14:02</p>
         <h3 style="font-size:21px;line-height:1.2;margin:8px 0 8px">Council freezes the parking levy</h3>
         <p style="font-size:13px;line-height:1.6;color:var(--ink-2)">Seven to four, after two hours.
@@ -674,10 +677,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
   <p class="cap"><b>Idea.</b> A breaking alert as the top sheet of a memo pad, half ripped off the
     glue strip. Two surfaces: the pad (aged, coarse, heavy shadow) and the sheet on top of it, torn
     along a fibrous deckle edge with a single fold where somebody's thumb bent it.
-    <code>top: preset worn · dpi 128 · edge.deckle_px 9 · folds {count 1, depth 0.22} ·
-    light.spec_intensity 0.32 · pad: dpi 110 · tone.paper [0.96,0.92,0.84]</code>
-    Worth knowing: <code>worn</code>'s default specular blows a fold out to white on a small sheet,
-    so the fold depth and <code>spec_intensity</code> both come down.</p>
+    <code>top: preset worn · dpi 128 · edge.deckle_px 9 · folds {count 1, depth 0.6, sharpness 0.5} ·
+    pad: dpi 110 · tone.paper [0.96,0.92,0.84]</code>
+    Worth knowing: a fold is a broad tilt over about 14&thinsp;mm plus a sub-millimetre crease line,
+    and peak relief is only <code>depth × 43&thinsp;µm</code>, so a single thumb-bend wants a depth
+    near 0.6 to be visible at all. <code>sharpness</code> sets the crease width, not the fold's.
+    The sheet keeps <code>worn</code>'s own <code>spec_intensity</code>: the highlight shoulder holds
+    the sheen short of white, so there is nothing left to damp.</p>
 </section>
 
 <!-- ============================== 07 ================================== -->
@@ -883,7 +889,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
     <article class="sheet wire" style="width:100%;max-width:720px"
       data-paper="paper" data-paper-dpi="70"
       data-paper-params='{"tone":{"paper":[0.96,0.945,0.90],"duotone":0.45},
-                          "folds":{"enabled":true,"count":3,"depth":0.55,"sharpness":0.8},
+                          "folds":{"enabled":true,"count":3,"depth":1.4,"sharpness":0.8},
                           "formation":{"amplitude":0.026,"gsm_amount":0.8},
                           "edge":{"wobble_px":3},"shadow":{"offset_px":10,"blur_px":16}}'>
       <span class="sprockets l"></span>
@@ -905,7 +911,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
     concertina: at <code>dpi 70</code> the fold creases land at printer-paper scale instead of
     stationery scale. The sprocket holes are a repeating radial-gradient painted the colour of the
     desk, so they read as punched through.
-    <code>preset paper · dpi 70 · folds {count 3, depth 0.55, sharpness 0.8}</code></p>
+    <code>preset paper · dpi 70 · folds {count 3, depth 1.4, sharpness 0.8}</code>
+    A fanfold crease is the deepest thing on this page, so the depth is well past 1: peak relief is
+    <code>depth × 43&thinsp;µm</code>, and <code>sharpness 0.8</code> pulls the crease line down to
+    about 0.7&thinsp;mm so it stays a line rather than a band.</p>
 </section>
 
 <!-- ============================== 12 ================================== -->
@@ -1198,9 +1207,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
     <article class="sheet tilt" style="--r:1.1deg;width:100%;max-width:620px;padding:26px 30px 28px;position:relative"
       data-paper="worn" data-paper-dpi="105"
       data-paper-params='{"tone":{"paper":[0.98,0.92,0.81],"duotone":0.6},
-                          "imperfect":{"enabled":true,"pit_density":0.02,"mark_density":0.05,"mark_strength":0.14},
-                          "crumple":{"enabled":true,"scale_mm":16,"amplitude_um":26,"crease":0.15},
-                          "folds":{"enabled":true,"count":2,"depth":0.35},
+                          "imperfect":{"enabled":true,"pit_density":0.01,"mark_density":0.025,"mark_strength":0.14},
+                          "crumple":{"enabled":true,"scale_mm":16,"amplitude_um":30,"crease":0.05},
+                          "folds":{"enabled":true,"count":2,"depth":0.8},
                           "edge":{"deckle_px":6,"wobble_px":7}}'>
       <span class="coffee" style="width:150px;height:138px;right:16px;top:6px;transform:rotate(-11deg) scaleY(.94)"></span>
       <span class="coffee" style="width:86px;height:80px;right:118px;top:118px;transform:rotate(8deg) scaleY(.9);opacity:.7"></span>
@@ -1222,8 +1231,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
   <p class="cap"><b>Idea.</b> Letters as the sheet that sat under somebody's mug all afternoon. The
     rings are two radial-gradient ellipses at <code>mix-blend-mode: multiply</code>, and the paper's own
     relief shows through the stain, which is the entire reason not to draw stains as flat blobs. The
-    <code>imperfect</code> layer adds the sparse pits and blotches underneath.
-    <code>preset worn · dpi 105 · imperfect.mark_density 0.05 · crumple.crease 0.15 · edge.deckle_px 6</code></p>
+    <code>imperfect</code> layer adds the sparse pits and blotches underneath, at half the density it
+    looks like it should want: pits and marks are scanned across the 3×3 neighbourhood and render
+    whole, so a given density reads about twice as busy as the number suggests.
+    <code>preset worn · dpi 105 · imperfect {pit_density 0.01, mark_density 0.025} ·
+    crumple {amplitude_um 30, crease 0.05} · folds.depth 0.8 · edge.deckle_px 6</code></p>
 </section>
 
 <!-- ============================== 17 ================================== -->

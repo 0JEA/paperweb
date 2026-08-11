@@ -46,7 +46,7 @@ export const presets = {
     },
     "folds": {
       "count": 2,
-      "depth": 0.07999999821186066,
+      "depth": 0.22,
       "enabled": true,
       "seed": 3,
       "sharpness": 0.4000000059604645
@@ -300,7 +300,7 @@ export const presets = {
     "folds": {
       "enabled": true,
       "count": 2,
-      "depth": 0.4
+      "depth": 1.05
     },
     "light": {
       "relief_exaggerate": 10,
@@ -431,7 +431,7 @@ export const presets = {
     "folds": {
       "enabled": true,
       "count": 3,
-      "depth": 0.5,
+      "depth": 1.3,
       "sharpness": 0.5
     },
     "scratches": {
@@ -549,12 +549,12 @@ export const presets = {
       "enabled": true,
       "scale_mm": 13,
       "amplitude_um": 34,
-      "crease": 0.2
+      "crease": 0.07
     },
     "folds": {
       "enabled": true,
       "count": 3,
-      "depth": 0.45,
+      "depth": 1.2,
       "sharpness": 0.6
     },
     "scratches": {

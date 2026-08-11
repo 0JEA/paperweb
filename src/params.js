@@ -63,6 +63,21 @@ export function defaults() {
       thickness: 1.0,
       // Granulation (Curtis et al. 1997 S4.5): pigment pools in the paper's
       // relief valleys, so ink is denser where the sheet dips. 0 = flat ink.
+      //
+      // TWO THINGS HAVE TO BE TRUE for this to be visible, and neither is by
+      // default. Both were found by measurement, not by reading the code.
+      //
+      //   1. `thickness` must be in Kubelka-Munk's SENSITIVE range. The curve
+      //      saturates: a 5% change in optical depth moves the ink's
+      //      reflectance by 3.20% at x = 0.3, 0.93% at x = 1.0 and 0.34% at
+      //      x = 1.5. So at the shipped thickness of 1.0 granulation is already
+      //      almost inert, and raising thickness to make ink "stronger" kills it
+      //      outright. Granulated showpieces want thickness DOWN, near 0.5-1.0.
+      //   2. `cavity.radius_mm` must be comparable to the relief it is measuring.
+      //      The signal is (blur(h) - h), so against a 12 mm cockle wavelength
+      //      the default 0.8 mm radius returns about 4e-4: three orders too
+      //      small to modulate anything. Widen it to 2.5-3 mm and drop
+      //      `cavity.lambda` so the wider radius does not blotch the paper.
       granulation: 0.0,
       // 1 = treat content grey as AREA COVERAGE (right for antialiased text),
       // 0 = treat it as ink THICKNESS (right for washes and halftones, and what
