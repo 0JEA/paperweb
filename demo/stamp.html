@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paperweb — stamp studio</title>
+<style>
+  :root {
+    --ground: #17161a;
+    --ground-2: #1f1e23;
+    --rule: #34323a;
+    --accent: #c8a06a;
+    --text: #e8e4dc;
+    --dim: #8d8880;
+  }
+  * { box-sizing: border-box; }
+  html { overflow-x: clip; }
+  body {
+    margin: 0; background: var(--ground); color: var(--text);
+    font: 400 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: clamp(20px, 4vw, 48px) clamp(14px, 4vw, 48px) 64px;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  h1 { font-size: clamp(24px, 4vw, 34px); margin: 0 0 8px; font-weight: 600; letter-spacing: -0.02em; }
+  header p { color: var(--dim); margin: 0; max-width: 62ch; font-size: 14px; }
+  header p + p { margin-top: 8px; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: 0.88em; color: var(--accent); }
+
+  /* align-items: start, or the stage stretches to the height of the taller
+     control column and the sheet floats in a large empty box. */
+  .cols { display: grid; gap: clamp(20px, 3vw, 36px); grid-template-columns: minmax(0, 1fr) 300px;
+          margin-top: 32px; align-items: start; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+
+  /* --- stage ------------------------------------------------------------- */
+  #stage {
+    position: relative; border-radius: 10px; padding: clamp(16px, 3vw, 40px);
+    background: var(--ground-2); border: 1px solid var(--rule);
+    display: flex; align-items: center; justify-content: center; min-height: 420px;
+  }
+  #stage.over { border-color: var(--accent); background: #262128; }
+  #sheet {
+    width: min(100%, 560px); aspect-ratio: 1 / 1.32;
+    color: #241f18; padding: 7% 8%;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    cursor: grab; touch-action: none; user-select: none;
+  }
+  #sheet.dragging { cursor: grabbing; }
+  #sheet h2 { font-size: 22px; margin: 0 0 4px; font-weight: 600; letter-spacing: -0.01em; }
+  #sheet .rule { border: 0; border-top: 1px solid rgba(60, 45, 25, 0.25); margin: 12px 0 14px; }
+  #sheet p { font-size: 13.5px; line-height: 1.66; color: #4c4437; margin: 0 0 10px; }
+  #sheet .meta { font: 11px/1.5 ui-monospace, Menlo, monospace; letter-spacing: 0.08em;
+                 text-transform: uppercase; color: #8a7f6d; }
+
+  #drop-hint {
+    position: absolute; inset: 0; display: grid; place-content: center; text-align: center;
+    pointer-events: none; opacity: 0; transition: opacity .12s; border-radius: 10px;
+    background: rgba(23, 22, 26, .82); color: var(--accent);
+    font: 600 15px/1.5 ui-sans-serif, system-ui, sans-serif; letter-spacing: .02em;
+  }
+  #stage.over #drop-hint { opacity: 1; }
+
+  /* --- panel ------------------------------------------------------------- */
+  .panel { border: 1px solid var(--rule); border-radius: 10px; padding: 16px 16px 18px; background: var(--ground-2); }
+  .panel + .panel { margin-top: 16px; }
+  .panel h3 { font: 600 11px/1.4 ui-sans-serif, system-ui, sans-serif; text-transform: uppercase;
+              letter-spacing: .14em; color: var(--dim); margin: 0 0 12px; }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; margin-bottom: 10px; }
+  .row label { font-size: 12.5px; color: #b6b0a7; }
+  .row output { font: 11px/1 ui-monospace, Menlo, monospace; color: var(--dim); }
+  .row input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 2px 0 0; }
+  .row.inline { grid-template-columns: 1fr auto; }
+  .row.inline input[type=color] { width: 42px; height: 26px; padding: 0; border: 1px solid var(--rule);
+                                  border-radius: 5px; background: none; cursor: pointer; }
+  select, .btn {
+    font: 500 13px/1 ui-sans-serif, system-ui, sans-serif; padding: 8px 12px; border-radius: 6px;
+    color: #cfcac2; background: rgba(255, 255, 255, .05); border: 1px solid var(--rule); cursor: pointer;
+  }
+  select { width: 100%; }
+  .btn:hover, select:hover { background: rgba(255, 255, 255, .09); }
+  .btn.primary { color: #e5c79a; background: rgba(200, 160, 106, .16); border-color: rgba(200, 160, 106, .42); }
+  .btn:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hint { font-size: 12px; color: #6d675f; margin: 10px 0 0; line-height: 1.5; }
+  .privacy { border-color: rgba(200, 160, 106, .28); }
+  .privacy p { margin: 0; font-size: 12.5px; color: #b6b0a7; line-height: 1.55; }
+
+  #out { width: 100%; min-height: 150px; margin-top: 10px; resize: vertical; padding: 10px;
+         border-radius: 6px; border: 1px solid var(--rule); background: #141319; color: var(--text);
+         font: 12px/1.5 ui-monospace, Menlo, monospace; }
+  #say { font-size: 12px; color: var(--accent); min-height: 1.4em; margin-top: 8px; }
+  .fail { color: #e0876a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Stamp studio</h1>
+    <p>Drop a logo anywhere on this page and it becomes a rubber stamp on the sheet.
+      Drag the stamp to move it, scroll over it to resize, hold shift and scroll to rotate.</p>
+    <p>A stamp inks where the paper is <strong>high</strong>: the crests reach the rubber first
+      and the impression skips in the hollows. That is <code>contact</code>, and it is the
+      difference between a stamp that reads pressed and one that reads pasted on.</p>
+  </header>
+
+  <div class="cols">
+    <div id="stage">
+      <div id="sheet" data-paper="paper">
+        <div class="meta">Filed &middot; no. 4417</div>
+        <h2>Certificate of deposit</h2>
+        <hr class="rule">
+        <p>Received of the bearer, in good order and condition, the goods described in the
+          schedule annexed hereto, to be held at the warehouse named below until such time as
+          this instrument is surrendered.</p>
+        <p>The holder acknowledges that the rates set out overleaf are subject to revision on
+          thirty days' notice, and that storage beyond the stated term shall be charged at the
+          prevailing monthly rate.</p>
+        <p>Signed in duplicate, one part retained by the warehouseman and one part delivered to
+          the bearer, on the date first written above.</p>
+      </div>
+      <div id="drop-hint">Drop an image to make it a stamp</div>
+    </div>
+
+    <div>
+      <div class="panel privacy">
+        <h3>Nothing is stored</h3>
+        <p>The image never leaves this tab. It is read straight into a GPU texture and dropped
+          when you close the page. No upload, nothing written to disk.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Die</h3>
+        <div class="btns" style="margin-bottom:12px">
+          <button class="btn" id="pick">Choose image…</button>
+          <button class="btn" id="builtin">Built-in</button>
+        </div>
+        <input type="file" id="file" accept="image/*" hidden>
+        <div class="row inline"><label for="colour">Ink colour</label><input type="color" id="colour" value="#8c2320"></div>
+        <p class="hint" id="diename">Using the built-in die.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Impression</h3>
+        <div id="sliders"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Paper</h3>
+        <select id="preset"></select>
+        <p class="hint">Contact needs relief to bite into. On a flat stock it does nothing,
+          which is correct rather than broken.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Copy out</h3>
+        <div class="btns">
+          <button class="btn primary" id="copy-js">params</button>
+          <button class="btn" id="copy-attr">data-paper-params</button>
+        </div>
+        <textarea id="out" readonly aria-label="Generated configuration"></textarea>
+        <div id="say" role="status"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { Paper, presetNames } from '../src/index.js';
+
+// --- the die ------------------------------------------------------------------
+// A built-in stamp so the page is useful before anything is dropped on it. Drawn
+// rather than shipped as a file: it keeps the demo dependency-free, and it is a
+// worked example of what a die needs to be, which is a high-contrast silhouette.
+function builtinDie() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 512;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff';
+  x.fillRect(0, 0, 512, 512);
+  x.strokeStyle = x.fillStyle = '#000';
+  x.lineWidth = 14;
+  x.beginPath(); x.arc(256, 256, 222, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = 5;
+  x.beginPath(); x.arc(256, 256, 196, 0, Math.PI * 2); x.stroke();
+
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  x.font = '700 74px ui-sans-serif, system-ui, sans-serif';
+  x.fillText('RECEIVED', 256, 232);
+  x.font = '600 40px ui-monospace, Menlo, monospace';
+  x.fillText('12 AUG 2026', 256, 300);
+  x.fillRect(96, 256, 320, 4);
+
+  // Curved text round the bottom, which is the thing that makes a disc read as
+  // a stamp rather than as a badge.
+  x.font = '600 34px ui-sans-serif, system-ui, sans-serif';
+  const label = 'CENTRAL RECORDS OFFICE';
+  const span = Math.PI * 0.72;
+  // Bottom arc: start at the LEFT and sweep right, with each glyph following
+  // the tangent. Sweeping the other way and flipping each letter 180 lands the
+  // text in the right place upside down, which is the obvious way to write this
+  // and is wrong.
+  const start = Math.PI / 2 + span / 2;
+  x.save();
+  x.translate(256, 256);
+  for (let i = 0; i < label.length; i++) {
+    const a = start - (i / (label.length - 1)) * span;
+    x.save();
+    x.rotate(a - Math.PI / 2);
+    x.translate(0, 172);
+    x.fillText(label[i], 0, 0);
+    x.restore();
+  }
+  x.restore();
+  return c;
+}
+
+// --- state --------------------------------------------------------------------
+const stamp = {
+  enabled: true, image: builtinDie(),
+  x: 0.66, y: 0.74, scale: 0.42, rotation_deg: -8,
+  color: [0.55, 0.14, 0.11],
+  threshold: 0.5, pressure: 0.9, contact: 0.7, reach_um: 12, wear: 0.3, opacity: 0.92,
+};
+let presetName = 'worn';
+
+const sheet = document.getElementById('sheet');
+const paper = new Paper(sheet, { preset: presetName, params: { stamp } });
+
+const apply = () => { paper.set({ stamp }); write(); };
+
+// --- controls -----------------------------------------------------------------
+const SLIDERS = [
+  ['scale', 0.05, 1, 0.01, 'Size'],
+  ['rotation_deg', -180, 180, 1, 'Rotation'],
+  ['pressure', 0, 1.4, 0.01, 'Pressure'],
+  ['contact', 0, 1, 0.01, 'Contact with the relief'],
+  ['reach_um', 2, 40, 1, 'Reach (µm below the plane)'],
+  ['wear', 0, 1, 0.01, 'Wear'],
+  ['threshold', 0.05, 0.95, 0.01, 'Die threshold'],
+  ['opacity', 0, 1, 0.01, 'Opacity'],
+];
+const box = document.getElementById('sliders');
+for (const [key, min, max, step, label] of SLIDERS) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = `<label for="s-${key}">${label}</label><output id="o-${key}"></output>`
+    + `<input type="range" id="s-${key}" min="${min}" max="${max}" step="${step}">`;
+  box.appendChild(row);
+  const input = row.querySelector('input');
+  const out = row.querySelector('output');
+  const show = () => { out.textContent = stamp[key]; };
+  input.value = stamp[key];
+  show();
+  input.addEventListener('input', () => { stamp[key] = +input.value; show(); apply(); });
+  row.dataset.key = key;
+}
+// Keep the sliders honest when the sheet is dragged or scrolled instead.
+function syncSliders() {
+  for (const [key] of SLIDERS) {
+    const input = document.getElementById(`s-${key}`);
+    const out = document.getElementById(`o-${key}`);
+    if (!input) continue;
+    input.value = stamp[key];
+    out.textContent = Math.round(stamp[key] * 1000) / 1000;
+  }
+}
+syncSliders();
+
+const presetSel = document.getElementById('preset');
+for (const n of presetNames) {
+  const o = document.createElement('option');
+  o.value = o.textContent = n;
+  if (n === presetName) o.selected = true;
+  presetSel.appendChild(o);
+}
+presetSel.addEventListener('change', () => {
+  presetName = presetSel.value;
+  // A preset is a whole parameter tree, so the stamp has to be reasserted on
+  // top of it; setting the preset alone would drop the die.
+  paper.set({ preset: presetName });
+  paper.set({ stamp });
+  write();
+});
+
+const colour = document.getElementById('colour');
+const toHex = ([r, g, b]) => '#' + [r, g, b].map((v) =>
+  Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0')).join('');
+colour.value = toHex(stamp.color);
+colour.addEventListener('input', () => {
+  const h = colour.value;
+  stamp.color = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  apply();
+});
+
+// --- placing the stamp by hand ------------------------------------------------
+// Sliders for x and y would work and would be worse. Dragging the thing you are
+// positioning is the whole point of a studio.
+let drag = null;
+sheet.addEventListener('pointerdown', (e) => {
+  drag = { px: e.clientX, py: e.clientY };
+  sheet.setPointerCapture(e.pointerId);
+  sheet.classList.add('dragging');
+});
+sheet.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const r = sheet.getBoundingClientRect();
+  stamp.x = Math.min(1.1, Math.max(-0.1, stamp.x + (e.clientX - drag.px) / r.width));
+  stamp.y = Math.min(1.1, Math.max(-0.1, stamp.y + (e.clientY - drag.py) / r.height));
+  drag = { px: e.clientX, py: e.clientY };
+  apply();
+});
+const endDrag = (e) => {
+  if (!drag) return;
+  drag = null;
+  sheet.classList.remove('dragging');
+  if (e.pointerId !== undefined && sheet.hasPointerCapture(e.pointerId)) {
+    sheet.releasePointerCapture(e.pointerId);
+  }
+};
+sheet.addEventListener('pointerup', endDrag);
+sheet.addEventListener('pointercancel', endDrag);
+
+sheet.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const d = Math.sign(e.deltaY);
+  if (e.shiftKey) stamp.rotation_deg = ((stamp.rotation_deg - d * 3 + 180 + 360) % 360) - 180;
+  else stamp.scale = Math.min(1, Math.max(0.05, +(stamp.scale * (1 - d * 0.06)).toFixed(3)));
+  syncSliders();
+  apply();
+}, { passive: false });
+
+// --- loading a die ------------------------------------------------------------
+const nameEl = document.getElementById('diename');
+const say = document.getElementById('say');
+
+function useImage(img, label) {
+  stamp.image = img;
+  nameEl.textContent = label;
+  apply();
+}
+
+/**
+ * Read a dropped or chosen file into an <img>.
+ *
+ * FileReader to a data URL, never a fetch and never a blob URL that outlives
+ * the load: the image is uploaded to a texture and then there is no copy of it
+ * anywhere. A logo dropped here may be someone's client work.
+ */
+function readFile(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    say.className = 'fail';
+    say.textContent = 'That is not an image.';
+    return;
+  }
+  const fr = new FileReader();
+  fr.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      useImage(img, `${file.name} — held in this tab only`);
+      say.className = '';
+      say.textContent = '';
+    };
+    img.onerror = () => {
+      say.className = 'fail';
+      say.textContent = `Could not decode ${file.name}.`;
+    };
+    img.src = fr.result;
+  };
+  fr.onerror = () => {
+    say.className = 'fail';
+    say.textContent = `Could not read ${file.name}.`;
+  };
+  fr.readAsDataURL(file);
+}
+
+const stage = document.getElementById('stage');
+// Drops land anywhere on the page, because aiming at a target is a needless
+// step; the whole window is the drop zone and the stage just shows it.
+let depth = 0;
+addEventListener('dragenter', (e) => { e.preventDefault(); depth++; stage.classList.add('over'); });
+addEventListener('dragover', (e) => { e.preventDefault(); });
+addEventListener('dragleave', (e) => { e.preventDefault(); if (--depth <= 0) { depth = 0; stage.classList.remove('over'); } });
+addEventListener('drop', (e) => {
+  e.preventDefault();
+  depth = 0;
+  stage.classList.remove('over');
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  readFile(f);
+});
+
+const fileInput = document.getElementById('file');
+document.getElementById('pick').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => readFile(fileInput.files[0]));
+document.getElementById('builtin').addEventListener('click', () => {
+  useImage(builtinDie(), 'Using the built-in die.');
+});
+
+// --- copy out -------------------------------------------------------------------
+const outEl = document.getElementById('out');
+const round = (v) => Math.round(v * 1000) / 1000;
+
+function config() {
+  return {
+    enabled: true,
+    image: '/* your image element, canvas or URL */',
+    x: round(stamp.x), y: round(stamp.y),
+    scale: round(stamp.scale),
+    rotation_deg: round(stamp.rotation_deg),
+    color: stamp.color.map(round),
+    threshold: round(stamp.threshold),
+    pressure: round(stamp.pressure),
+    contact: round(stamp.contact),
+    reach_um: round(stamp.reach_um),
+    wear: round(stamp.wear),
+    opacity: round(stamp.opacity),
+  };
+}
+
+function asJs() {
+  const c = config();
+  const body = Object.entries(c)
+    .map(([k, v]) => `    ${k}: ${k === 'image' ? v : JSON.stringify(v)},`)
+    .join('\n');
+  return `new Paper(el, {\n  preset: ${JSON.stringify(presetName)},\n  params: {\n`
+    + `  stamp: {\n${body}\n  },\n  },\n});`;
+}
+
+function asAttr() {
+  // The attribute form cannot carry an image element, so it names one instead:
+  // the markup path needs a src the page can resolve.
+  const c = { ...config(), image: 'YOUR-LOGO.png' };
+  return `<div data-paper="${presetName}"\n     data-paper-params='${JSON.stringify({ stamp: c })}'>`;
+}
+
+let mode = 'js';
+const write = () => { outEl.value = mode === 'js' ? asJs() : asAttr(); };
+
+async function copy(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    say.className = '';
+    say.textContent = 'Copied.';
+  } catch {
+    outEl.select();
+    say.className = 'fail';
+    say.textContent = 'Could not reach the clipboard; the text is selected instead.';
+  }
+}
+document.getElementById('copy-js').addEventListener('click', () => {
+  mode = 'js'; write(); copy(outEl.value);
+});
+document.getElementById('copy-attr').addEventListener('click', () => {
+  mode = 'attr'; write(); copy(outEl.value);
+});
+
+write();
+</script>
+</body>
+</html>
