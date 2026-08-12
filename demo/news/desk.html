@@ -129,13 +129,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
                     100% 93%,92% 100%,81% 92%,69% 100%,56% 91%,45% 100%,33% 92%,21% 100%,9% 92%,0 100%);
 }
 
-.coffee{
-  position:absolute;border-radius:50%;mix-blend-mode:multiply;pointer-events:none;
-  background:radial-gradient(closest-side,
-    rgba(122,80,36,.10) 0 58%, rgba(108,62,22,.34) 65%, rgba(78,42,12,.52) 79%,
-    rgba(120,78,34,.24) 87%, transparent 93%);
-  filter:blur(.5px);
-}
 
 .grease{position:absolute;inset:0;mix-blend-mode:multiply;pointer-events:none;z-index:4;}
 
@@ -393,7 +386,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
   <p>Twenty editorial components, each built as the physical thing an editor
      actually kept on the desk: pinned, spiked, clipped, stacked, weighted down
      and scribbled on. Every cream surface below is a live WebGL2 paper render.
-     The pins, clips, spikes, bands and coffee rings are CSS and inline SVG.</p>
+     The pins, clips, spikes and bands are CSS and inline SVG; the coffee
+     rings are not, they are rendered into the paper.</p>
   <div class="rule"></div>
 </header>
 
@@ -1208,11 +1202,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
       data-paper="worn" data-paper-dpi="105"
       data-paper-params='{"tone":{"paper":[0.98,0.92,0.81],"duotone":0.6},
                           "imperfect":{"enabled":true,"pit_density":0.01,"mark_density":0.025,"mark_strength":0.14},
+                          "stains":{"enabled":true,"seed":7,"amount":1.0,"relief_um":10,"marks":[{"x":0.55,"y":0.62,"r_mm":30,"strength":0.6,"kind":"ring"},{"x":0.86,"y":0.27,"r_mm":17,"strength":0.44,"kind":"ring"}]},
                           "crumple":{"enabled":true,"scale_mm":16,"amplitude_um":30,"crease":0.05},
                           "folds":{"enabled":true,"count":2,"depth":0.8},
                           "edge":{"deckle_px":6,"wobble_px":7}}'>
-      <span class="coffee" style="width:150px;height:138px;right:16px;top:6px;transform:rotate(-11deg) scaleY(.94)"></span>
-      <span class="coffee" style="width:86px;height:80px;right:118px;top:118px;transform:rotate(8deg) scaleY(.9);opacity:.7"></span>
 
       <p class="stamp" style="margin-bottom:14px">Letters &middot; 40 received, two printed</p>
       <h3 style="font-size:18px;margin-bottom:8px">“Nobody asked us about the mural”</h3>
@@ -1229,8 +1222,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
     </article>
   </div>
   <p class="cap"><b>Idea.</b> Letters as the sheet that sat under somebody's mug all afternoon. The
-    rings are two radial-gradient ellipses at <code>mix-blend-mode: multiply</code>, and the paper's own
-    relief shows through the stain, which is the entire reason not to draw stains as flat blobs. The
+    rings are the <code>stains</code> layer, not CSS. Deegan et al. (<i>Nature</i> 389, 1997): a drop
+    pins at its contact line, evaporation is fastest at the perimeter, and the outward flow carries
+    every particle there, so a dried ring is DARK at the edge and pale in the middle rather than a
+    soft disc. The liquid also swells the fibres, so each mark is a shallow dish with a raised rim
+    and sits in the sheet instead of on top of it. The
     <code>imperfect</code> layer adds the sparse pits and blotches underneath, at half the density it
     looks like it should want: pits and marks are scanned across the 3×3 neighbourhood and render
     whole, so a given density reads about twice as busy as the number suggests.
