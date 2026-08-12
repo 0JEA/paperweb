@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paperweb · edges, folds, crumple</title>
+<style>
+  *{box-sizing:border-box} html{overflow-x:clip}
+  body{margin:0;background:#17161a;color:#e8e4dc;padding:34px clamp(16px,4vw,52px) 110px;
+       font:15px/1.65 ui-sans-serif,system-ui,-apple-system,sans-serif}
+  .wrap{max-width:1400px;margin:0 auto}
+  h1{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:clamp(26px,3.6vw,38px);
+     margin:0 0 12px;font-weight:600;letter-spacing:-.02em}
+  p.lede{color:#8d8880;max-width:76ch;margin:0 0 9px}
+  a{color:#c8a06a} code{font-family:ui-monospace,Menlo,monospace;font-size:.86em;
+    background:#1f1e23;padding:2px 6px;border-radius:4px;color:#c8a06a}
+  h2{font:600 12px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;
+     color:#8d8880;margin:56px 0 6px;padding-bottom:10px;border-bottom:1px solid #34323a}
+  h2+p{color:#7d776f;font-size:14px;margin:12px 0 30px;max-width:76ch}
+  .grid{display:grid;gap:34px 30px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  figure{margin:0}
+  .sheet{height:220px;position:relative}
+  figcaption{margin-top:11px}
+  .n{font:600 11px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.09em;
+     text-transform:uppercase;color:#e8e4dc}
+  .p{font:11px/1.6 ui-monospace,Menlo,monospace;color:#6f6a63;margin-top:5px}
+</style>
+</head>
+<body><div class="wrap">
+  <h1>Edges, folds and crumple</h1>
+  <p class="lede">Every sheet below is the same flat stock with one layer varied, so the differences are the parameter and nothing else. Seeds differ per sheet, which is why no two are the same piece of paper.</p>
+  <p class="lede"><a href="./">&larr; the capability demo</a> &middot; <a href="news/">the news showcase</a></p>
+
+  <h2>Edge</h2>
+  <p>The silhouette is one signed distance field with the displacement sampled at the nearest point on the boundary, so it stays continuous through the corners. The cast shadow is thrown by the sheet's <em>body</em>, not by its fibres, which is what stops a torn edge reading as a row of black teeth.</p>
+  <div class="grid" id="g-edge"></div>
+
+  <h2>Folds</h2>
+  <p><code>count</code> is a maximum and each candidate has to pass <code>chance</code>, so sheets genuinely differ in how used they look. Creases are biased toward horizontal, turn vertical near the left and right edges, and do not always run the full width.</p>
+  <div class="grid" id="g-fold"></div>
+
+  <h2>Crumple</h2>
+  <p>Each Worley cell is a tilted plane faded to zero at the boundary it shares with its neighbour, so the sheet stays continuous and the creases are angle changes rather than cliffs. <code>crease</code> blends back toward a sharp crack network; above about 0.05 it starts to read as dried mud rather than paper.</p>
+  <div class="grid" id="g-crumple"></div>
+</div>
+
+<script type="module">
+import { Paper } from '../src/index.js';
+
+const FLAT = { cockle:{enabled:false}, folds:{enabled:false}, crumple:{enabled:false},
+  formation:{enabled:true, amplitude:0.014}, fade:{enabled:false}, scratches:{enabled:false},
+  imperfect:{enabled:false}, cavity:{enabled:true, lambda:0.7}, shadow:{enabled:true} };
+
+const SETS = {
+  'g-edge': { base:{ ...FLAT, cockle:{enabled:true, amplitude_um:16} }, items:[
+    ['cut',           'wobble 0 · deckle 0 · tear 0',    { edge:{enabled:true, wobble_px:0, deckle_px:0, tear_px:0} }],
+    ['guillotined',   'wobble 3',                         { edge:{enabled:true, wobble_px:3} }],
+    ['rounded',       'wobble 2 · radius_px 14',          { edge:{enabled:true, wobble_px:2, radius_px:14} }],
+    ['deckle, light', 'wobble 4 · deckle_px 8',           { edge:{enabled:true, wobble_px:4, deckle_px:8} }],
+    ['deckle, full',  'wobble 5 · deckle_px 14',          { edge:{enabled:true, wobble_px:5, deckle_px:14} }],
+    ['torn',          'wobble 3 · tear_px 10',            { edge:{enabled:true, wobble_px:3, tear_px:10} }],
+    ['torn, hard',    'wobble 4 · tear_px 18',            { edge:{enabled:true, wobble_px:4, tear_px:18} }],
+    ['torn deckle',   'deckle_px 7 · tear_px 12',         { edge:{enabled:true, wobble_px:4, deckle_px:7, tear_px:12} }],
+    ['curled',        'deckle_px 5 · curl 0.55',          { edge:{enabled:true, wobble_px:4, deckle_px:5, curl:0.55} }],
+  ]},
+  'g-fold': { base:{ ...FLAT, edge:{enabled:true, wobble_px:3} }, items:[
+    ['rarely folded', 'count 4 · chance 0.3 · depth 1.2', { folds:{enabled:true, count:4, chance:0.3, depth:1.2} }],
+    ['once or twice', 'count 4 · chance 0.5 · depth 1.2', { folds:{enabled:true, count:4, chance:0.5, depth:1.2} }],
+    ['well used',     'count 5 · chance 0.9 · depth 1.2', { folds:{enabled:true, count:5, chance:0.9, depth:1.2} }],
+    ['soft crease',   'sharpness 0.15',                    { folds:{enabled:true, count:4, chance:0.6, depth:1.2, sharpness:0.15} }],
+    ['pressed hard',  'sharpness 0.95',                    { folds:{enabled:true, count:4, chance:0.6, depth:1.2, sharpness:0.95} }],
+    ['deep',          'depth 2.4',                         { folds:{enabled:true, count:4, chance:0.6, depth:2.4} }],
+  ]},
+  'g-crumple': { base:{ ...FLAT, edge:{enabled:true, wobble_px:3} }, items:[
+    ['light handling', 'scale 18 · amp 40 · crease 0.02',  { crumple:{enabled:true, scale_mm:18, amplitude_um:40, crease:0.02} }],
+    ['pocketed',       'scale 12 · amp 70 · crease 0.03',  { crumple:{enabled:true, scale_mm:12, amplitude_um:70, crease:0.03} }],
+    ['balled up',      'scale 7 · amp 110 · irreg 1.0',    { crumple:{enabled:true, scale_mm:7, amplitude_um:110, crease:0.05, irregularity:1.0} }],
+    ['fine crush',     'scale 4 · amp 55',                 { crumple:{enabled:true, scale_mm:4, amplitude_um:55, crease:0.04, irregularity:0.8} }],
+    ['broad facets',   'scale 26 · amp 85 · irreg 0.6',    { crumple:{enabled:true, scale_mm:26, amplitude_um:85, crease:0.02, irregularity:0.6} }],
+    ['crazed',         'crease 0.35 — the old crack network', { crumple:{enabled:true, scale_mm:11, amplitude_um:55, crease:0.35} }],
+    ['regular',        'irregularity 0 — no domain warp',  { crumple:{enabled:true, scale_mm:12, amplitude_um:70, crease:0.03, irregularity:0} }],
+    ['stretched',      'irregularity 1.4',                 { crumple:{enabled:true, scale_mm:9, amplitude_um:75, crease:0.03, irregularity:1.4} }],
+  ]},
+};
+
+let seed = 3;
+for (const [id, { base, items }] of Object.entries(SETS)) {
+  const grid = document.getElementById(id);
+  for (const [name, params, patch] of items) {
+    const fig = document.createElement('figure');
+    const el = document.createElement('div');
+    el.className = 'sheet';
+    const cap = document.createElement('figcaption');
+    cap.innerHTML = `<span class="n">${name}</span><div class="p">${params}</div>`;
+    fig.append(el, cap);
+    grid.appendChild(fig);
+    const merged = { ...base };
+    for (const k in patch) merged[k] = { ...(base[k] || {}), ...patch[k] };
+    new Paper(el, { seed: seed++, params: merged });
+  }
+}
+</script>
+</body></html>

@@ -102,7 +102,7 @@ function signatures(p, geom) {
   const shade = sig(normal, cavity, p.cavity.enabled, p.cavity.lambda, p.light);
   const albedo = sig(g, p.formation, p.fade, p.mould, p.scratches, p.imperfect);
   const mask = sig(g, p.edge);
-  const shadow = sig(mask, p.shadow.blur_px, p.shadow.enabled);
+  const shadow = sig(mask, p.shadow.blur_px, p.shadow.enabled, p.edge);
   const composite = sig(shade, albedo, mask, shadow, cavity,
     p.tone, p.ink, p.shadow, geom.contentId);
   return { height, cavity, normal, shade, albedo, mask, shadow, composite };
@@ -136,6 +136,7 @@ export class Pipeline {
     // background. The mask is also the crispest thing in the image: it is the
     // sheet's outline. It gets its own resolution.
     t.mask = acquire(canvasW, canvasH, 'scalar');
+    t.maskBody = acquire(canvasW, canvasH, 'scalar');
     t.composite = acquire(canvasW, canvasH, 'vec3');
     this.fx = { w: fxW, h: fxH, cw: canvasW, ch: canvasH };
     this.last = {};          // geometry changed: everything is dirty
@@ -238,6 +239,7 @@ export class Pipeline {
         u_fold_count: p.folds.count,
         u_fold_depth: p.folds.depth,
         u_fold_sharpness: p.folds.sharpness,
+        u_fold_chance: p.folds.chance,
         u_fold_seed: layerSeed(p.folds.seed, seed),
         u_crumple_on: { i: p.crumple.enabled ? 1 : 0 },
         u_crumple_scale_mm: p.crumple.scale_mm,
@@ -343,8 +345,7 @@ export class Pipeline {
     // Every edge quantity is in real canvas px here, with no fxs scaling, so
     // `wobble_px` and `deckle_px` mean the number of device pixels they say.
     if (dirty('mask')) {
-      t.mask.bind();
-      pr.mask.use().set({
+      const maskUniforms = {
         u_res: [canvasW, canvasH],
         u_page_rect: [px0, py0, px1, py1],
         u_px_per_mm: pxmm,
@@ -353,8 +354,15 @@ export class Pipeline {
         u_wobble_px: p.edge.enabled ? p.edge.wobble_px : 0,
         u_curl: p.edge.enabled ? p.edge.curl : 0,
         u_deckle_px: p.edge.enabled ? p.edge.deckle_px : 0,
+        u_tear_px: p.edge.enabled ? p.edge.tear_px : 0,
         u_radius_px: p.edge.radius_px,
-      });
+      };
+      t.mask.bind();
+      pr.mask.use().set({ ...maskUniforms, u_edge_detail: 1 });
+      drawFullscreen();
+      // The body silhouette, for the shadow to be cast by.
+      t.maskBody.bind();
+      pr.mask.use().set({ ...maskUniforms, u_edge_detail: 0 });
       drawFullscreen();
     }
 
@@ -365,8 +373,21 @@ export class Pipeline {
     // to be blurred anyway.
     if (dirty('shadow')) {
       if (p.shadow.enabled) {
-        blurInto(t.shadowT, t.mask.tex, Math.max(p.shadow.blur_px * fxs * 0.25, 1.0));
-        blurInto(t.shadowW, t.mask.tex, Math.max(p.shadow.blur_px * fxs, 1.0));
+        // The shadow must not resolve the edge's own fibre detail.
+        //
+        // A deckled or torn silhouette has notches cut into it. The cast shadow
+        // is the blurred mask, so at a tight blur radius it reaches into every
+        // notch and paints it dark: against a dark page each notch becomes a
+        // black tooth, and the edge reads as a comb rather than as paper. That
+        // was the whole "edges look bad" complaint, and it was never the mask.
+        //
+        // A real penumbra cannot resolve detail finer than itself either, so the
+        // floor is tied to how rough the edge is. The wide halo is unaffected;
+        // only the tight contact core needs the floor, and it keeps its
+        // hardening everywhere the outline is smooth.
+        // Cast from the BODY, so the fringe does not shadow its own notches.
+        blurInto(t.shadowT, t.maskBody.tex, Math.max(p.shadow.blur_px * fxs * 0.25, 1.0));
+        blurInto(t.shadowW, t.maskBody.tex, Math.max(p.shadow.blur_px * fxs, 1.0));
       } else {
         // Clear rather than skip: a stale shadow from a previous parameter set
         // would otherwise linger under the sheet.

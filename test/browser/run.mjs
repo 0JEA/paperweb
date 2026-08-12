@@ -512,24 +512,33 @@ console.log('\nevery surface is its own piece of paper');
       document.body.appendChild(el);
       const pp = new window.PW.Paper(el, {
         retain: true, lazy: false, seed,
+        // chance pinned to 1 so every seed definitely has folds; this probe is
+        // about WHERE they land, and rarity is asserted separately below.
         params: { cockle: { enabled: false }, crumple: { enabled: false },
-                  folds: { enabled: true, count: 3, depth: 0.45, sharpness: 0.6, seed: 3 } },
+                  folds: { enabled: true, count: 3, chance: 1.0, depth: 1.2,
+                           sharpness: 0.6, seed: 3 } },
       });
       await pp.render();
       const { data, w: bw, h: bh } = pp.floats('Height');
       const stride = data.length / (bw * bh);
+      // ABSOLUTE height, and a column a quarter of the way in rather than the
+      // far edge. A fold can be a valley as easily as a ridge, so signing the
+      // test throws away half the draws, and folds are finite now so one need
+      // not reach x = 4 at all.
       let best = -1, bestV = 8;
+      const col = Math.floor(bw * 0.25);
       for (let y = 1; y < bh - 1; y++) {
-        const v = data[(y * bw + 4) * stride];
+        const v = Math.abs(data[(y * bw + col) * stride]);
         if (v > bestV) { bestV = v; best = y / bh; }
       }
       pp.destroy(); el.remove();
       return best < 0 ? null : +best.toFixed(3);
     };
-    return {
-      auto1, auto2, pin1, pin2, pin3,
-      ridges: [await ridge(0), await ridge(1), await ridge(2), await ridge(3)],
-    };
+    const ridges = [];
+    // More seeds than before: creases are rare now, so some sheets legitimately
+    // have none and a four-sample probe can come back mostly empty.
+    for (let s = 0; s < 8; s++) ridges.push(await ridge(s));
+    return { auto1, auto2, pin1, pin2, pin3, ridges };
   });
 
   check('two surfaces with the same preset and size are NOT identical',
@@ -538,9 +547,83 @@ console.log('\nevery surface is its own piece of paper');
     res.pin1 === res.pin2, 'seed 41 gave two different fields');
   check('a different pinned seed gives a different sheet',
     res.pin1 !== res.pin3, 'seeds 41 and 42 gave the same field');
-  const uniq = new Set(res.ridges.filter((r) => r !== null));
+  const found = res.ridges.filter((r) => r !== null);
+  const uniq = new Set(found);
+  check('some seeds put a crease in this column at all',
+    found.length >= 3, `only ${found.length} of 8 seeds: ${JSON.stringify(res.ridges)}`);
+  // The bug this guards: paperlab places folds in sheet-relative coordinates, so
+  // the same crease landed at height fraction ~0.50 on every sheet at every size.
   check('the fold layout differs between surfaces instead of landing mid-sheet every time',
-    uniq.size >= 3, `ridge height fractions across four seeds: ${JSON.stringify(res.ridges)}`);
+    uniq.size >= 3, `ridge height fractions: ${JSON.stringify(res.ridges)}`);
+}
+
+// --- invariant 12d2: folds are rare, finite and mostly horizontal -------------
+// paperlab draws exactly `count` folds on every sheet, each an infinite line at
+// a uniformly random angle. That makes a page of sheets look stamped from one
+// die: same number of creases, same edge-to-edge runs, no preferred direction.
+// A sheet is folded across its width far more often than on a diagonal, and a
+// crease near the left or right edge is usually a side turned in.
+console.log('\nfolds are rare, finite and biased horizontal');
+{
+  const res = await page.evaluate(async () => {
+    const measure = async (seed, chance) => {
+      const el = document.createElement('div');
+      el.style.cssText = 'width:520px;height:360px;position:relative';
+      document.body.appendChild(el);
+      const pp = new window.PW.Paper(el, {
+        retain: true, lazy: false, seed,
+        params: { cockle: { enabled: false }, crumple: { enabled: false },
+                  folds: { enabled: true, count: 4, chance, depth: 1.4, seed: 3 } },
+      });
+      await pp.render();
+      const { data, w, h } = pp.floats('Height');
+      const st = data.length / (w * h);
+      const at = (x, y) => data[(y * w + x) * st];
+      let peak = 0, covered = 0, gx = 0, gy = 0;
+      // Gradient orientation, not coverage. A horizontal crease is a step in y,
+      // so it puts its energy in dh/dy. Coverage sounds equivalent but is not:
+      // a single vertical crease marks every row and swamps the average, so one
+      // fold in six decides the answer.
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const v = Math.abs(at(x, y));
+        if (v > peak) peak = v;
+        if (v > 6) covered++;
+        gx += Math.abs(at(x + 1, y) - at(x - 1, y));
+        gy += Math.abs(at(x, y + 1) - at(x, y - 1));
+      }
+      const cols = new Set();
+      for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) if (Math.abs(at(x, y)) > 6) { cols.add(x); break; }
+      }
+      pp.destroy(); el.remove();
+      return { peak: +peak.toFixed(1), coverage: +(100 * covered / (w * h)).toFixed(1),
+               gx, gy, cols: cols.size / w };
+    };
+    const rare = [], always = [];
+    for (let s = 0; s < 10; s++) rare.push(await measure(s, 0.35));
+    for (let s = 0; s < 6; s++) always.push(await measure(s, 1.0));
+    return { rare, always };
+  });
+
+  const bare = res.rare.filter((r) => r.peak < 6).length;
+  check('at a low chance, some sheets get no fold at all',
+    bare >= 1, `${bare} of 10 sheets were unfolded (peaks: ${res.rare.map((r) => r.peak).join(', ')})`);
+  check('at a low chance, some sheets DO get folds',
+    res.rare.filter((r) => r.peak >= 6).length >= 2,
+    `only ${res.rare.filter((r) => r.peak >= 6).length} of 10 had any`);
+
+  // A fold that runs edge to edge marks every column. Finite ones do not.
+  const folded = res.always.filter((r) => r.peak >= 6);
+  check('creases do not always run the full width',
+    folded.some((r) => r.cols < 0.97), `column coverage: ${folded.map((r) => r.cols.toFixed(2)).join(', ')}`);
+
+  // Horizontal bias: summed across seeds so no single draw decides it. A level
+  // crease is a step in y, so dh/dy should carry more energy than dh/dx.
+  const GX = folded.reduce((s, r) => s + r.gx, 0);
+  const GY = folded.reduce((s, r) => s + r.gy, 0);
+  check('creases are biased toward horizontal rather than uniformly angled',
+    GY > GX * 1.15,
+    `vertical gradient energy ${(GY / GX).toFixed(2)}x horizontal (1.0 would be no bias)`);
 }
 
 // --- invariant 12e: the noise must not tile ----------------------------------

@@ -57,6 +57,7 @@ uniform int   u_folds_on;
 uniform float u_fold_count;
 uniform float u_fold_depth;
 uniform float u_fold_sharpness;
+uniform float u_fold_chance;
 uniform float u_fold_seed;
 
 uniform int   u_crumple_on;
@@ -124,43 +125,74 @@ void main() {
     }
 
     if (u_folds_on == 1) {
-        // Each fold is a straight crease line; its height profile is a signed
-        // ridge. Sharp = narrow (pressed fold), broad = wide (crumple ridge).
         vec2 sheet_mm = u_res / u_px_per_mm;
+        float longest = max(sheet_mm.x, sheet_mm.y);
         for (int i = 0; i < 8; ++i) {
             if (float(i) >= u_fold_count) break;
             vec2 r1 = hash22(vec2(float(i) * 3.7 + u_fold_seed, 1.3));
             vec2 r2 = hash22(vec2(float(i) * 7.1 + u_fold_seed, 5.9));
-            float ang = r1.x * 3.14159265;
+            vec2 r3 = hash22(vec2(float(i) * 11.9 + u_fold_seed, 2.7));
+
+            // count is a MAXIMUM, not a quota. paperlab draws exactly the count
+            // folds on every sheet, which is why a page of them looked
+            // stamped: same number of creases everywhere. Each candidate now
+            // has to pass a roll, so sheets genuinely differ in how used they
+            // look and an unfolded sheet is a possible outcome.
+            if (r3.x > u_fold_chance) continue;
+
+            // Anywhere on the sheet. paperlab places p0 along the diagonal
+            // (r1.y * sheet + 0.2 * sheet), which quietly concentrates every
+            // crease on one axis of the page.
+            vec2 p0 = r1 * sheet_mm;
+
+            // ORIENTATION. A sheet is folded across its width far more often
+            // than on a diagonal, so the angle is biased hard toward
+            // horizontal: a power curve on a symmetric variate keeps most
+            // creases within a few degrees of level while still allowing the
+            // occasional slant.
+            float t = r2.x * 2.0 - 1.0;
+            float ang = sign(t) * pow(abs(t), 2.4) * 1.0472;   // +/-60 deg, dense near 0
+
+            // ...except near the left and right edges, where a crease is
+            // usually a side or corner turned in, and those run vertically.
+            float edgeDist = min(p0.x, sheet_mm.x - p0.x) / max(sheet_mm.x, 1.0);
+            // Threshold kept tight on purpose. edgeDist is uniform on [0, 0.5]
+            // because p0 is uniform, so a 0.30 cutoff would turn 60% of creases
+            // vertical and swamp the horizontal bias. At 0.16 it is about a
+            // quarter, which reads as "usually across, sometimes a side turned
+            // in".
+            float nearSide = smoothstep(0.16, 0.03, edgeDist);
+            ang = mix(ang, 1.5708 + ang * 0.30, nearSide);
+
             vec2 dir = vec2(cos(ang), sin(ang));
             vec2 nrm = vec2(-dir.y, dir.x);
-            vec2 p0 = r1.y * sheet_mm + 0.2 * sheet_mm;
-            float d = dot(mm_sheet - p0, nrm);
-            float sgn = (r2.x < 0.5) ? -1.0 : 1.0;
+            vec2 rel = mm_sheet - p0;
+            float d = dot(rel, nrm);
+            float along = dot(rel, dir);
 
-            // A fold has TWO parts at very different scales, and paperlab's
-            // single Gaussian collapses them into one.
-            //
-            // Measured against the preset defaults, that Gaussian puts 68 um of
-            // relief across 2.76 mm: a slope of 0.0245, which is 13.5x steeper
-            // than cockle and tilts each face 11 degrees once relief_exaggerate
-            // is applied. Two 11-degree facets render as two flat bands of
-            // uniform tone with a hard line between, which is a roof, not a
-            // sheet of paper that was folded once.
-            //
-            // What a relaxed fold actually looks like:
-            //   BROAD  the halves never lie quite flat again, so they sit at
-            //          slightly different angles over a centimetre or two, at an
-            //          amplitude comparable to the cockle around it.
-            //   CREASE a narrow line where the fibres actually broke, well under
-            //          a millimetre, and this is the part that catches light.
-            float broad = 1.0 - abs(clamp(d / 14.0, -1.0, 1.0));
-            // Clamp the crease to about a texel and a half. Narrower than that
-            // and it falls between samples and aliases into a dashed line.
+            // FINITE LENGTH. paperlab's fold is an infinite line, so every
+            // crease runs edge to edge. Real folds often stop: a dog-ear, a
+            // half fold, a crease that peters out. The end taper is soft so it
+            // does not terminate in a visible cap.
+            float halfLen = mix(0.28, 1.10, r3.y) * longest * 0.5;
+            float ends = 1.0 - smoothstep(halfLen * 0.62, halfLen, abs(along));
+            if (ends <= 0.0) continue;
+
+            // Two scales: a broad relaxed tilt, and the narrow crease line that
+            // actually catches the light. The crease is clamped to about a
+            // texel and a half or it aliases into a dashed line.
+            // The relaxed tilt is narrower than a first guess suggests, and
+            // carries LESS of the amplitude than the crease does. At 14 mm it
+            // spans 106 px of a 220 px card, so the soft wedge swamped the
+            // crease line and a fold read as a broad diagonal band. What you
+            // actually notice on folded paper is the crease; the tilt is the
+            // quiet part that tells you which way it went.
+            float broad = 1.0 - abs(clamp(d / 9.0, -1.0, 1.0));
             float crease_mm = max(mix(1.8, 0.5, clamp(u_fold_sharpness, 0.0, 1.0)),
                                   1.5 / max(u_px_per_mm, 0.5));
             float crease = exp(-(d * d) / (crease_mm * crease_mm));
-            h_um += sgn * u_fold_depth * (28.0 * broad + 15.0 * crease);
+            float sgn = (r2.y < 0.5) ? -1.0 : 1.0;
+            h_um += sgn * u_fold_depth * (14.0 * broad + 29.0 * crease) * ends;
         }
     }
 
@@ -209,10 +241,21 @@ void main() {
         vec2 cell = W.zw;
         vec2 feat = cell + hash22(cell);
         vec2 tilt = hash22(cell + vec2(17.3, 5.9)) * 2.0 - 1.0;
-        float lift = hash21(cell + vec2(3.7, 11.1)) - 0.5;
-        // The plane, in cell units. Kept shallow: a facet that tilts more than a
-        // couple of degrees stops reading as paper and starts reading as rock.
-        float facet = dot(cp - feat, tilt) * 0.42 + lift * 0.30;
+
+        // Each cell is a tilted plane, but the plane is faded out toward the
+        // cell BOUNDARY rather than carrying a per-cell height offset.
+        //
+        // A per-cell offset gives every boundary a height step, and a height
+        // step is a cliff. Rendered, that is cracked ceramic: hard-edged plates
+        // with shadow in the gaps. Paper does not break when it crumples, so a
+        // crease is a discontinuity in ANGLE and never in height.
+        //
+        // Fading both neighbours to zero at the boundary they share makes the
+        // surface continuous across it while leaving their slopes to disagree,
+        // which is exactly a crease. It also dishes each facet slightly, which
+        // is what a crumpled panel really does between its folds.
+        float atBoundary = smoothstep(0.0, 0.22, W.y - W.x);
+        float facet = dot(cp - feat, tilt) * 0.62 * atBoundary;
 
         // The crease term is kept as a blendable extra rather than the default,
         // because a sharply creased network is a real look, just not the baseline.
@@ -615,90 +658,117 @@ out vec4 frag_out;
 uniform vec2  u_res;
 uniform vec4  u_page_rect;   // x0,y0,x1,y1 in canvas px (top-left origin)
 uniform float u_px_per_mm;
-uniform vec2  u_seed_mm;   // per-surface offset into the edge noise
-uniform float u_wobble_px;
+uniform vec2  u_seed_mm;
+uniform float u_wobble_px;   // slow wander: the cut was never perfectly straight
+uniform float u_deckle_px;   // fibrous mould edge: tufts with fibres riding them
+uniform float u_tear_px;     // torn edge: angular runs with sudden direction changes
 uniform float u_curl;
-uniform float u_deckle_px;
-uniform float u_radius_px;   // web addition: rounded corners, to match CSS boxes
-
-// Fibrous deckle displacement along an edge: a clustered low-frequency ENVELOPE
-// (where the tufts are) times a fine along-edge CARRIER (the fibres). The cheap
-// P&S Group-C recipe: energy organized along the contour by construction.
-//
-// paperlab expresses both frequencies per PIXEL, which silently ties the fringe
-// to the render resolution: the same sheet at another DPI grows or shrinks its
-// fibres. Here they are per MILLIMETRE, matching the rest of the scale model.
-// The constants are paperlab's own frequencies converted at its native 150 DPI
-// half-resolution (2.95 px/mm), so the look is preserved and only the coupling
-// to resolution is removed.
-//   carrier  0.35 /px x 2.95 px/mm = 1.03 cycles/mm  (individual fibres, ~1 mm)
-//   envelope 0.045/px x 2.95 px/mm = 0.133 cycles/mm (tuft clusters, ~7.5 mm)
-float deckle(float t_mm, float seed) {
-    // The TUFT envelope carries the displacement; the FIBRE carrier only
-    // modulates it.
-    //
-    // paperlab multiplies the two, which makes the fine carrier set the full
-    // amplitude. At a 1 cycle/mm carrier that is an oscillation every ~3.8 px
-    // swinging the whole deckle_px, so an 11 px deckle becomes a 3.8 px-pitch
-    // comb: against a dark page it reads as a row of black teeth rather than a
-    // torn edge. A real deckle is a slow wander of the edge with fine fibres
-    // riding on top, so the two are summed with the slow term dominant.
-    float env = fbm(vec2(t_mm * 0.133, seed + 11.0), 2, 0.5, 2.0) - 0.5;
-    float car = fbm(vec2(t_mm * 1.03, seed), 3, 0.5, 2.0) - 0.5;
-    return (env * 1.55 + car * 0.42) * u_deckle_px;
-}
+uniform float u_radius_px;
+// 1 = the sheet's real silhouette. 0 = its BODY only, with the fibre-scale
+// detail left off. The cast shadow uses the body: a torn fringe is thin paper
+// lying almost flat against the sheet and does not cast a resolvable shadow
+// into its own notches. Blurring the detailed mask instead paints every notch
+// dark, which against a dark page turns a torn edge into a row of black teeth.
+uniform float u_edge_detail;
 
 void main() {
     vec2 p = vec2(uv.x, 1.0 - uv.y) * u_res;
-    // The seed offsets only where the edge noise is SAMPLED. Variable p stays in
-    // real canvas pixels because the rectangle test and the corner curl are
-    // geometry, not noise: offsetting those would move the sheet off the element.
-    vec2 mm = p / max(u_px_per_mm, 1e-3) + u_seed_mm;
     vec2 lo = u_page_rect.xy, hi = u_page_rect.zw;
-
-    // Low-frequency silhouette wobble, also per mm: 0.01/px at 2.95 px/mm is
-    // 0.0295 cycles/mm, a ~34 mm undulation down the edge.
-    const float WOB = 0.0295;
-    float wl = (fbm(vec2(mm.y * WOB, 1.0), 3, 0.5, 2.0) - 0.5) * 2.0 * u_wobble_px + deckle(mm.y, 1.5);
-    float wr = (fbm(vec2(mm.y * WOB, 9.0), 3, 0.5, 2.0) - 0.5) * 2.0 * u_wobble_px + deckle(mm.y, 8.5);
-    float wt = (fbm(vec2(mm.x * WOB, 3.0), 3, 0.5, 2.0) - 0.5) * 2.0 * u_wobble_px + deckle(mm.x, 3.5);
-    float wb = (fbm(vec2(mm.x * WOB, 7.0), 3, 0.5, 2.0) - 0.5) * 2.0 * u_wobble_px + deckle(mm.x, 6.5);
-
-    // curl pulls corners inward (a lifted corner occludes toward the sheet centre)
     vec2 c = 0.5 * (lo + hi);
-    vec2 rel = (p - c) / max(0.5 * (hi - lo), vec2(1.0));
-    float corner = smoothstep(0.6, 1.0, max(abs(rel.x), abs(rel.y)));
-    float curl_in = u_curl * corner * 0.04 * (hi.x - lo.x);
+    vec2 halfSz = max(0.5 * (hi - lo), vec2(1.0));
+    float r = clamp(u_radius_px, 0.0, min(halfSz.x, halfSz.y) - 0.5);
 
-    // Feather the silhouette in proportion to how far it is being displaced.
-    // A 1 px transition on an edge that wanders 8 px reads as a stair, because
-    // the displacement changes faster than the feather can hide. The wobble term
-    // is what stops a plain non-rectangular sheet looking pixelated.
-    float aa = 1.0 + u_deckle_px * 0.5 + u_wobble_px * 0.14;
+    // ONE signed distance for the whole silhouette, rounded-rect with r = 0
+    // giving a plain rectangle, so there is a single code path.
+    vec2 q = abs(p - c) - (halfSz - vec2(r));
+    float sd = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - r;
 
-    float inside;
-    if (u_radius_px > 0.5) {
-        // Rounded-rect signed distance, so the sheet can match a CSS
-        // border-radius. Edge displacement is applied as a radial perturbation
-        // sampled from the same wobble/deckle fields, so a rounded sheet still
-        // gets a fibrous silhouette.
-        vec2 half_sz = 0.5 * (hi - lo);
-        float r = min(u_radius_px, min(half_sz.x, half_sz.y));
-        vec2 q = abs(p - c) - (half_sz - vec2(r));
-        float sd = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - r;
-        // pick the perturbation from whichever axis dominates at this point
-        float w = mix(mix(wl, wr, step(0.0, rel.x)), mix(wt, wb, step(0.0, rel.y)),
-                      step(abs(rel.x), abs(rel.y)));
-        inside = 1.0 - smoothstep(-aa, aa, sd - w + curl_in);
-    } else {
-        inside =
-            smoothstep(lo.x + wl - aa, lo.x + wl + aa, p.x + curl_in) *
-            smoothstep(hi.x + wr + aa, hi.x + wr - aa, p.x - curl_in) *
-            smoothstep(lo.y + wt - aa, lo.y + wt + aa, p.y + curl_in) *
-            smoothstep(hi.y + wb + aa, hi.y + wb - aa, p.y - curl_in);
+    // The edge noise is sampled at the CLOSEST POINT ON THE BOUNDARY.
+    //
+    // paperlab displaces each of the four edges by an independent function of a
+    // single coordinate, then multiplies four smoothsteps together. Two things
+    // follow, and both are visible. The corners are attenuated twice, so they
+    // read as chewed rather than cut. And the left edge's wander is unrelated to
+    // the top edge's, so the outline jumps exactly where a corner draws the eye.
+    //
+    // Sampling a 2-D field at the nearest boundary point instead gives one
+    // continuous contour: walking around the outline, the displacement varies
+    // smoothly, corners included, because adjacent boundary points are adjacent
+    // in the field.
+    vec2 near = c + clamp(p - c, -halfSz, halfSz);
+    vec2 nmm = near / max(u_px_per_mm, 1e-3) + u_seed_mm;
+
+    float disp = 0.0;
+
+    // BAND-LIMIT the fine edge detail to what the raster can actually carry.
+    //
+    // The fibre carrier runs at 1.03 cycles/mm, which at 96 dpi and dpr 1 is one
+    // cycle every 3.7 px: right at Nyquist, where it cannot resolve and can only
+    // alias into a regular comb. At dpr 2 the same field has 7.3 px per cycle
+    // and renders as the fibrous tuft edge it is meant to be. Measured both:
+    // magnified 2x on a large sheet the edge is correct, and the comb only
+    // appears on small low-dpr cards.
+    //
+    // So fade the fine terms out as they approach the pixel grid, instead of
+    // drawing something the grid will turn into a pattern. Detail reappears on
+    // its own when there are pixels to draw it with.
+    float fibrePx = u_px_per_mm / 1.03;          // px per fibre cycle
+    float fine = smoothstep(2.5, 6.0, fibrePx);
+
+    // WOBBLE: a slow undulation, ~34 mm period. Even a guillotined edge has it.
+    if (u_wobble_px > 0.001) {
+        disp += (fbm(nmm * 0.0295, 3, 0.5, 2.0) - 0.5) * 2.0 * u_wobble_px;
     }
 
-    frag_out = vec4(inside, 0.0, 0.0, 1.0);
+    // DECKLE: the mould edge. A clustered tuft envelope with fine fibres riding
+    // on it, summed rather than multiplied so the fibres modulate the tufts
+    // instead of setting the whole amplitude.
+    if (u_deckle_px > 0.001 && u_edge_detail > 0.5) {
+        float env = fbm(nmm * 0.133 + vec2(11.0, 3.0), 2, 0.5, 2.0) - 0.5;
+        float car = fbm(nmm * 1.03 + vec2(2.0, 7.0), 3, 0.5, 2.0) - 0.5;
+        // The TUFT envelope scales with deckle_px. The FIBRE carrier does NOT:
+        // it is capped at a physical fibre width, because a fibre is a fibre
+        // whatever size tuft it sits in.
+        //
+        // Letting the carrier scale was the comb. At 1.03 cycles/mm it
+        // oscillates every ~3.7 px at 96 dpi, so a 14 px deckle swung it +/-5.9
+        // px over a 3.7 px period: far faster than the feather can resolve, and
+        // it aliased into regular black teeth. Capped at 0.35 mm the fibres are
+        // sub-pixel-ish and read as fuzz on the tuft, which is what they are.
+        float fibre_px = min(u_deckle_px * 0.42, 0.35 * u_px_per_mm);
+        disp += env * 1.55 * u_deckle_px + car * 2.0 * fibre_px * fine;
+    }
+
+    // TEAR: paper does not tear smoothly. It runs straight for a while, catches,
+    // and turns. A ridged (folded) noise gives exactly that: near-linear runs
+    // separated by sudden direction changes, where a plain fbm would only wander.
+    // Biased inward, because a tear removes material more often than it adds a
+    // flap.
+    if (u_tear_px > 0.001 && u_edge_detail > 0.5) {
+        float n1 = fbm(nmm * 0.28 + vec2(5.5, 1.7), 3, 0.55, 2.1) - 0.5;
+        float n2 = fbm(nmm * 0.9 + vec2(0.3, 9.1), 2, 0.5, 2.0) - 0.5;
+        float ridged = 0.5 - abs(n1) * 2.0;
+        // Same cap as the deckle carrier, for the same reason: the fine term is
+        // physical roughness along the tear, not a fraction of how deep it runs.
+        float rough_px = min(u_tear_px * 0.35, 0.45 * u_px_per_mm);
+        disp += (ridged - 0.12) * u_tear_px + n2 * 2.0 * rough_px * fine;
+    }
+
+    // Curl pulls the corners inward: a lifted corner occludes toward the centre.
+    vec2 rel = (p - c) / halfSz;
+    float corner = smoothstep(0.6, 1.0, max(abs(rel.x), abs(rel.y)));
+    disp -= u_curl * corner * 0.04 * halfSz.x * 2.0;
+
+    // Feather in proportion to how hard the edge is being displaced. A 1 px
+    // transition on an outline that wanders 8 px reads as a stair, because the
+    // displacement changes faster than the feather can hide it.
+    // Feather. Kept small: the signed distance is already smooth, so this only
+    // has to cover one pixel of rasterisation. The old value scaled hard with
+    // deckle and reached 5.3 px at deckle 14, which blurred a torn edge into a
+    // soft grey band and threw away the fibre detail underneath it.
+    float aa = 0.7 + (u_deckle_px + u_tear_px) * 0.05 + u_wobble_px * 0.03;
+
+    frag_out = vec4(1.0 - smoothstep(-aa, aa, sd - disp), 0.0, 0.0, 1.0);
 }
 `, { common: true, legacy });
 

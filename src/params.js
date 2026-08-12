@@ -183,7 +183,7 @@ export function defaults() {
       density: 0.036,
       lightness: 0.15,
       scale_mm: 11.94,
-      dark_frac: 0.3,
+      dark_frac: 0.5,        // half light fibre-lift, half pressed or dirty
       seed: 5.0,
     },
 
@@ -207,7 +207,11 @@ export function defaults() {
 
     folds: {
       enabled: false,
-      count: 3,
+      // count is the MAXIMUM number of candidate creases; each has to pass
+      // `chance` to appear. paperlab drew exactly `count` every time, which made
+      // a page of sheets look stamped from one die.
+      count: 4,
+      chance: 0.5,
       depth: 0.4,
       sharpness: 0.6,           // sharp pressed fold vs broad crumple ridge
       seed: 3.0,
@@ -259,6 +263,11 @@ export function defaults() {
       // the contour. A clustered low-frequency envelope times a fine along-edge
       // carrier feathers the silhouette into fibre tufts. 0 = clean cut edge.
       deckle_px: 0.0,
+      // Torn rather than cut. Paper tears in near-straight runs that catch and
+      // turn, so this is a ridged noise, not a smooth wander, and it is biased
+      // inward because a tear takes material away more often than it leaves a
+      // flap. Combine with deckle for a torn mould-made sheet.
+      tear_px: 0.0,
       radius_px: 0,             // web-only: match a CSS border-radius
     },
   };
