@@ -96,11 +96,12 @@ const sig = (...parts) => JSON.stringify(parts);
 
 function signatures(p, geom) {
   const g = [geom.fxW, geom.fxH, geom.canvasW, geom.canvasH, geom.pageRect, p.page.dpi, p.page.seed, p.page.legacy];
-  const height = sig(g, p.cockle, p.folds, p.crumple);
+  const height = sig(g, p.cockle, p.folds, p.crumple, p.stains);
   const cavity = sig(height, p.cavity.radius_mm);
   const normal = sig(height, p.light.relief_exaggerate);
   const shade = sig(normal, cavity, p.cavity.enabled, p.cavity.lambda, p.light);
-  const albedo = sig(g, p.formation, p.fade, p.mould, p.scratches, p.imperfect);
+  const albedo = sig(g, p.formation, p.fade, p.mould, p.scratches, p.imperfect,
+    p.stains, p.foxing);
   const mask = sig(g, p.edge);
   const shadow = sig(mask, p.shadow.blur_px, p.shadow.enabled, p.edge);
   const composite = sig(shade, albedo, mask, shadow, cavity,
@@ -125,10 +126,14 @@ export class Pipeline {
     this.releaseTargets();
     const t = this.t;
     for (const name of ['height', 'heightblur', 'blurtmp', 'cavity', 'shade',
-      'albedo', 'shadowT', 'shadowW']) {
+      'shadowT', 'shadowW']) {
       t[name] = acquire(fxW, fxH, 'scalar');
     }
     t.normal = acquire(fxW, fxH, 'vec3');
+    // Albedo is per-channel, not scalar. Every layer except stains and foxing
+    // writes grey, but a stain that cannot absorb one channel harder than
+    // another comes out grey, and a grey coffee stain is just dirt.
+    t.albedo = acquire(fxW, fxH, 'vec3');
     // The mask runs at FULL resolution, unlike every other field. paperlab keeps
     // it at half res because its sheet is 1275 px wide, so half res is still 637
     // px of silhouette. A 300 px card on a web page has only 150 px of half-res
@@ -216,6 +221,43 @@ export class Pipeline {
     const pxmmFx = pxmm * fxs;
     const FX = [fxW, fxH];
 
+    // --- stains -------------------------------------------------------------
+    // Marks are authored in sheet-relative coordinates so a stain stays put when
+    // the element resizes; the shader wants millimetres from the sheet origin.
+    // The arrays are always length 4 because GLSL needs a fixed bound; u_stain_count
+    // is what actually gates the loop.
+    const STAIN_KIND = { ring: 0, tide: 1, blot: 2 };
+    // Absorption per channel, i.e. what the stain takes OUT of the paper. Coffee
+    // absorbs blue hardest (so it reads brown), ink absorbs everything nearly
+    // evenly with a slight blue cast left over.
+    const STAIN_TINT = {
+      ring: [0.30, 0.48, 0.70],
+      tide: [0.15, 0.20, 0.27],
+      blot: [0.86, 0.83, 0.74],
+    };
+    // Relative to the SHEET, not the canvas. The canvas is grown past the
+    // element to make room for the deckle and the cast shadow, so a mark at
+    // x = 0.95 placed against the canvas would sit off the paper entirely.
+    const [sx0, sy0, sx1, sy1] = geom.pageRect;
+    const marks = (p.stains.enabled ? p.stains.marks || [] : []).slice(0, 4);
+    const stainXY = [], stainKind = [], stainTint = [];
+    for (let i = 0; i < 4; i++) {
+      const m = marks[i];
+      stainXY.push(m
+        ? [(sx0 + m.x * (sx1 - sx0)) / pxmm, (sy0 + m.y * (sy1 - sy0)) / pxmm,
+           m.r_mm ?? 24, m.strength ?? 0.5]
+        : [0, 0, 1, 0]);
+      stainKind.push(STAIN_KIND[m?.kind] ?? 0);
+      stainTint.push(STAIN_TINT[m?.kind] || STAIN_TINT.ring);
+    }
+    const stainU = {
+      u_stain_count: { i: marks.length },
+      u_stain: stainXY,
+      u_stain_kind: { iv: stainKind },
+      u_stain_seed: layerSeed(p.stains.seed, seed),
+      u_stain_amount: p.stains.amount,
+    };
+
     g.disable(g.BLEND);
     g.disable(g.DEPTH_TEST);
 
@@ -241,6 +283,8 @@ export class Pipeline {
         u_fold_sharpness: p.folds.sharpness,
         u_fold_chance: p.folds.chance,
         u_fold_seed: layerSeed(p.folds.seed, seed),
+        ...stainU,
+        u_stain_relief_um: p.stains.relief_um,
         u_crumple_on: { i: p.crumple.enabled ? 1 : 0 },
         u_crumple_scale_mm: p.crumple.scale_mm,
         u_crumple_amp_um: p.crumple.amplitude_um,
@@ -321,6 +365,11 @@ export class Pipeline {
         u_mould_amount: p.mould.amount,
         u_chain_ratio: p.mould.chain_ratio,
         u_mould_wander: p.mould.wander,
+        ...stainU,
+        u_stain_tint: stainTint,
+        u_fox_on: { i: p.foxing.enabled ? 1 : 0 },
+        u_fox_density: p.foxing.density,
+        u_fox_strength: p.foxing.strength,
         u_scr_on: { i: p.scratches.enabled ? 1 : 0 },
         u_scr_density: p.scratches.density,
         u_scr_lightness: p.scratches.lightness,

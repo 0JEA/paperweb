@@ -790,6 +790,97 @@ console.log('\nevery preset renders');
   }
 }
 
+// --- stains -------------------------------------------------------------------
+// The whole Deegan claim is that a dried drop is a dark RING with a PALE
+// INTERIOR, not a soft disc. If the ring is not measurably darker than the
+// middle, the layer is wrong no matter how it looks.
+console.log('\nstains');
+{
+  const res = await page.evaluate(async () => {
+    // Radial profile of a single centred stain, in both albedo and height.
+    const profile = async (enabled) => {
+      const el = document.createElement('div');
+      el.style.cssText = 'width:400px;height:400px;position:relative';
+      document.body.appendChild(el);
+      const pp = new window.PW.Paper(el, {
+        retain: true, lazy: false, seed: 7,
+        params: {
+          // Every other source of variation off, so anything we measure is the
+          // stain and not formation noise sitting on top of it.
+          formation: { enabled: false }, fade: { enabled: false },
+          mould: { enabled: false }, scratches: { enabled: false },
+          imperfect: { enabled: false }, foxing: { enabled: false },
+          cockle: { enabled: false }, folds: { enabled: false },
+          crumple: { enabled: false },
+          stains: {
+            enabled, amount: 1, relief_um: 9, seed: 2,
+            marks: [{ x: 0.5, y: 0.5, r_mm: 20, strength: 0.7, kind: 'ring' }],
+          },
+        },
+      });
+      await pp.render();
+      const rd = (name, ch) => {
+        const { data, w, h } = pp.floats(name);
+        const stride = data.length / (w * h);
+        // Mean over a ring at radius t*R, in the same mm units the shader used.
+        return (t) => {
+          // The canvas is GROWN past the element to fit the deckle and shadow,
+          // so the buffer does not span 400 px and the sheet is not centred in
+          // it by assumption. Both the centre and the scale come from the
+          // reported sheet rect, in the same buffer pixels the data is in.
+          const gm = pp.geometry();
+          const s = gm.sheet;                     // canvas px [x0,y0,x1,y1]
+          const k = w / gm.canvas.w;              // canvas px -> buffer px
+          const pxmm = window.PW.defaults().page.dpi / 25.4;
+          const cx = ((s[0] + s[2]) / 2) * k, cy = ((s[1] + s[3]) / 2) * k;
+          const rpx = t * 20 * pxmm * k;
+          let sum = 0, n = 0;
+          for (let a = 0; a < 64; a++) {
+            const th = (a / 64) * Math.PI * 2;
+            const x = Math.round(cx + Math.cos(th) * rpx);
+            const y = Math.round(cy + Math.sin(th) * rpx);
+            if (x < 0 || y < 0 || x >= w || y >= h) continue;
+            sum += data[(y * w + x) * stride + ch]; n++;
+          }
+          return n ? sum / n : NaN;
+        };
+      };
+      const alb = rd('Albedo', 0);
+      const albB = rd('Albedo', 2);
+      const hgt = rd('Height', 0);
+      const out = {
+        alb: { centre: alb(0.0), mid: alb(0.5), rim: alb(0.97), outside: alb(1.6) },
+        blue: { centre: albB(0.0), rim: albB(0.97) },
+        h: { centre: hgt(0.0), rim: hgt(0.97) },
+      };
+      pp.destroy(); el.remove();
+      return out;
+    };
+    return { on: await profile(true), off: await profile(false) };
+  });
+
+  const { on, off } = res;
+  // POSITIVE CONTROL FIRST: with the layer off the profile must be flat, which
+  // proves the probe is reading the stain and not some pre-existing gradient.
+  const flat = Math.abs(off.alb.rim - off.alb.mid) < 1e-3
+    && Math.abs(off.h.rim - off.h.centre) < 1e-3;
+  check('control: with stains off the radial profile is flat', flat,
+    `off albedo mid=${off.alb.mid.toFixed(4)} rim=${off.alb.rim.toFixed(4)} `
+    + `height centre=${off.h.centre.toFixed(3)} rim=${off.h.rim.toFixed(3)}`);
+
+  check('the ring is darker than the interior (Deegan)', on.alb.rim < on.alb.mid - 0.01,
+    `rim=${on.alb.rim.toFixed(4)} mid=${on.alb.mid.toFixed(4)}`);
+  check('the interior is paler than the ring but darker than clean paper',
+    on.alb.mid < on.alb.outside - 1e-3 && on.alb.mid > on.alb.rim,
+    `mid=${on.alb.mid.toFixed(4)} outside=${on.alb.outside.toFixed(4)}`);
+  check('the stain is coloured, not grey: blue absorbs harder than red',
+    on.blue.rim < on.alb.rim - 5e-3,
+    `red=${on.alb.rim.toFixed(4)} blue=${on.blue.rim.toFixed(4)}`);
+  check('fibre swelling raises the rim above the dished centre',
+    on.h.rim > on.h.centre + 0.5,
+    `centre=${on.h.centre.toFixed(3)}um rim=${on.h.rim.toFixed(3)}um`);
+}
+
 // --- console hygiene ---------------------------------------------------------
 console.log('\nconsole');
 // The deliberate 404 from the rasterize-failure test is expected; anything else

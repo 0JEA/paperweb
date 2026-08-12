@@ -81,6 +81,19 @@ export class Program {
       if (typeof v === 'number') g.uniform1f(l, v);
       else if (typeof v === 'boolean') g.uniform1i(l, v ? 1 : 0);
       else if (v && typeof v === 'object' && 'i' in v) g.uniform1i(l, v.i | 0);
+      // Integer ARRAY, as { iv: [...] }, for the same reason { i } exists.
+      else if (v && typeof v === 'object' && 'iv' in v) g.uniform1iv(l, Int32Array.from(v.iv));
+      // Array of vectors, e.g. vec4[4]. getUniformLocation on an array name
+      // returns element 0, and the *v setters fill from there, so one call
+      // uploads the whole array.
+      else if (Array.isArray(v) && Array.isArray(v[0])) {
+        const n = v[0].length;
+        const flat = Float32Array.from(v.flat());
+        if (n === 2) g.uniform2fv(l, flat);
+        else if (n === 3) g.uniform3fv(l, flat);
+        else if (n === 4) g.uniform4fv(l, flat);
+        else throw new Error(`paperweb: unsupported vec${n} array for ${name}`);
+      }
       else if (v.length === 2) g.uniform2f(l, v[0], v[1]);
       else if (v.length === 3) g.uniform3f(l, v[0], v[1], v[2]);
       else if (v.length === 4) g.uniform4f(l, v[0], v[1], v[2], v[3]);

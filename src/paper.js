@@ -303,6 +303,7 @@ export class Paper {
     if (seq !== this._renderSeq || this.destroyed) return;
 
     const g = gl();
+    this._geom = geom;
     ensureSize(geom.canvasW, geom.canvasH);
     this.pipe.render(
       this.params,
@@ -362,6 +363,25 @@ export class Paper {
     tmp.height = h;
     tmp.getContext('2d').drawImage(sharedCanvas(), 0, 0);
     return tmp.getContext('2d').getImageData(0, 0, w, h);
+  }
+
+  /**
+   * Where the sheet sits inside the canvas, after the last render.
+   *
+   * The canvas is grown past the element to make room for the deckle and the
+   * cast shadow, so the sheet is neither the canvas size nor centred in it by
+   * assumption. Anything placing a mark in sheet-relative coordinates -- the
+   * stain probe, the stamp studio -- needs this rather than the element box.
+   *
+   * @returns {{canvas: {w: number, h: number}, sheet: number[]}} sheet is
+   *   [x0, y0, x1, y1] in canvas pixels.
+   */
+  geometry() {
+    if (!this._geom) throw new Error('paperweb: nothing rendered yet');
+    return {
+      canvas: { w: this._geom.canvasW, h: this._geom.canvasH },
+      sheet: [...this._geom.pageRect],
+    };
   }
 
   /** Raw float readback of an intermediate buffer. Requires `retain: true`. */

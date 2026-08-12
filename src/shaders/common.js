@@ -141,6 +141,62 @@ float gaborNoise(vec2 mm, float F0, float a, float seed) {
     return sum * 0.9;
 }
 
+// --- stains (Deegan et al., Nature 389, 1997) -------------------------------
+// "Capillary flow as the cause of ring stains from dried liquid drops". A drop
+// pins at its contact line; evaporation is fastest at the perimeter, so liquid
+// flows outward to replenish it and carries every suspended particle with it.
+// The signature is a DARK RING with a PALE INTERIOR, which is why a soft radial
+// gradient never looks like a coffee stain.
+//
+// Returns (pigment, relief): how much the stain darkens, and how much the
+// swollen fibres lift. mm is position relative to the stain centre.
+vec2 stainField(vec2 mm, float radius_mm, float seed, int kind) {
+    float d = length(mm);
+    float ang = atan(mm.y, mm.x);
+
+    // Irregular pinning: surface roughness pins the contact line unevenly, so
+    // the ring is scalloped rather than circular. Sampled on the angle so it is
+    // continuous all the way round.
+    float wob = fbm(vec2(cos(ang), sin(ang)) * 2.4 + seed, 3, 0.5, 2.0) - 0.5;
+    float R = radius_mm * (1.0 + wob * 0.16);
+    float t = d / max(R, 0.1);
+    if (t > 1.28) return vec2(0.0);
+
+    // Mottled interior. Real stains dry unevenly across the middle.
+    float mott = fbm(mm / max(radius_mm * 0.22, 0.4) + seed * 3.1, 3, 0.55, 2.0) - 0.5;
+
+    float pigment = 0.0;
+    if (kind == 2) {
+        // BLOT: no ring. Ink soaks in from the centre and feathers along the
+        // fibres, so the edge is ragged rather than sharp.
+        float feather = 1.0 - smoothstep(0.55, 1.0 + wob * 0.5, t);
+        pigment = feather * (0.75 + 0.5 * mott);
+    } else {
+        // The main ring, then the stick-slip rings inside it: the contact line
+        // pins, depins and re-pins as it retreats, leaving fainter concentric
+        // marks rather than one clean edge.
+        float w = (kind == 1) ? 0.19 : 0.075;      // tide lines are much softer
+        float e = (t - 1.0) / w;
+        float ring = exp(-e * e);
+        float e2 = (t - 0.83) / (w * 1.5);
+        float e3 = (t - 0.64) / (w * 2.0);
+        float slip = exp(-e2 * e2) * 0.34 + exp(-e3 * e3) * 0.18;
+        // Interior: pale, and paler still toward the middle.
+        float inner = (t < 1.0 ? 1.0 : 0.0) * (0.10 + 0.16 * smoothstep(0.0, 1.0, t))
+                    * (0.7 + 0.6 * mott);
+        pigment = ring + (kind == 1 ? 0.0 : slip) + inner;
+        if (kind == 1) pigment *= 0.55;            // a tide line carries no pigment
+    }
+
+    // Fibre swelling: the wetted area dries as a shallow dish with a raised rim.
+    // Without this a stain is painted on; with it the stain is IN the sheet.
+    float rim = exp(-pow((t - 0.97) / 0.16, 2.0));
+    float dish = (t < 1.0 ? 1.0 : 0.0) * (1.0 - t * t) * 0.6;
+    float relief = rim - dish;
+
+    return vec2(max(pigment, 0.0), relief);
+}
+
 // --- Worley / cellular noise (Worley 1996) ---------------------------------
 // One feature point per cell, 3x3 search. Returns (F1, F2) = distance to nearest
 // and 2nd-nearest. fbm(F1) is Worley's own "crumpled paper" bump; F2 - F1 is ~0 on

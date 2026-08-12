@@ -60,6 +60,13 @@ uniform float u_fold_sharpness;
 uniform float u_fold_chance;
 uniform float u_fold_seed;
 
+uniform int   u_stain_count;
+uniform vec4  u_stain[4];        // x, y in mm from the sheet origin; z radius_mm; w strength
+uniform int   u_stain_kind[4];   // 0 ring, 1 tide, 2 blot
+uniform float u_stain_seed;
+uniform float u_stain_amount;
+uniform float u_stain_relief_um;
+
 uniform int   u_crumple_on;
 uniform float u_crumple_scale_mm;
 uniform float u_crumple_amp_um;
@@ -264,6 +271,16 @@ void main() {
         h_um += field * u_crumple_amp_um;
     }
 
+    // Stains lift the sheet. Liquid swells the fibres, so a dried stain is a
+    // shallow dish with a raised rim, and that relief is what makes it sit in
+    // the paper instead of on top of it.
+    for (int i = 0; i < 4; ++i) {
+        if (i >= u_stain_count) break;
+        vec2 sm = mm_sheet - u_stain[i].xy;
+        vec2 f = stainField(sm, u_stain[i].z, u_stain_seed + float(i) * 7.3, u_stain_kind[i]);
+        h_um += f.y * u_stain_relief_um * u_stain[i].w * u_stain_amount;
+    }
+
     frag_out = vec4(h_um, 0.0, 0.0, 1.0);
 }
 `, { common: true, legacy });
@@ -453,6 +470,16 @@ uniform float u_mould_amount;
 uniform float u_chain_ratio;
 uniform float u_mould_wander;
 
+uniform int   u_stain_count;
+uniform vec4  u_stain[4];        // x, y in mm from the sheet origin; z radius_mm; w strength
+uniform int   u_stain_kind[4];   // 0 ring, 1 tide, 2 blot
+uniform float u_stain_seed;
+uniform float u_stain_amount;
+uniform vec3  u_stain_tint[4];
+uniform int   u_fox_on;
+uniform float u_fox_density;
+uniform float u_fox_strength;
+
 uniform int   u_imp_on;
 uniform float u_pit_density;
 uniform float u_pit_depth;
@@ -466,7 +493,7 @@ void main() {
     // Everything in this pass is a pure function of position, so one offset
     // decorrelates formation, fade, scratches and imperfections together.
     vec2 mm = (uv * u_res) / u_px_per_mm + u_seed_mm;
-    float albedo = 1.0;
+    vec3 albedo = vec3(1.0);
 
     // --- non-stationary fade (cubed big-scale mask) ---
     // Its absence is the single biggest "this is procedural" tell: real paper is
@@ -643,7 +670,48 @@ void main() {
         }
     }
 
-    frag_out = vec4(albedo, 0.0, 0.0, 1.0);
+    // --- stains --------------------------------------------------------------
+    // Placed marks, in sheet coordinates rather than the seed-offset field: a
+    // stain is somewhere specific on this sheet, not a property of the stock.
+    vec2 mm_sheet_a = (uv * u_res) / u_px_per_mm;
+    for (int i = 0; i < 4; ++i) {
+        if (i >= u_stain_count) break;
+        vec2 sm = mm_sheet_a - u_stain[i].xy;
+        vec2 f = stainField(sm, u_stain[i].z, u_stain_seed + float(i) * 7.3, u_stain_kind[i]);
+        float amt = f.x * u_stain[i].w * u_stain_amount;
+        // The tint is what the stain takes OUT of the paper, per channel, which
+        // is how a brown stain stays brown over a cream sheet.
+        albedo *= clamp(1.0 - amt * u_stain_tint[i], 0.0, 1.0);
+    }
+
+    // --- foxing --------------------------------------------------------------
+    // Rusty age spots. Separate from imperfect because foxing is CLUSTERED:
+    // it follows damp and residual iron in the stock, so a low-frequency mask
+    // gates it rather than scattering it evenly.
+    if (u_fox_on == 1) {
+        float cluster = fbm(mm / 34.0 + 5.5, 3, 0.5, 2.0);
+        cluster = smoothstep(0.45, 0.85, cluster);
+        if (cluster > 0.01) {
+            vec2 fm = mm / 3.2;
+            vec2 fb = floor(fm);
+            for (int j = -1; j <= 1; ++j)
+            for (int i = -1; i <= 1; ++i) {
+                vec2 g = fb + vec2(float(i), float(j));
+                if (hash21(g * 2.7 + 91.0) >= u_fox_density * cluster) continue;
+                vec2 ctr = hash22(g * 3.3 + 17.0);
+                float rad = 0.10 + 0.22 * hash21(g * 5.9 + 3.0);
+                float dist = length(fm - (g + ctr));
+                if (dist >= rad) continue;
+                float m = 1.0 - dist / rad;
+                m *= m;
+                float fx = u_fox_strength * m * (0.5 + 0.5 * hash21(g * 7.1));
+                // Iron-tannate rust: strongest absorption in blue, least in red.
+                albedo *= clamp(1.0 - fx * vec3(0.62, 0.86, 1.0), 0.0, 1.0);
+            }
+        }
+    }
+
+    frag_out = vec4(albedo, 1.0);
 }
 `, { common: true, legacy });
 
@@ -846,7 +914,7 @@ void main() {
         : clamp(csample.r, 0.0, 1.0);
 
     float shade = texture(u_shade, uv).r;
-    float albedo = texture(u_albedo, uv).r;
+    vec3 albedo = texture(u_albedo, uv).rgb;
 
     // warm/cool duotone: a scalar shade x a beige tint cannot hue-shift; tint the
     // highlights warm and the shadows cool (painter's rule).
@@ -897,7 +965,7 @@ void main() {
         float lum = dot(base, vec3(0.299, 0.587, 0.114));
         float w = smoothstep(u_gate_lo, u_gate_hi, lum);
         float eff_shade = mix(1.0, shade, w);
-        float eff_alb = mix(1.0, albedo, w);
+        vec3 eff_alb = mix(vec3(1.0), albedo, w);
         vec3 eff_tint = mix(vec3(1.0), tint, w);
         sheet = base * eff_shade * eff_alb * eff_tint;
     }

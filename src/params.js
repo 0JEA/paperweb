@@ -171,6 +171,37 @@ export function defaults() {
       wander: 0.6,          // mm of drift; 0 = mechanically straight, and looks it
     },
 
+    stains: {
+      // Deegan et al., Nature 389 (1997). A drop pins at its contact line,
+      // evaporation is fastest at the perimeter, and the outward replenishing
+      // flow carries every particle there: a DARK RING with a PALE INTERIOR.
+      // A soft radial gradient is the one thing a coffee stain is not.
+      //
+      // Stains also lift the sheet. Liquid swells the fibres, so a dried stain
+      // is a shallow dish with a raised rim, and that relief is what makes it
+      // sit IN the paper rather than on top of it.
+      enabled: false,
+      seed: 4,
+      amount: 1.0,
+      relief_um: 9,
+      // Up to four placed marks, in sheet-relative coordinates (0..1). Placed
+      // rather than scattered, because a stain is somewhere specific on this
+      // sheet and not a property of the stock.
+      //   kind 'ring' coffee or tea: hard dark ring, pale mottled middle
+      //   kind 'tide' water damage: soft pale ring, no pigment
+      //   kind 'blot' spilled ink: dark centre feathered along the fibres
+      marks: [],
+    },
+
+    foxing: {
+      // Rusty age spots. Separate from the imperfect layer because foxing is
+      // CLUSTERED: it follows damp and residual iron in the stock, so a
+      // low-frequency mask gates it instead of scattering it evenly.
+      enabled: false,
+      density: 0.10,
+      strength: 0.13,
+    },
+
     scratches: {
       // Sparse, and they read LIGHT (fibre lift), not dark. A fraction are dark
       // (embedded dirt / pressed lines). Wear-correlated rather than stacked.
