@@ -29,15 +29,33 @@ function findComponents() {
     && !n.closest('nav')
     && !n.closest('[class*="contents"],[class*="toc"],[id*="contents"]'));
 
+  const isMark = (n) => marks.includes(n);
+
   const byNumber = new Map();
   for (const m of marks) {
     const n = m.textContent.trim();
     if (byNumber.has(n)) continue;          // first occurrence wins
-    const host = m.closest('section') || m.parentElement;
+
+    // The host is the LARGEST ancestor that belongs to this component alone:
+    // climb while the next parent up would swallow another component's marker.
+    //
+    // closest('section') is the obvious choice and it is wrong. On the
+    // broadsheet page components 15-20 live inside one shared section.sheet, so
+    // all six resolved to the same host: their controls stacked into a single
+    // block under component 14 and took its heading, and the reviewer had to
+    // type six verdicts into 14's comment box as a workaround. Counting 20
+    // components was not enough; they also have to be 20 DISTINCT hosts.
+    let host = m.parentElement;
+    while (host.parentElement
+           && host.parentElement !== document.body
+           && ![...host.parentElement.querySelectorAll('*')].some((o) => o !== m && isMark(o))) {
+      host = host.parentElement;
+    }
+
     const heading = host.querySelector('h2, h3');
     const title = (heading ? heading.textContent : '')
       .trim().replace(/\s+/g, ' ').replace(/^\d{2}\s*/, '') || `component ${n}`;
-    byNumber.set(n, { n, title, section: host.closest('section') || host });
+    byNumber.set(n, { n, title, section: host });
   }
   return [...byNumber.values()].sort((a, b) => a.n.localeCompare(b.n));
 }
