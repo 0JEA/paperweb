@@ -27,31 +27,43 @@ function findComponents() {
     && /^\d{2}$/.test(n.textContent.trim())
     && +n.textContent.trim() >= 1 && +n.textContent.trim() <= 20
     && !n.closest('nav')
+    // Exclude the review widget's own number labels: it injects a span per
+    // component, and on a page where it is already mounted those double the
+    // marker count and break host resolution. The instrument must not be
+    // visible to the thing measuring.
+    && !n.closest('.rv')
     && !n.closest('[class*="contents"],[class*="toc"],[id*="contents"]'));
 
   const isMark = (n) => marks.includes(n);
+  const markCount = (el) => [...el.querySelectorAll('*')].filter(isMark).length;
+
+  // Host resolution, hybrid on purpose.
+  //
+  // closest('section') is right on three of the four pages and wrong on
+  // broadsheet, where components 15-20 share one section.sheet. The obvious fix
+  // -- climb to the largest ancestor holding only this marker -- is wrong the
+  // other way: on desk it stops at div.bay-head, the heading block, because the
+  // component section also contains something else the marker test matches, so
+  // extraction would capture a heading and no component.
+  //
+  // So: take the section, and only narrow it if that section is actually shared.
+  const hostFor = (m) => {
+    const sec = m.closest('section');
+    if (sec && markCount(sec) <= 1) return sec;
+    let host = m.parentElement;
+    while (host.parentElement && host.parentElement !== document.body
+      && (!sec || host.parentElement !== sec.parentElement)
+      && ![...host.parentElement.querySelectorAll('*')].some((o) => o !== m && isMark(o))) {
+      host = host.parentElement;
+    }
+    return host;
+  };
 
   const byNumber = new Map();
   for (const m of marks) {
     const n = m.textContent.trim();
     if (byNumber.has(n)) continue;          // first occurrence wins
-
-    // The host is the LARGEST ancestor that belongs to this component alone:
-    // climb while the next parent up would swallow another component's marker.
-    //
-    // closest('section') is the obvious choice and it is wrong. On the
-    // broadsheet page components 15-20 live inside one shared section.sheet, so
-    // all six resolved to the same host: their controls stacked into a single
-    // block under component 14 and took its heading, and the reviewer had to
-    // type six verdicts into 14's comment box as a workaround. Counting 20
-    // components was not enough; they also have to be 20 DISTINCT hosts.
-    let host = m.parentElement;
-    while (host.parentElement
-           && host.parentElement !== document.body
-           && ![...host.parentElement.querySelectorAll('*')].some((o) => o !== m && isMark(o))) {
-      host = host.parentElement;
-    }
-
+    const host = hostFor(m);
     const heading = host.querySelector('h2, h3');
     const title = (heading ? heading.textContent : '')
       .trim().replace(/\s+/g, ' ').replace(/^\d{2}\s*/, '') || `component ${n}`;

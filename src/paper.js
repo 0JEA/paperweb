@@ -464,6 +464,17 @@ export class Paper {
   }
 }
 
+/**
+ * Every live instance, in creation order.
+ *
+ * Exposed for tooling: extracting a component from a page needs the parameters
+ * its instance actually resolved to, and those live on the instance rather than
+ * in the markup. Not part of the rendering API and not needed to use paperweb.
+ */
+export function surfaces() {
+  return [...live];
+}
+
 /** Tear down every live instance. */
 export function destroyAll() {
   for (const p of [...live]) p.destroy();

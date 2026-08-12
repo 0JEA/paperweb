@@ -10,7 +10,7 @@
 //     import { scan } from 'paperweb'; scan();
 //   </script>
 
-export { Paper, destroyAll } from './paper.js';
+export { Paper, destroyAll, surfaces } from './paper.js';
 export { scan, unscan, boundTo } from './scan.js';
 export { presets, presetNames, preset } from './presets.js';
 export { defaults, resolve, merge, pxPerMm, pxPerPt } from './params.js';

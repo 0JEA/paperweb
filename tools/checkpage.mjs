@@ -52,7 +52,19 @@ await page.evaluate(async () => {
 await page.waitForTimeout(7000);
 
 const report = await page.evaluate(() => {
-  const canvases = [...document.querySelectorAll('[data-paperweb-canvas]')];
+  // Walk shadow roots too. The combined keepers page mounts each component in
+  // its own shadow root to isolate four colliding stylesheets, and a plain
+  // querySelectorAll reports zero surfaces on a page that is rendering 61.
+  const deepAll = (sel) => {
+    const out = [];
+    const walk = (root) => {
+      out.push(...root.querySelectorAll(sel));
+      for (const el of root.querySelectorAll('*')) if (el.shadowRoot) walk(el.shadowRoot);
+    };
+    walk(document);
+    return out;
+  };
+  const canvases = deepAll('[data-paperweb-canvas]');
   // A surface counts as rendered if its centre pixel is not transparent.
   let painted = 0, blank = 0;
   for (const c of canvases) {
@@ -70,13 +82,13 @@ const report = await page.evaluate(() => {
 
   // Anything sticking out past the viewport horizontally.
   const vw = document.documentElement.clientWidth;
-  const overflowing = [...document.body.querySelectorAll('*')].filter((n) => {
+  const overflowing = deepAll('*').filter((n) => {
     const r = n.getBoundingClientRect();
     return r.width > 0 && (r.right > vw + 2 || r.left < -2);
   }).slice(0, 6).map((n) => `${n.tagName.toLowerCase()}.${(n.className || '').toString().split(' ')[0]}`);
 
   // Text too small or too low contrast to read on cream.
-  const tiny = [...document.body.querySelectorAll('p,li,td,span,figcaption')].filter((n) => {
+  const tiny = deepAll('p,li,td,span,figcaption').filter((n) => {
     const s = getComputedStyle(n);
     return n.textContent.trim().length > 12 && parseFloat(s.fontSize) < 11;
   }).length;
@@ -86,7 +98,7 @@ const report = await page.evaluate(() => {
     scrollsSideways: scrolled > 0 ? scrolled : 0,
     overflowing, tiny,
     height: document.body.scrollHeight,
-    headings: document.querySelectorAll('h1,h2,h3').length,
+    headings: deepAll('h1,h2,h3').length,
   };
 });
 
