@@ -994,6 +994,94 @@ console.log('\nstamps');
     `min delta ${Math.min(...d).toExponential(1)}`);
 }
 
+// --- newsprint ------------------------------------------------------------------
+// Three effects on the ink rather than the paper. Each one is asserted to
+// change the composite when on AND to leave it bit-identical when off, because
+// an effect that is silently inert looks exactly like an effect that is subtle.
+console.log('\nnewsprint ink effects');
+{
+  const res = await page.evaluate(async () => {
+    // Ink on the LEFT half only. Show-through mirrors in x, so the right half is
+    // clean paper backing onto solid ink and is where show-through must appear.
+    const art = document.createElement('canvas');
+    art.width = art.height = 256;
+    const ac = art.getContext('2d');
+    ac.fillStyle = '#fff'; ac.fillRect(0, 0, 256, 256);
+    ac.fillStyle = '#000'; ac.fillRect(24, 40, 84, 176);
+    // A few thin strokes, which is what dot gain acts on.
+    for (let i = 0; i < 6; i++) ac.fillRect(20, 20 + i * 38, 100, 3);
+
+    const run = async (ink, extra = {}) => {
+      const el = document.createElement('div');
+      el.style.cssText = 'width:320px;height:320px;position:relative';
+      document.body.appendChild(el);
+      const pp = new window.PW.Paper(el, {
+        retain: true, lazy: false, seed: 5, content: art,
+        params: {
+          formation: { enabled: false }, fade: { enabled: false },
+          mould: { enabled: false }, scratches: { enabled: false },
+          imperfect: { enabled: false }, stains: { enabled: false },
+          foxing: { enabled: false }, cockle: { enabled: false },
+          folds: { enabled: false }, crumple: { enabled: false },
+          ...extra,
+          ink: { show_through: 0, bleed_mm: 0, fold_crack: 0, ...ink },
+        },
+      });
+      await pp.render();
+      const F = pp.floats('Final');
+      const st = F.data.length / (F.w * F.h);
+      const gm = pp.geometry();
+      const [x0, y0, x1, y1] = gm.sheet;
+      const k = F.w / gm.canvas.w;
+      let left = 0, right = 0, nl = 0, nr = 0, inked = 0, all = 0;
+      for (let y = Math.ceil(y0 * k) + 2; y < y1 * k - 2; y++) {
+        for (let x = Math.ceil(x0 * k) + 2; x < x1 * k - 2; x++) {
+          const v = F.data[(y * F.w + x) * st];
+          const u = (x / k - x0) / (x1 - x0);
+          if (u < 0.45) { left += v; nl++; } else if (u > 0.55) { right += v; nr++; }
+          all++; if (v < 0.55) inked++;
+        }
+      }
+      pp.destroy(); el.remove();
+      return { left: left / nl, right: right / nr, inkedFrac: inked / all };
+    };
+
+    return {
+      base: await run({}),
+      show: await run({ show_through: 0.09 }),
+      bleed: await run({ bleed_mm: 0.35 }),
+      crackOff: await run({ fold_crack: 0 }, { crumple: { enabled: true, amplitude_um: 60 } }),
+      crackOn: await run({ fold_crack: 1 }, { crumple: { enabled: true, amplitude_um: 60 } }),
+    };
+  });
+
+  const { base, show, bleed, crackOff, crackOn } = res;
+
+  check('control: show-through off leaves the clean side untouched',
+    Math.abs(base.right - 1.0) < 0.02, `right half mean ${base.right.toFixed(4)}`);
+  check('show-through darkens the blank side, where the reverse type is',
+    show.right < base.right - 0.005, `${base.right.toFixed(4)} -> ${show.right.toFixed(4)}`);
+  check('show-through stays a suggestion, not readable type',
+    show.right > base.right - 0.06, `drop ${(base.right - show.right).toFixed(4)}`);
+
+  check('dot gain fattens the strokes', bleed.inkedFrac > base.inkedFrac + 0.004,
+    `inked ${(base.inkedFrac * 100).toFixed(2)}% -> ${(bleed.inkedFrac * 100).toFixed(2)}%`);
+  // Dilation must not invent ink. The blank half has nothing to wick from, so
+  // if it darkens at all the effect is a blur rather than a dilation.
+  check('control: dot gain does not create ink on the blank half',
+    Math.abs(bleed.right - base.right) < 0.002,
+    `blank half ${base.right.toFixed(4)} -> ${bleed.right.toFixed(4)}`);
+
+  // Cracking removes ink, so the inked side gets LIGHTER. The control is the
+  // same crumpled sheet with the effect off, so any difference is the flaking
+  // and not the crease shading.
+  check('ink cracks off where a crease crosses it', crackOn.left > crackOff.left + 0.002,
+    `inked half ${crackOff.left.toFixed(4)} -> ${crackOn.left.toFixed(4)}`);
+  check('cracking needs ink: it does not lighten the blank side',
+    Math.abs(crackOn.right - crackOff.right) < 0.002,
+    `blank half ${crackOff.right.toFixed(4)} -> ${crackOn.right.toFixed(4)}`);
+}
+
 // --- console hygiene ---------------------------------------------------------
 console.log('\nconsole');
 // The deliberate 404 from the rasterize-failure test is expected; anything else

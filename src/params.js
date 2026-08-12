@@ -83,6 +83,23 @@ export function defaults() {
       // 0 = treat it as ink THICKNESS (right for washes and halftones, and what
       // paperlab does). See the long note in the composite shader.
       coverage: 1.0,
+
+      // --- newsprint --------------------------------------------------------
+      // All three act on the content layer, so they need content: they do
+      // nothing in the default content:'behind' mode where there is no ink.
+      //
+      // Show-through: type on the reverse of the sheet, faintly visible because
+      // newsprint is thin. The most newspaper-specific effect here and the
+      // cheapest. 0.06 is a suggestion of type; anything readable is too much.
+      show_through: 0.0,
+      // Dot gain: newsprint is absorbent, ink wicks along the fibres and strokes
+      // fatten. This is why newsprint type reads heavier than book type at the
+      // same size. 0.05-0.15 mm is the useful range.
+      bleed_mm: 0.0,
+      // Ink cracking: where a crease crosses solid ink the dried film flakes off
+      // along it. Needs a crease to work with, so pair it with folds or crumple.
+      fold_crack: 0.0,
+
       // Legacy lerp+gate path (kubelka_munk = false), kept for A/B comparison.
       color: [0.06, 0.06, 0.06],
       gate_lo: 0.55,

@@ -414,7 +414,7 @@ export class Pipeline {
       u_stamp_opacity: st.opacity,
       // puv is sheet-relative, so converting it to mm needs sheet fraction
       // per mm, not canvas px per mm.
-      u_stamp_px_per_mm: pxmm / Math.max(px1 - px0, 1),
+      u_sheet_per_mm: pxmm / Math.max(px1 - px0, 1),
       u_stamp_reach_um: st.reach_um,
     };
 
@@ -509,6 +509,9 @@ export class Pipeline {
           u_ink_thickness: p.ink.thickness,
           u_ink_gran: p.cavity.enabled ? p.ink.granulation : 0,
           u_ink_coverage: p.ink.coverage,
+          u_show_through: p.ink.show_through,
+          u_bleed_mm: p.ink.bleed_mm,
+          u_fold_crack: p.ink.fold_crack,
           u_hi_tint: p.tone.highlight,
           u_lo_tint: p.tone.shadow,
           u_duotone: p.tone.duotone,

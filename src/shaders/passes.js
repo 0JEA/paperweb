@@ -917,8 +917,13 @@ uniform float u_stamp_pressure;
 uniform float u_stamp_contact;
 uniform float u_stamp_wear;
 uniform float u_stamp_opacity;
-uniform float u_stamp_px_per_mm;
+uniform float u_sheet_per_mm;   // sheet fractions per millimetre
 uniform float u_stamp_reach_um;
+
+// --- newsprint ---------------------------------------------------------------
+uniform float u_show_through;   // reverse-side type coming through the stock
+uniform float u_bleed_mm;       // ink wicking along the fibres (dot gain)
+uniform float u_fold_crack;     // ink flaking off where a crease crosses it
 
 uniform int   u_content_alpha;   // 1 = content texture carries meaningful alpha
 uniform float u_opacity;
@@ -945,6 +950,53 @@ void main() {
         ? clamp(csample.r + (1.0 - csample.a), 0.0, 1.0)
         : clamp(csample.r, 0.0, 1.0);
 
+    // --- newsprint: what happens to the ink between the plate and the eye ------
+    float cover = 1.0 - c;
+
+    // Dot gain. Newsprint is absorbent, so ink wicks along the fibres and every
+    // stroke fattens. This is why newsprint type reads heavier than book type at
+    // the same size, and it is a dilation: take the MOST ink in a small
+    // neighbourhood, not the average, because wicking spreads ink outward
+    // without thinning where it came from.
+    if (u_bleed_mm > 0.0) {
+        float r = u_bleed_mm * u_sheet_per_mm;
+        float grab = cover;
+        for (int i = 0; i < 6; ++i) {
+            float a = (float(i) + 0.5) * 1.0471976;          // 6 taps, 60 apart
+            vec2 o = vec2(cos(a), sin(a)) * r;
+            // Wicking follows the fibres, so the reach is uneven around a stroke.
+            o *= 0.55 + 0.9 * fbm((puv + o) / max(u_sheet_per_mm, 1e-4) * 1.7, 2, 0.5, 2.0);
+            vec4 t2 = texture(u_content, vec2(puv.x + o.x, 1.0 - (puv.y + o.y)));
+            float c2 = u_content_alpha == 1
+                ? clamp(t2.r + (1.0 - t2.a), 0.0, 1.0)
+                : clamp(t2.r, 0.0, 1.0);
+            grab = max(grab, 1.0 - c2);
+        }
+        cover = grab;
+    }
+
+    // Show-through. Type printed on the reverse, faintly visible because
+    // newsprint is thin. Mirrored in x because that is where the back of the
+    // sheet is, and hard-limited: it is a suggestion of type, never readable.
+    if (u_show_through > 0.0) {
+        vec4 bk = texture(u_content, vec2(1.0 - puv.x, 1.0 - puv.y));
+        float bc = u_content_alpha == 1
+            ? clamp(bk.r + (1.0 - bk.a), 0.0, 1.0)
+            : clamp(bk.r, 0.0, 1.0);
+        cover = clamp(cover + (1.0 - bc) * u_show_through, 0.0, 1.0);
+    }
+
+    // Ink cracking. Where a crease crosses solid ink the ink layer flakes off
+    // along it: the paper folds, the dried film does not. Only solid ink cracks,
+    // which is why this multiplies by coverage rather than replacing it.
+    if (u_fold_crack > 0.0) {
+        float crease = smoothstep(0.004, 0.03, texture(u_cavity, uv).r);
+        float flake = smoothstep(0.42, 0.62,
+            fbm(puv / max(u_sheet_per_mm, 1e-4) * 3.1 + 8.3, 3, 0.55, 2.0));
+        cover *= 1.0 - u_fold_crack * crease * flake * cover;
+    }
+    c = 1.0 - cover;
+
     float shade = texture(u_shade, uv).r;
     vec3 albedo = texture(u_albedo, uv).rgb;
 
@@ -965,7 +1017,6 @@ void main() {
         // Granulation: pigment pools in the relief valleys (cavity > 0), so ink is
         // denser there and thinner on the peaks.
         float gran = 1.0 + u_ink_gran * texture(u_cavity, uv).r;
-        float cover = 1.0 - c;
 
         // COVERAGE vs THICKNESS. A mid-grey in the content texture means two
         // completely different things depending on where it came from, and
@@ -1024,7 +1075,7 @@ void main() {
 
             // Patchy transfer. The rubber flexes, so pressure is uneven across
             // the die at a scale much coarser than the artwork.
-            vec2 mmv = puv / max(u_stamp_px_per_mm, 1e-4);
+            vec2 mmv = puv / max(u_sheet_per_mm, 1e-4);
             // patch is a reserved word in GLSL ES 3.00 (tessellation), and
             // the driver reports it as a syntax error on the following line.
             float flex = fbm(mmv * 0.55 + 31.7, 3, 0.5, 2.0);
