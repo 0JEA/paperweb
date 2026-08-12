@@ -70,9 +70,7 @@ export class Paper {
     this.el = el;
     this.opts = { ...DEFAULTS, ...opts };
 
-    let base = this.opts.preset ? lookupPreset(this.opts.preset) : {};
-    if (this.opts.params) base = merge(base, this.opts.params);
-    if (this.opts.dpi != null) base = merge(base, { page: { dpi: this.opts.dpi } });
+    let base = this._baseTree();
     // Every surface gets its own sheet of paper. Without this, paperlab's
     // constant seeds make every card on a page the identical piece of paper,
     // and the fold layer is the loudest tell because its creases are placed in
@@ -340,8 +338,34 @@ export class Paper {
    * Merge a parameter patch and re-render the affected passes.
    * @param {object} patch
    */
+  /**
+   * The parameter tree implied by the current options, before seeding.
+   *
+   * Shared by the constructor and by set({ preset }), so switching presets
+   * cannot drift from how the preset would have been applied at construction.
+   */
+  _baseTree() {
+    let base = this.opts.preset ? lookupPreset(this.opts.preset) : {};
+    if (this.opts.params) base = merge(base, this.opts.params);
+    if (this.opts.dpi != null) base = merge(base, { page: { dpi: this.opts.dpi } });
+    return base;
+  }
+
   set(patch) {
-    this.params = resolve(merge(this.params, patch));
+    if (patch && patch.preset !== undefined) {
+      // A preset is a whole tree, not a parameter, so merging it as one is a
+      // silent no-op -- which is what made the studio's preset picker look
+      // dead. It is also REBUILT rather than layered over the current params:
+      // presets are partial, so layering leaves the previous preset's layers
+      // switched on underneath. Anything set through set() since construction
+      // is intentionally discarded, because "switch to this preset" means that.
+      const { preset: name, ...rest } = patch;
+      this.opts.preset = name;
+      this.params = resolve(merge(merge(this._baseTree(),
+        { page: { seed: this.params.page.seed } }), rest));
+    } else {
+      this.params = resolve(merge(this.params, patch));
+    }
     if (!this.caps.ok) { this._degradeToFlat(); return this; }
     this.render();
     return this;

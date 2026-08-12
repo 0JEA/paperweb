@@ -276,10 +276,9 @@ for (const n of presetNames) {
 }
 presetSel.addEventListener('change', () => {
   presetName = presetSel.value;
-  // A preset is a whole parameter tree, so the stamp has to be reasserted on
-  // top of it; setting the preset alone would drop the die.
-  paper.set({ preset: presetName });
-  paper.set({ stamp });
+  // set({ preset }) rebuilds from the preset, so the stamp goes in the SAME
+  // call; a second set() would work too, but this way there is only one render.
+  paper.set({ preset: presetName, stamp });
   write();
 });
 

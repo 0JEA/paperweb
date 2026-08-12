@@ -59,6 +59,19 @@ composite(content, shade, albedo, mask, shadowT, shadowW, cavity)
 | dot gain | ink wicking along the fibres, so strokes fatten | |
 | fold cracking | the dried ink film flaking off along a crease | |
 
+### The newsprint preset
+
+`preset: 'newsprint'` bundles the whole newspaper look: greyer stock, coarse
+formation, a couple of hard folds, dot gain, show-through and ink cracking along
+the creases. The three ink effects only do anything when the surface has content
+to act on, so on a `content: 'behind'` surface you get the paper and the folds
+and nothing else, which is correct rather than broken. `demo/newsprint.html`
+shows each of them against an otherwise identical sheet.
+
+Cracking is the one worth reaching for on its own: `ink.fold_crack` needs only a
+crease and some solid ink, and it is the single strongest "this is old print"
+signal in the library.
+
 ## Content modes
 
 The one thing the web cannot do is sample live DOM in a shader. There are three
@@ -101,6 +114,7 @@ const p = new Paper(el, {
 });
 
 p.set({ light: { azimuth_deg: 60 } });  // re-runs only the affected passes
+p.set({ preset: 'newsprint' });         // rebuilds from the preset, keeps the seed
 p.render();
 p.setContent(imgElement);
 p.buffer('Height');                     // ImageData of any pass; needs retain: true

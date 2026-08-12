@@ -1082,6 +1082,56 @@ console.log('\nnewsprint ink effects');
     `blank half ${crackOff.right.toFixed(4)} -> ${crackOn.right.toFixed(4)}`);
 }
 
+// --- set({ preset }) ------------------------------------------------------------
+// A preset is a whole tree, not a parameter, so merging it as one was a silent
+// no-op: the studio's preset picker looked dead and threw no error. It must
+// also REBUILD rather than layer, or the previous preset's layers stay on.
+console.log('\nswitching preset at runtime');
+{
+  const res = await page.evaluate(async () => {
+    const el = document.createElement('div');
+    el.style.cssText = 'width:300px;height:300px;position:relative';
+    document.body.appendChild(el);
+    const pp = new window.PW.Paper(el, { preset: 'worn', retain: true, lazy: false });
+    await pp.render();
+    const stats = () => {
+      const { data, w, h } = pp.floats('Height');
+      const st = data.length / (w * h);
+      let min = 1e9, max = -1e9;
+      for (let i = 0; i < w * h; i++) {
+        const v = data[i * st];
+        if (v < min) min = v; if (v > max) max = v;
+      }
+      return +(max - min).toFixed(3);
+    };
+    const wornRange = stats();
+    const wornFolds = pp.params.folds.enabled;
+    const seed = pp.params.page.seed;
+
+    pp.set({ preset: 'subtle' });
+    await pp.render();
+    const subtleRange = stats();
+    const out = {
+      wornRange, subtleRange, wornFolds,
+      subtleFolds: pp.params.folds.enabled,
+      seedKept: pp.params.page.seed === seed,
+      name: pp.params.cockle.amplitude_um,
+    };
+    pp.destroy(); el.remove();
+    return out;
+  });
+
+  check('switching preset changes the render', res.wornRange !== res.subtleRange,
+    `height range worn=${res.wornRange} subtle=${res.subtleRange}`);
+  // The rebuild, not the merge: 'worn' turns folds on and 'subtle' does not
+  // mention them, so a layered merge would leave them on.
+  check('switching preset does not leave the old preset\'s layers on',
+    res.wornFolds === true && res.subtleFolds === false,
+    `folds worn=${res.wornFolds} subtle=${res.subtleFolds}`);
+  check('switching preset keeps the surface its own sheet of paper', res.seedKept,
+    'page.seed must survive, or every card reshuffles on a theme change');
+}
+
 // --- console hygiene ---------------------------------------------------------
 console.log('\nconsole');
 // The deliberate 404 from the rasterize-failure test is expected; anything else

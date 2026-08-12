@@ -348,7 +348,17 @@ export function defaults() {
 
 // --- merging ----------------------------------------------------------------
 
-const isPlain = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+// PLAIN means a plain object, not merely "an object". A canvas, an <img> or an
+// ImageBitmap has no own enumerable properties, so recursing into one and
+// spreading it yields {} and silently destroys it. That is exactly what
+// happened to stamp.image: the first render worked, because the default is null
+// and a non-plain value is assigned wholesale, and every set() after it merged
+// the canvas with itself and threw the canvas away.
+const isPlain = (v) => {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
+  const proto = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
+};
 
 /**
  * Deep-merge `patch` over `base`, returning a new tree. Arrays (colours) are

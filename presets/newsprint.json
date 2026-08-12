@@ -1,0 +1,67 @@
+{
+  "tone": {
+    "paper": [0.957, 0.937, 0.886],
+    "duotone": 0.35
+  },
+  "formation": {
+    "enabled": true,
+    "amplitude": 0.075,
+    "gsm_amount": 0.8,
+    "skew": -0.2,
+    "scale_mm": 2.2
+  },
+  "fade": {
+    "enabled": true,
+    "scale_mm": 60.0,
+    "amount": 0.6
+  },
+  "cockle": {
+    "enabled": true,
+    "amplitude_um": 14.0,
+    "wavelength_mm": 20.0,
+    "anisotropy": 2.2,
+    "irregularity": 0.9
+  },
+  "folds": {
+    "enabled": true,
+    "count": 2,
+    "chance": 0.85,
+    "depth": 1.1,
+    "sharpness": 0.65
+  },
+  "crumple": {
+    "enabled": true,
+    "scale_mm": 22.0,
+    "amplitude_um": 16.0,
+    "crease": 0.05
+  },
+  "cavity": {
+    "enabled": true,
+    "radius_mm": 0.9,
+    "lambda": 0.7
+  },
+  "imperfect": {
+    "enabled": true,
+    "pit_density": 0.008,
+    "mark_density": 0.012,
+    "mark_strength": 0.1
+  },
+  "scratches": {
+    "enabled": false
+  },
+  "edge": {
+    "enabled": true,
+    "deckle_px": 0,
+    "wobble_px": 3,
+    "tear_px": 0
+  },
+  "ink": {
+    "thickness": 0.85,
+    "bleed_mm": 0.12,
+    "show_through": 0.06,
+    "fold_crack": 0.8
+  },
+  "light": {
+    "relief_exaggerate": 6.0
+  }
+}

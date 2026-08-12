@@ -1,6 +1,7 @@
 // paperlab presets, embedded so the library needs no fetch at runtime.
 //
-// Generated from the JSON in presets/ at build time (tools/gen-presets.mjs).
+// Mirrors the JSON in presets/. There is no longer a generator, so the two are
+// kept in step by hand; a preset test asserts they have not drifted.
 // Each preset is a PARTIAL patch over params.defaults(), which is exactly how
 // paperlab stores them, so the two stay interchangeable: a preset saved by
 // paperlab loads here and vice versa.
@@ -12,6 +13,77 @@
 // the relief keeps its physical meaning rather than its pixel count.
 
 export const presets = {
+  "newsprint": {
+    "cavity": {
+      "enabled": true,
+      "lambda": 0.7,
+      "radius_mm": 0.9
+    },
+    "cockle": {
+      "amplitude_um": 14.0,
+      "anisotropy": 2.2,
+      "enabled": true,
+      "irregularity": 0.9,
+      "wavelength_mm": 20.0
+    },
+    "crumple": {
+      "amplitude_um": 16.0,
+      "crease": 0.05,
+      "enabled": true,
+      "scale_mm": 22.0
+    },
+    "edge": {
+      "deckle_px": 0,
+      "enabled": true,
+      "tear_px": 0,
+      "wobble_px": 3
+    },
+    "fade": {
+      "amount": 0.6,
+      "enabled": true,
+      "scale_mm": 60.0
+    },
+    "folds": {
+      "chance": 0.85,
+      "count": 2,
+      "depth": 1.1,
+      "enabled": true,
+      "sharpness": 0.65
+    },
+    "formation": {
+      "amplitude": 0.075,
+      "enabled": true,
+      "gsm_amount": 0.8,
+      "scale_mm": 2.2,
+      "skew": -0.2
+    },
+    "imperfect": {
+      "enabled": true,
+      "mark_density": 0.012,
+      "mark_strength": 0.1,
+      "pit_density": 0.008
+    },
+    "ink": {
+      "bleed_mm": 0.12,
+      "fold_crack": 0.8,
+      "show_through": 0.06,
+      "thickness": 0.85
+    },
+    "light": {
+      "relief_exaggerate": 6.0
+    },
+    "scratches": {
+      "enabled": false
+    },
+    "tone": {
+      "duotone": 0.35,
+      "paper": [
+        0.957,
+        0.937,
+        0.886
+      ]
+    }
+  },
   "Interesting": {
     "cavity": {
       "enabled": true,
