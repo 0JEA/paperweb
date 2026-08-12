@@ -1147,7 +1147,7 @@ console.log('\nblock library');
     document.body.appendChild(host);
 
     const bad = [];
-    let mounted = 0, surfaces = 0;
+    let mounted = 0, surfaces = 0, converted = 0;
     for (const b of base.blocks) {
       const el = document.createElement('paper-block');
       el.setAttribute('type', b.id);
@@ -1158,6 +1158,7 @@ console.log('\nblock library');
       mounted++;
       const bound = el.shadowRoot.querySelectorAll('[data-paper]').length;
       surfaces += bound;
+      if (b.family !== 'shapes') converted += bound;
       if (bound !== b.surfaces) bad.push(`${b.id}: ${bound} surfaces, manifest says ${b.surfaces}`);
       const html = el.shadowRoot.innerHTML;
       for (const [name, re] of [['heading', /class="[^"]*\b(?:bay|demo|sec)-head\b/],
@@ -1167,15 +1168,19 @@ console.log('\nblock library');
       el.remove();
     }
     host.remove();
-    return { total: base.blocks.length, mounted, surfaces, bad };
+    return { total: base.blocks.length, mounted, surfaces, converted, bad };
   });
 
   check('every block in the manifest mounts',
     summary.mounted === summary.total, `${summary.mounted}/${summary.total}`);
   check('conversion kept every surface and dropped every bit of chrome',
     summary.bad.length === 0, summary.bad.slice(0, 6).join('; '));
-  check('the library binds the surfaces the gallery had', summary.surfaces === 68,
-    `${summary.surfaces} surfaces (keep.html renders 68)`);
+  // Parity is a claim about the CONVERSION, so it counts converted blocks only.
+  // The hand-authored shapes were never in the gallery and would inflate it.
+  check('the converted blocks bind every surface the gallery had',
+    summary.converted === 68,
+    `${summary.converted} converted surfaces (keep.html renders 68), `
+    + `${summary.surfaces} including shapes`);
 }
 
 // --- block controls ----------------------------------------------------------
@@ -1214,17 +1219,38 @@ console.log('\nblock controls');
     };
 
     const VALUE = { stock: 'pronounced', paper: '#d8c49a', edge: 'torn',
-      width: '300', rotate: '7', seed: '77', folds: '3' };
+      width: '300', rotate: '7', seed: '77', folds: '3',
+      font: 'mono', ink: '#3a2a55', 'type-size': '22' };
     await settle();
-    let prev = sig();
+
+    // Typography controls change the PRINTED TEXT, which is live DOM sitting on
+    // top of the canvas, so sampling the canvas would call all three dead. Each
+    // control is measured on the surface it actually acts on.
+    const typeSig = () => {
+      const t = el.shadowRoot.querySelector('h3, h2, .pp-headline, p');
+      if (!t) return 'notext';
+      const cs = getComputedStyle(t);
+      return `${cs.fontFamily}|${cs.fontSize}|${cs.color}`;
+    };
+
+    let prev = sig(), prevType = typeSig();
     const dead = [], skipped = [];
     for (const c of CONTROLS) {
       if (c.needsContent && !target.hasInk) { skipped.push(c.name); continue; }
+      // Typography reaches the shapes; converted blocks set their own type and
+      // report these as unavailable. Asserted on a shape further down.
+      if (c.css && target.family !== 'shapes') { skipped.push(c.name); continue; }
       el.setAttribute(c.name, VALUE[c.name] ?? '0.9');
       await settle();
-      const now = sig();
-      if (now === prev) dead.push(c.name);
-      prev = now;
+      if (c.css) {
+        const now = typeSig();
+        if (now === prevType) dead.push(c.name);
+        prevType = now;
+      } else {
+        const now = sig();
+        if (now === prev) dead.push(c.name);
+        prev = now;
+      }
     }
 
     // Honesty: an ink control on a block with no ink must be REPORTED, not
@@ -1250,9 +1276,29 @@ console.log('\nblock controls');
     await settle();
     const after = el3.shadowRoot.querySelectorAll(slot.tag)[slot.nth]?.textContent;
 
+    // Typography, on the surface it is designed for.
+    const shape = base.blocks.find((b) => b.family === 'shapes');
+    const el4 = document.createElement('paper-block');
+    el4.setAttribute('type', shape.id);
+    host.appendChild(el4);
+    for (let i = 0; i < 160 && !el4.block; i++) await new Promise((r) => setTimeout(r, 25));
+    const shapeTypeSig = () => {
+      const t = el4.shadowRoot.querySelector('.pp-headline');
+      if (!t) return 'notext';
+      const cs = getComputedStyle(t);
+      return `${cs.fontFamily.split(',')[0]}|${cs.fontSize}|${cs.color}`;
+    };
+    const typeBefore = shapeTypeSig();
+    el4.setAttribute('font', 'mono');
+    el4.setAttribute('ink', '#3a2a55');
+    el4.setAttribute('type-size', '22');
+    await settle();
+    const typeAfter = shapeTypeSig();
+
     host.remove();
     return { id: target.id, dead, skipped, reported, plainId: plain.id,
-      slotBlock: withSlot.id, slotName: slot.name, before, after };
+      slotBlock: withSlot.id, slotName: slot.name, before, after,
+      shapeId: shape.id, typeBefore, typeAfter, typeMoved: typeBefore !== typeAfter };
   });
 
   check('the control probe found a block to drive', !res.error, res.error || '');
@@ -1261,6 +1307,8 @@ console.log('\nblock controls');
   check('an ink control on an inkless block is reported, not silently accepted',
     res.reported && res.reported.includes('fold-crack'),
     `${res.plainId} reported ${JSON.stringify(res.reported)}`);
+  check('typography controls change the type on a shape', res.typeMoved,
+    `${res.shapeId}: ${res.typeBefore} -> ${res.typeAfter}`);
   check('setting a slot changes the rendered text',
     res.after === 'A DELIBERATELY DISTINCT STRING' && res.before !== res.after,
     `${res.slotBlock}.${res.slotName}: "${res.before}" -> "${res.after}"`);

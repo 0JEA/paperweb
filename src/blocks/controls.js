@@ -25,7 +25,7 @@ export const CONTROLS = [
   { name: 'stock', type: 'preset', label: 'Stock', default: null,
     help: 'Which paper the block is printed on.' },
 
-  { name: 'paper', type: 'color', label: 'Paper colour', default: null,
+  { name: 'paper', type: 'color', label: 'Colour', default: null,
     help: 'The unlit sheet colour.' },
 
   { name: 'duotone', type: 'range', label: 'Duotone', min: 0, max: 1, step: 0.01, default: null,
@@ -55,11 +55,11 @@ export const CONTROLS = [
     needsContent: true,
     help: 'Ink wicking along the fibres, so strokes fatten.' },
 
-  { name: 'show-through', type: 'range', label: 'Show-through', min: 0, max: 1, step: 0.01, default: null,
+  { name: 'show-through', type: 'range', label: 'Show thru', min: 0, max: 1, step: 0.01, default: null,
     needsContent: true,
     help: 'Type on the reverse, faintly visible through thin stock.' },
 
-  { name: 'fold-crack', type: 'range', label: 'Ink cracking', min: 0, max: 1, step: 0.01, default: null,
+  { name: 'fold-crack', type: 'range', label: 'Cracking', min: 0, max: 1, step: 0.01, default: null,
     needsContent: true,
     help: 'The dried ink film flaking off along a crease.' },
 
@@ -71,7 +71,35 @@ export const CONTROLS = [
 
   { name: 'seed', type: 'number', label: 'Sheet', min: 0, max: 9999, step: 1, default: null,
     help: 'Which physical sheet of paper this is. Change it for a different one.' },
+
+  // --- typography -----------------------------------------------------------
+  // CSS rather than paper params: these change what is PRINTED on the sheet,
+  // not what the sheet is. The element applies them as custom properties.
+  { name: 'font', type: 'enum', label: 'Face', css: true, default: null,
+    options: ['serif', 'sans', 'mono', 'slab', 'grotesk', 'humanist'],
+    help: 'The typeface the piece is set in.' },
+
+  { name: 'ink', type: 'color', label: 'Ink', css: true, default: null,
+    help: 'Text colour. Everything on the sheet is toned from it.' },
+
+  { name: 'type-size', type: 'range', label: 'Type size', css: true,
+    min: 9, max: 26, step: 0.5, unit: 'px', default: null,
+    help: 'Scales the whole piece: every size is set in em off this one.' },
 ];
+
+/**
+ * Stacks rather than single families, so a shape still sets in something
+ * appropriate when the first choice is missing. Named for what they read as,
+ * not for a font that may not be installed.
+ */
+export const FONT_STACKS = {
+  serif: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif',
+  sans: '"Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif',
+  mono: 'ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace',
+  slab: '"Roboto Slab", "Bitstream Vera Serif", Rockwell, Georgia, serif',
+  grotesk: '"Inter", "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+  humanist: 'Optima, Candara, "Gill Sans", "Trebuchet MS", sans-serif',
+};
 
 export const CONTROL_NAMES = CONTROLS.map((c) => c.name);
 const BY_NAME = new Map(CONTROLS.map((c) => [c.name, c]));

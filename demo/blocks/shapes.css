@@ -1,0 +1,115 @@
+
+/* The defaults live on :host, NOT on .pp.
+   
+   A custom property declared on .pp overrides one inherited from an ancestor,
+   and the element sets these on .pb-root, which sits between the host and .pp.
+   Declaring them here means the shape supplies a default and the Type controls
+   can still override it -- with them on .pp, all three controls were inert. */
+:host {
+  display: block;
+  --pp-type: 16px;
+  --pp-ink: #241f18;
+  --pp-face: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+.pp {
+  position: relative;
+  width: 100%;
+  color: var(--pp-ink);
+  font-family: var(--pp-face);
+  font-size: var(--pp-type);
+}
+.pp-inner { position: absolute; inset: 0; padding: 7% 8%; display: flex;
+            flex-direction: column; overflow: hidden; }
+
+.pp-label { margin: 0 0 .5em; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: .7em; letter-spacing: .14em; text-transform: uppercase;
+            color: color-mix(in srgb, var(--pp-ink) 55%, transparent); }
+.pp-headline { margin: 0 0 .45em; font-size: 1.25em; line-height: 1.14;
+               font-weight: 600; letter-spacing: -0.01em; }
+.pp-body { flex: 1; min-height: 0; overflow: hidden; }
+.pp-body p { margin: 0 0 .55em; font-size: .78em; line-height: 1.5;
+             color: color-mix(in srgb, var(--pp-ink) 82%, transparent); }
+.pp-signoff { margin: .4em 0 0; font-size: .7em; font-style: italic;
+              color: color-mix(in srgb, var(--pp-ink) 62%, transparent); }
+
+/* --- the shapes ------------------------------------------------------------ */
+.pp-sheet      { aspect-ratio: 1 / 1.294; }
+.pp-landscape  { aspect-ratio: 1.414 / 1; }
+.pp-card       { aspect-ratio: 5 / 3; }
+.pp-square     { aspect-ratio: 1 / 1; }
+.pp-slip       { aspect-ratio: 1 / 2.1; }
+.pp-receipt    { aspect-ratio: 1 / 3.2; }
+.pp-ticket     { aspect-ratio: 2.6 / 1; }
+.pp-tag        { aspect-ratio: 1 / 1.75; }
+.pp-postcard   { aspect-ratio: 1.48 / 1; }
+.pp-torn       { aspect-ratio: 1 / 0.78; }
+.pp-broadsheet { aspect-ratio: 1 / 1.42; }
+.pp-sticky     { aspect-ratio: 1 / 1; }
+.pp-envelope   { aspect-ratio: 1.9 / 1; }
+.pp-folded     { aspect-ratio: 1.4 / 1; }
+.pp-deckle     { aspect-ratio: 1 / 1.24; }
+.pp-strip      { aspect-ratio: 1 / 2.6; }
+
+/* Narrow shapes cannot carry a 1.25em headline over four words, so they step
+   the scale down rather than letting the text overrun the sheet. */
+.pp-slip .pp-headline, .pp-receipt .pp-headline,
+.pp-strip .pp-headline, .pp-tag .pp-headline { font-size: 1.02em; }
+.pp-receipt .pp-inner, .pp-strip .pp-inner { padding: 9% 9%; }
+.pp-ticket .pp-inner { padding: 6% 5% 6% 13%; }
+.pp-envelope .pp-inner { padding: 16% 9% 8%; }
+.pp-tag .pp-inner { padding: 16% 10% 8%; }
+
+/* --- fixtures that ARE the shape ------------------------------------------- */
+.pp-hole {
+  position: absolute; left: 50%; top: 5.5%; width: 9%; aspect-ratio: 1;
+  translate: -50% 0; border-radius: 50%;
+  background: #0d0b09;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6), 0 1px 0 rgba(255, 255, 255, .3);
+}
+.pp-perf {
+  position: absolute; left: 9%; top: 0; bottom: 0; width: 2px;
+  background: repeating-linear-gradient(180deg,
+    color-mix(in srgb, var(--pp-ink) 42%, transparent) 0 4px, transparent 4px 9px);
+}
+.pp-flap {
+  position: absolute; left: 0; right: 0; top: 0; height: 46%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .07), rgba(0, 0, 0, .015));
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  border-bottom: 1px solid color-mix(in srgb, var(--pp-ink) 18%, transparent);
+}
+.pp-crease {
+  position: absolute; left: 50%; top: 0; bottom: 0; width: 1px;
+  background: color-mix(in srgb, var(--pp-ink) 20%, transparent);
+}
+.pp-curl {
+  position: absolute; right: 0; bottom: 0; width: 17%; aspect-ratio: 1;
+  background: linear-gradient(315deg, rgba(0, 0, 0, .16), rgba(0, 0, 0, 0) 62%);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* A thumbnail is the same markup at a small size. Hiding the body below a
+   certain width keeps it a picture of the SHAPE rather than a grey smudge. */
+/* Thumbnail mode is keyed on the HOST attribute, not on a container query.
+   A container query on .pp made .pp its own container while it also carried an
+   aspect-ratio, which is a self-referential sizing loop: the query hides
+   content, layout changes, the container resizes, and the element and its
+   canvas settle on different widths. The picker already knows it is drawing a
+   thumbnail, so it says so. */
+:host([thumb]) .pp-label,
+:host([thumb]) .pp-body,
+:host([thumb]) .pp-signoff,
+:host([thumb]) .pp-headline { display: none; }
+:host([thumb]) .pp-inner { padding: 15% 13%; gap: 13%; }
+:host([thumb]) .pp-inner::before {
+  content: ''; display: block; height: 9%; min-height: 3px; width: 78%;
+  background: color-mix(in srgb, var(--pp-ink) 62%, transparent);
+}
+:host([thumb]) .pp-inner::after {
+  content: ''; display: block; flex: 1; min-height: 0;
+  background: repeating-linear-gradient(180deg,
+    color-mix(in srgb, var(--pp-ink) 34%, transparent) 0 1.5px,
+    transparent 1.5px 6px);
+  -webkit-mask-image: linear-gradient(180deg, #000 0 58%, transparent 92%);
+  mask-image: linear-gradient(180deg, #000 0 58%, transparent 92%);
+}

@@ -18,6 +18,7 @@
 import { scan, unscan, boundTo } from '../scan.js';
 import { CONTROL_NAMES, controlsToParams } from './controls.js';
 import { merge } from '../params.js';
+import { FONT_STACKS } from './controls.js';
 import { preset as lookupPreset } from '../presets.js';
 
 let manifestUrl = new URL('../../demo/blocks/manifest.json', import.meta.url).href;
@@ -69,10 +70,20 @@ const HOST_CSS = `
    fighting whatever transform its own design already uses. */
 .pb-root { width: var(--pb-width, 100%); margin-inline: auto;
            transform: rotate(var(--pb-rotate, 0deg)); transform-origin: 50% 40%; }
+/* A thumbnail lays out at a comfortable size and is ZOOMED down to fit its
+   swatch, rather than being squeezed into a small box.
+   
+   Forcing width and height onto a shape that carries its own aspect-ratio left
+   the element and its canvas disagreeing about how wide they were, and the
+   canvas is what you actually see. Zoom re-lays-out rather than rasterising, so
+   the render stays crisp and there is only one size to be right about. */
+:host([thumb]) .pb-root { transform: none; height: 100%; }
+:host([thumb]) .pb-root > * { width: 100% !important; height: 100% !important;
+                              aspect-ratio: auto !important; }
 `;
 
 export class PaperBlock extends HTMLElement {
-  static observedAttributes = ['type', ...CONTROL_NAMES];
+  static observedAttributes = ['type', 'thumb', ...CONTROL_NAMES];
 
   constructor() {
     super();
@@ -211,7 +222,12 @@ export class PaperBlock extends HTMLElement {
     for (const slot of this._mounted.slots) {
       const src = this.querySelector(`[slot="${slot.name}"]`);
       if (!src) continue;
-      const target = this._root.querySelectorAll(slot.tag)[slot.nth];
+      // Converted blocks are addressed by tag + ordinal, because they reuse
+      // class names freely and a selector would be ambiguous. Hand-authored
+      // shapes declare a selector, which is both stable and legible.
+      const target = slot.sel
+        ? this._root.querySelector(slot.sel)
+        : this._root.querySelectorAll(slot.tag)[slot.nth];
       if (!target) continue;
       const text = src.textContent.trim();
       if (slot.multiline && text.includes('\n\n')) {
@@ -251,8 +267,28 @@ export class PaperBlock extends HTMLElement {
     }
 
     const hasStains = !!block.paper?.params?.stains?.marks?.length;
+    // Typography is CSS, not paper. It is applied as custom properties on the
+    // root so a shape's own stylesheet can size everything in em off one value
+    // and scale coherently instead of having each element overridden.
+    // These reach the SHAPES, which set every size and colour off them. The
+    // converted news components declare their own faces and colours on their own
+    // elements, so nothing inherits and the controls would move a slider and
+    // change nothing. Forcing them with !important across a converted block
+    // flattens the typographic hierarchy that makes it worth having, so they are
+    // reported as unavailable instead -- the same answer the ink effects give.
+    const typographic = block.family === 'shapes';
+    const cssDead = [];
+    for (const [attr, prop, fmt] of [
+      ['font', '--pp-face', (v) => FONT_STACKS[v] || v],
+      ['ink', '--pp-ink', (v) => v],
+      ['type-size', '--pp-type', (v) => `${parseFloat(v)}px`],
+    ]) {
+      if (c[attr] && !typographic) { cssDead.push(attr); continue; }
+      this._root.style.setProperty(prop, c[attr] ? fmt(c[attr]) : '');
+    }
+
     const { params, unavailable } = controlsToParams(c, block.hasInk, hasStains);
-    this._unavailable = unavailable;
+    this._unavailable = [...unavailable, ...cssDead];
 
     // The block's own paper, then the controls over the top. An unset control
     // contributes nothing, so a block renders exactly as authored until it is
@@ -268,7 +304,18 @@ export class PaperBlock extends HTMLElement {
     // element carrying only data-paper-params is not a surface to it.
     const surfaces = this._root.querySelectorAll('[data-paper]');
     if (mount) {
-      for (const el of surfaces) el.setAttribute('data-paper-params', JSON.stringify(full));
+      // `thumb` means "render inside the box you were given".
+      //
+      // The default overhang GROWS the canvas past the element so the deckle
+      // and the cast shadow have somewhere to fall. In a 74 px picker swatch
+      // that overspill is wider than the swatch, so the canvas hangs outside
+      // the rail and gets clipped. A thumbnail trades the shadow for staying
+      // put, which is the right trade at that size.
+      const thumb = this.hasAttribute('thumb');
+      for (const el of surfaces) {
+        el.setAttribute('data-paper-params', JSON.stringify(full));
+        if (thumb) el.setAttribute('data-paper-overhang', 'inset');
+      }
       scan(this._shadow);
     } else {
       // Already bound: patch the live instances instead of re-binding, so the

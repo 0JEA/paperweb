@@ -299,9 +299,12 @@ Three controls need ink to act on (`bleed`, `show-through`, `fold-crack`). On a
 nothing for them to touch; the element reports them through `.unavailable` and
 the studio greys them out rather than accepting them silently.
 
-`demo/studio.html` is the studio: search and drag from a palette of all 52, edit
-with the generated control panel, and export the markup. Layouts persist locally.
-`node tools/build-blocks.mjs` regenerates the manifest from the showcase.
+`demo/studio.html` is the studio, and it works one piece at a time: pick a
+SHAPE from live thumbnails, edit its text, and turn the paper, trim, wear and
+type on the right. Sixteen shapes carry identical sample copy, so the picker
+compares silhouettes rather than comparing an obituary against a crossword; the
+52 converted components are on a second tab. `node tools/build-blocks.mjs`
+regenerates the manifest.
 
 ## Tools
 

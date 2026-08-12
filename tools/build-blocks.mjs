@@ -16,6 +16,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defaults, merge } from '../src/params.js';
 import { preset as lookupPreset, presetNames } from '../src/presets.js';
+import { SHAPES, SHAPES_CSS } from '../src/blocks/shapes.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const OUT = `${root}demo/blocks/`;
@@ -248,6 +249,14 @@ for (const [family, { css, components }] of Object.entries(DATA)) {
     });
   }
 }
+
+// --- shapes ------------------------------------------------------------------
+// Hand-authored rather than converted: they answer "what shape is the paper",
+// which the 52 news components cannot, because each carries its own copy and
+// comparing an obituary against a crossword compares content, not silhouette.
+families.shapes = { label: 'Shapes', css: 'shapes.css' };
+writeFileSync(`${OUT}shapes.css`, SHAPES_CSS);
+blocks.push(...SHAPES);
 
 blocks.sort((a, b) => a.id.localeCompare(b.id));
 mkdirSync(OUT, { recursive: true });
