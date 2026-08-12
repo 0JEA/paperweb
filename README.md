@@ -52,6 +52,12 @@ composite(content, shade, albedo, mask, shadowT, shadowW, cavity)
 | duotone | warm highlights, cool shadows, because a scalar cannot hue-shift | |
 | Kubelka-Munk ink | ink as an absorbing layer OVER the lit paper, not painted on it | Curtis et al. 1997 |
 | granulation | pigment pools in the relief valleys | Curtis et al. 1997 |
+| stains | dark ring, pale interior, and a dish with a swollen rim | Deegan et al. 1997 |
+| foxing | rusty age spots, clustered by damp rather than scattered | |
+| stamps | a rubber die that inks off the paper's HIGH points | |
+| show-through | reverse-side type coming faintly through thin stock | |
+| dot gain | ink wicking along the fibres, so strokes fatten | |
+| fold cracking | the dried ink film flaking off along a crease | |
 
 ## Content modes
 
