@@ -105,7 +105,10 @@ function signatures(p, geom) {
   const mask = sig(g, p.edge);
   const shadow = sig(mask, p.shadow.blur_px, p.shadow.enabled, p.edge);
   const composite = sig(shade, albedo, mask, shadow, cavity,
-    p.tone, p.ink, p.shadow, geom.contentId);
+    p.tone, p.ink, p.shadow, geom.contentId,
+    // The die image is identified by src, not by object identity: the params
+    // object holds an <img>, which JSON.stringify flattens to {}.
+    { ...p.stamp, image: undefined }, geom.stampId);
   return { height, cavity, normal, shade, albedo, mask, shadow, composite };
 }
 
@@ -390,6 +393,31 @@ export class Pipeline {
 
     const [px0, py0, px1, py1] = geom.pageRect;
 
+    // --- stamp ---------------------------------------------------------------
+    // Placed in sheet-relative coordinates, like stains. The half-extent is
+    // aspect-corrected so `scale` always means "this fraction of the sheet's
+    // WIDTH" and a die on a tall sheet is not squashed.
+    const st = p.stamp;
+    const stampOn = !!(st.enabled && geom.stampTex);
+    const sheetAspect = Math.max(px1 - px0, 1) / Math.max(py1 - py0, 1);
+    const stampU = {
+      u_stamp_on: { i: stampOn ? 1 : 0 },
+      u_stamp_alpha: { i: geom.stampHasAlpha ? 1 : 0 },
+      u_stamp_pos: [st.x, st.y],
+      u_stamp_half: [st.scale * 0.5, st.scale * 0.5 * sheetAspect],
+      u_stamp_rot: (st.rotation_deg * Math.PI) / 180,
+      u_stamp_colour: st.color,
+      u_stamp_threshold: st.threshold,
+      u_stamp_pressure: st.pressure,
+      u_stamp_contact: st.contact,
+      u_stamp_wear: st.wear,
+      u_stamp_opacity: st.opacity,
+      // puv is sheet-relative, so converting it to mm needs sheet fraction
+      // per mm, not canvas px per mm.
+      u_stamp_px_per_mm: pxmm / Math.max(px1 - px0, 1),
+      u_stamp_reach_um: st.reach_um,
+    };
+
     // --- mask (sheet silhouette), at full resolution ---
     // Every edge quantity is in real canvas px here, with no fxs scaling, so
     // `wobble_px` and `deckle_px` mean the number of device pixels they say.
@@ -465,6 +493,8 @@ export class Pipeline {
         .tex('u_shadow_t', t.shadowT.tex)
         .tex('u_shadow_w', t.shadowW.tex)
         .tex('u_cavity', t.cavity.tex)
+        .tex('u_stamp_tex', geom.stampTex || whiteTexture())
+        .tex('u_stamp_h', t.height.tex)
         .set({
           u_res: [canvasW, canvasH],
           u_page_rect: [px0, py0, px1, py1],
@@ -486,6 +516,7 @@ export class Pipeline {
           u_shadow_offset: p.shadow.enabled ? p.shadow.offset_px : 0,
           u_shadow_darkness: p.shadow.enabled ? p.shadow.darkness : 0,
           u_shadow_contact: p.shadow.contact,
+          ...stampU,
           u_content_alpha: { i: contentHasAlpha ? 1 : 0 },
           u_opacity: p.tone.opacity,
         });
@@ -565,7 +596,8 @@ export class Pipeline {
   readFloats(name) {
     const g = gl();
     const map = {
-      Height: this.t.height, Cavity: this.t.cavity, Shade: this.t.shade,
+      Height: this.t.height, HeightBlur: this.t.heightblur,
+      Cavity: this.t.cavity, Shade: this.t.shade,
       Albedo: this.t.albedo, Alpha: this.t.mask, Shadow: this.t.shadowW,
       Normal: this.t.normal, Final: this.t.composite,
     };

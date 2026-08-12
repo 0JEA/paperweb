@@ -171,6 +171,31 @@ export function defaults() {
       wander: 0.6,          // mm of drift; 0 = mechanically straight, and looks it
     },
 
+    stamp: {
+      // A rubber die pressed by hand. Set `image` to an <img>, a <canvas>, an
+      // ImageBitmap or a URL string; it is uploaded once and kept only as a GPU
+      // texture. Nothing about the image is written anywhere.
+      enabled: false,
+      image: null,
+      x: 0.72, y: 0.18,        // sheet-relative centre
+      scale: 0.28,             // width as a fraction of the sheet
+      rotation_deg: -6,
+      color: [0.55, 0.14, 0.11],
+      // Where to cut the die out of the image. Alpha if the image has any,
+      // otherwise darkness, so a black logo on white works with no preparation.
+      threshold: 0.5,
+      pressure: 0.9,           // how much ink the hand laid down
+      // How strongly the paper's own relief gates the transfer. This is the one
+      // that decides whether the stamp reads as PRESSED or as pasted on.
+      contact: 0.7,
+      // How deep the rubber reaches, in micrometres below the local mean. Paper
+      // relief runs 10-60 um, so 12 means the die follows gentle undulation and
+      // skips anything genuinely sunken.
+      reach_um: 12,
+      wear: 0.3,               // patchy transfer and an eroded edge
+      opacity: 0.92,
+    },
+
     stains: {
       // Deegan et al., Nature 389 (1997). A drop pins at its contact line,
       // evaporation is fastest at the perimeter, and the outward replenishing

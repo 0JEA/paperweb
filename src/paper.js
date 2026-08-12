@@ -11,7 +11,7 @@ import { capabilities, gl, sharedCanvas, ensureSize } from './gl/context.js';
 import { Pipeline } from './pipeline.js';
 import { resolve, merge, pxPerMm } from './params.js';
 import { preset as lookupPreset } from './presets.js';
-import { resolveContent } from './content.js';
+import { resolveContent, textureFromSource, loadImage } from './content.js';
 
 const DEFAULTS = {
   preset: null,
@@ -280,6 +280,12 @@ export class Paper {
     this.geom = geom;
     this._applyCanvasBox(geom);
 
+    // Same rule as content: any async image work happens before the GL work.
+    if (this.params.stamp && this.params.stamp.enabled && this.params.stamp.image) {
+      await this._resolveStamp(this.params.stamp.image);
+      if (seq !== this._renderSeq || this.destroyed) return;   // superseded
+    }
+
     // Content is resolved before the GL work so an async snapshot cannot
     // interleave with another instance's draw calls on the shared context.
     if (!this.contentTex || this._contentDirty) {
@@ -307,7 +313,11 @@ export class Paper {
     ensureSize(geom.canvasW, geom.canvasH);
     this.pipe.render(
       this.params,
-      { canvasW: geom.canvasW, canvasH: geom.canvasH, pageRect: geom.pageRect, contentId: this.contentMode },
+      { canvasW: geom.canvasW, canvasH: geom.canvasH, pageRect: geom.pageRect,
+        contentId: this.contentMode,
+        stampTex: this._stampTex, stampHasAlpha: this._stampHasAlpha,
+        // Identity, not content: the signature must change when the die does.
+        stampId: this._stampKey ? String(this._stampKey.src || this._stampKey) : '' },
       this.contentTex,
       this.contentHasAlpha,
     );
@@ -390,6 +400,36 @@ export class Paper {
       throw new Error('paperweb: targets have been released; construct with { retain: true }');
     }
     return this.pipe.readFloats(name);
+  }
+
+  /**
+   * Upload the stamp die, once per distinct image.
+   *
+   * The image is held only as a GPU texture. Nothing is written to disk, no
+   * copy is kept on the instance, and the texture dies with the surface: a
+   * logo dropped on the studio may be someone's client work and must not
+   * outlive the page.
+   */
+  async _resolveStamp(image) {
+    if (this._stampKey === image && this._stampTex) return;
+    const src = typeof image === 'string' ? await loadImage(image) : image;
+    if (this.destroyed) return;
+    const g = gl();
+    // Does the die shape live in alpha or in darkness? A logo PNG is cut out
+    // with alpha; a JPEG or an SVG rasterised onto white is not, and reading a
+    // fully opaque image's alpha would make the die a solid rectangle.
+    const probe = document.createElement('canvas');
+    probe.width = probe.height = 48;
+    const pc = probe.getContext('2d', { willReadFrequently: true });
+    pc.drawImage(src, 0, 0, 48, 48);
+    const px = pc.getImageData(0, 0, 48, 48).data;
+    let minA = 255;
+    for (let i = 3; i < px.length; i += 4) if (px[i] < minA) minA = px[i];
+
+    if (this._stampTex) g.deleteTexture(this._stampTex);
+    this._stampTex = textureFromSource(src);
+    this._stampHasAlpha = minA < 250;
+    this._stampKey = image;
   }
 
   // --- children visibility (rasterize mode) ---------------------------------
@@ -475,6 +515,14 @@ export class Paper {
       if (g && this.contentMode !== 'behind') g.deleteTexture(this.contentTex);
     }
     this.contentTex = null;
+    // The die texture is the only copy of a possibly-confidential logo. It goes
+    // with the surface.
+    if (this._stampTex) {
+      const gs = gl();
+      if (gs) gs.deleteTexture(this._stampTex);
+      this._stampTex = null;
+      this._stampKey = null;
+    }
     if (this.canvas && this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
     if (this._prevStyle) {
       this.el.style.position = this._prevStyle.position;

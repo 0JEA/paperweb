@@ -70,8 +70,12 @@ test('every shipped preset resolves to a complete tree', () => {
 test('presets contain no NaN or null leaves', () => {
   for (const name of presetNames) {
     const p = resolve(preset(name));
+    // stamp.image is the one legitimate null: "no die loaded". Everything else
+    // that is null is a value someone forgot to fill in, which is the bug this
+    // catches, so the exemption is by exact path rather than by type.
+    const NULLABLE = new Set(['stamp.image']);
     walk(p, (path, v) => {
-      assert.ok(v !== null, `${name}: ${path} is null`);
+      assert.ok(v !== null || NULLABLE.has(path), `${name}: ${path} is null`);
       if (typeof v === 'number') assert.ok(Number.isFinite(v), `${name}: ${path} is ${v}`);
     });
   }

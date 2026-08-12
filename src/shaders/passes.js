@@ -888,6 +888,38 @@ uniform float u_shadow_offset;
 uniform float u_shadow_darkness;
 uniform float u_shadow_contact;
 
+// --- stamp ------------------------------------------------------------------
+// A rubber die pressed by hand. The detail that sells it: a stamp inks where the
+// paper is HIGH. The raised parts of the sheet reach the rubber first, so the
+// impression is heavy on the crests and skips in the hollows. That is the exact
+// inverse of granulation, and both read off the same cavity buffer.
+uniform sampler2D u_stamp_tex;
+// Contact reads the height field directly, in micrometres.
+//
+// Not the cavity buffer: that is a Laplacian crease detector sitting around
+// 0.004, and it answers "is this a crease" where a stamp asks "how high is
+// this". Not height minus heightblur either: heightblur is blurred at the
+// cavity radius, which is far tighter than cockle's millimetre-scale waves, so
+// the difference is ~0 across exactly the undulation the die rides over.
+//
+// A rubber die is flat and stiff. Pressed onto a wavy sheet it touches the
+// absolute high points, and the height field is already signed about the sheet
+// plane, so the depth below that plane is the whole signal.
+uniform sampler2D u_stamp_h;
+uniform int   u_stamp_on;
+uniform int   u_stamp_alpha;     // 1 = use the image's alpha as the die shape
+uniform vec2  u_stamp_pos;       // sheet-relative centre
+uniform vec2  u_stamp_half;      // half extent, sheet-relative, aspect-corrected
+uniform float u_stamp_rot;       // radians
+uniform vec3  u_stamp_colour;
+uniform float u_stamp_threshold;
+uniform float u_stamp_pressure;
+uniform float u_stamp_contact;
+uniform float u_stamp_wear;
+uniform float u_stamp_opacity;
+uniform float u_stamp_px_per_mm;
+uniform float u_stamp_reach_um;
+
 uniform int   u_content_alpha;   // 1 = content texture carries meaningful alpha
 uniform float u_opacity;
 
@@ -970,6 +1002,47 @@ void main() {
         sheet = base * eff_shade * eff_alb * eff_tint;
     }
 
+    // --- stamp ---------------------------------------------------------------
+    if (u_stamp_on == 1) {
+        // Into the die's own frame: sheet-relative, recentred, unrotated, scaled.
+        vec2 d = puv - u_stamp_pos;
+        float cs = cos(-u_stamp_rot), sn = sin(-u_stamp_rot);
+        vec2 r = vec2(d.x * cs - d.y * sn, d.x * sn + d.y * cs) / u_stamp_half;
+        if (all(lessThan(abs(r), vec2(1.0)))) {
+            vec2 tuv = r * 0.5 + 0.5;
+            vec4 tx = texture(u_stamp_tex, vec2(tuv.x, 1.0 - tuv.y));
+            // The die shape. A PNG logo carries it in alpha; a flat JPEG or an
+            // SVG rasterised on white carries it as darkness.
+            float die = u_stamp_alpha == 1
+                ? tx.a
+                : 1.0 - dot(tx.rgb, vec3(0.299, 0.587, 0.114));
+            // Soften by one texel so the die edge is not a staircase, then let
+            // wear erode it: worn rubber loses its edge before its middle.
+            float soft = 0.5 * fwidth(die) + 0.02;
+            float lo = u_stamp_threshold + u_stamp_wear * 0.16;
+            float ink = smoothstep(lo - soft, lo + soft, die);
+
+            // Patchy transfer. The rubber flexes, so pressure is uneven across
+            // the die at a scale much coarser than the artwork.
+            vec2 mmv = puv / max(u_stamp_px_per_mm, 1e-4);
+            // patch is a reserved word in GLSL ES 3.00 (tessellation), and
+            // the driver reports it as a syntax error on the following line.
+            float flex = fbm(mmv * 0.55 + 31.7, 3, 0.5, 2.0);
+            ink *= 1.0 - u_stamp_wear * smoothstep(0.34, 0.72, flex);
+
+            // Contact. The rubber meets the crests first, so anything sitting
+            // below the local mean gets progressively less ink, and anything a
+            // full reach below gets none.
+            float below = max(-texture(u_stamp_h, uv).r, 0.0);   // um below the plane
+            ink *= 1.0 - u_stamp_contact * smoothstep(0.0, u_stamp_reach_um, below);
+
+            ink = clamp(ink * u_stamp_pressure * u_stamp_opacity, 0.0, 1.0);
+            // Over the LIT sheet, and still carrying the sheet's own shading, so
+            // the impression sits on the paper rather than floating above it.
+            sheet = mix(sheet, u_stamp_colour * shade, ink);
+        }
+    }
+
     // Alpha-out: the sheet is opaque, the void is transparent except where the
     // cast shadow falls. Colour is premultiplied so the canvas composites
     // correctly over the page behind it.
@@ -978,7 +1051,7 @@ void main() {
     vec3 col = clamp(sheet, 0.0, 2.0) * mask;   // shadow contributes black, so no term
     frag_out = vec4(col * u_opacity, a);
 }
-`);
+`, { common: true });
 
 // --- present / inspector ----------------------------------------------------
 // Debug readback: map any intermediate buffer into a viewable RGBA image. Ported

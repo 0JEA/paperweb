@@ -881,6 +881,119 @@ console.log('\nstains');
     `centre=${on.h.centre.toFixed(3)}um rim=${on.h.rim.toFixed(3)}um`);
 }
 
+// --- stamps -------------------------------------------------------------------
+// The claim worth testing is not "the die appears". It is that a stamp inks
+// where the paper is HIGH: the crests reach the rubber first, so the impression
+// skips in the hollows. That is what separates a pressed stamp from a pasted
+// one, and it is a correlation, so it has to be measured.
+//
+// Measured as a DIFFERENCE between two runs that vary only in `contact`. The
+// impression carries the sheet's own shading, and shading correlates with the
+// height field whether contact does anything or not, so correlating a single
+// run against relief would score ~0.48 with the feature switched off. The
+// difference cancels the shading and leaves the ink.
+console.log('\nstamps');
+{
+  const res = await page.evaluate(async () => {
+    const run = async (contact) => {
+      const die = document.createElement('canvas');
+      die.width = die.height = 128;
+      const dc = die.getContext('2d');
+      dc.fillStyle = '#fff'; dc.fillRect(0, 0, 128, 128);
+      dc.fillStyle = '#000'; dc.beginPath();
+      dc.arc(64, 64, 52, 0, Math.PI * 2); dc.fill();
+
+      const el = document.createElement('div');
+      el.style.cssText = 'width:360px;height:360px;position:relative';
+      document.body.appendChild(el);
+      const pp = new window.PW.Paper(el, {
+        retain: true, lazy: false, seed: 11,
+        params: {
+          // Strong, purely relief-driven variation and nothing else, so nothing
+          // in the albedo can produce the correlation.
+          cockle: { enabled: true, amplitude_um: 34 },
+          formation: { enabled: false }, fade: { enabled: false },
+          mould: { enabled: false }, scratches: { enabled: false },
+          imperfect: { enabled: false }, folds: { enabled: false },
+          crumple: { enabled: false }, stains: { enabled: false },
+          foxing: { enabled: false },
+          stamp: {
+            enabled: true, image: die, x: 0.5, y: 0.5, scale: 0.5,
+            rotation_deg: 0, threshold: 0.5, pressure: 1, wear: 0,
+            opacity: 1, reach_um: 12, contact,
+          },
+        },
+      });
+      await pp.render();
+      const F = pp.floats('Final');
+      const H = pp.floats('Height');
+      const fs = F.data.length / (F.w * F.h);
+      const hs = H.data.length / (H.w * H.h);
+      const gm = pp.geometry();
+      const [x0, y0, x1, y1] = gm.sheet;
+      const k = F.w / gm.canvas.w;
+
+      // Well inside the die, so its soft edge cannot dominate the statistic.
+      const cx = ((x0 + x1) / 2) * k, cy = ((y0 + y1) / 2) * k;
+      const rad = 0.5 * 0.5 * (x1 - x0) * k * 0.72;
+      const lum = [], depth = [];
+      for (let y = Math.floor(cy - rad); y < cy + rad; y++) {
+        for (let x = Math.floor(cx - rad); x < cx + rad; x++) {
+          if ((x - cx) ** 2 + (y - cy) ** 2 > rad * rad) continue;
+          if (x < 0 || y < 0 || x >= F.w || y >= F.h) continue;
+          lum.push(F.data[(y * F.w + x) * fs]);
+          const hx = Math.min(H.w - 1, Math.round((x / F.w) * H.w));
+          const hy = Math.min(H.h - 1, Math.round((y / F.h) * H.h));
+          depth.push(Math.max(-H.data[(hy * H.w + hx) * hs], 0));  // um below plane
+        }
+      }
+      pp.destroy(); el.remove();
+      return { lum, depth };
+    };
+    const a = await run(0.9);
+    const b = await run(0.0);
+    const c = await run(0.0);        // identical to b: the null difference
+    return { a, b, c };
+  });
+
+  const corr = (X, Y) => {
+    const m = (v) => v.reduce((s, x) => s + x, 0) / v.length;
+    const mx = m(X), my = m(Y);
+    let n = 0, dx = 0, dy = 0;
+    for (let i = 0; i < X.length; i++) {
+      n += (X[i] - mx) * (Y[i] - my); dx += (X[i] - mx) ** 2; dy += (Y[i] - my) ** 2;
+    }
+    return n / Math.sqrt(Math.max(dx * dy, 1e-12));
+  };
+  const diff = (P, Q) => P.lum.map((v, i) => v - Q.lum[i]);
+  const { a, b, c } = res;
+
+  check('the stamp probe found die interior to measure', a.lum.length > 500,
+    `n=${a.lum.length}`);
+  // CONTROL: two identical runs must differ by nothing. This proves the
+  // difference isolates the parameter and is not picking up render-to-render
+  // noise, which is what would make the assertion below meaningless.
+  const nullMax = Math.max(...diff(b, c).map(Math.abs));
+  check('control: two runs with contact 0 are bit-identical', nullMax < 1e-6,
+    `max |diff| = ${nullMax}`);
+
+  const d = diff(a, b);
+  const r = corr(d, a.depth);
+  check('the ink removed by contact tracks how deep the paper sits', r > 0.5,
+    `r=${r.toFixed(3)}`);
+  // The area that lightens must be the area that sits below the sheet plane,
+  // not some fraction chosen to make the test pass. Under this seed the die
+  // happens to land on mostly-raised paper, so only ~12% of it is in a hollow;
+  // tying the assertion to the geometry keeps it honest if the seed changes.
+  const lifted = d.filter((v) => v > 1e-4).length / d.length;
+  const inHollow = a.depth.filter((v) => v > 0).length / a.depth.length;
+  check('exactly the part of the die over a hollow loses ink',
+    Math.abs(lifted - inHollow) < 0.03 && lifted > 0.05,
+    `lightened ${(lifted * 100).toFixed(1)}%, below the plane ${(inHollow * 100).toFixed(1)}%`);
+  check('contact only ever removes ink, never adds it', d.every((v) => v > -1e-4),
+    `min delta ${Math.min(...d).toExponential(1)}`);
+}
+
 // --- console hygiene ---------------------------------------------------------
 console.log('\nconsole');
 // The deliberate 404 from the rasterize-failure test is expected; anything else
