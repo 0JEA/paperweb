@@ -115,7 +115,7 @@ its correct weight. If a showpiece was compensating with a reduced
    the documentation; a caption that lies is worse than no caption.
 4. Verify and LOOK:
    ```
-   cd /home/john/paperweb && node tools/checkpage.mjs demo/news/<page>.html
+   node tools/checkpage.mjs demo/news/<page>.html
    ```
    Read the screenshot it writes with the Read tool. Actually look at it. Iterate
    until each component reads the way its caption claims.
