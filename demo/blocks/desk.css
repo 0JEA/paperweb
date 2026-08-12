@@ -1,0 +1,350 @@
+
+/* ---------------------------------------------------------------------------
+   THE NEWSROOM DESK
+   Twenty editorial components, each built as a physical object that used to sit
+   on a working editor's desk. Every cream surface is a real paperweb render;
+   every pin, clip, spike, band and stain is drawn in CSS or inline SVG.
+   --------------------------------------------------------------------------- */
+
+:host{
+  --ink:#14110D;
+  --ink-2:#3A342B;
+  --ink-soft:#564E43;
+  --faint:#8A7F6D;
+  --red:#B03A2E;
+  --ochre:#C8A06A;
+  --blue:#2E4756;
+  --sage:#7D8C7C;
+  --desk:#171310;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;
+}
+
+/* paperweb's cast shadow overhangs the element box; clip (not hidden) keeps the
+   page from scrolling sideways without creating a scroll container. */
+:host{overflow-x:clip;background:var(--desk);}
+
+:host{
+  margin:0;
+  color:#E9DEC8;
+  font-family:var(--serif);
+  -webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(140% 70% at 50% -12%, rgba(150,104,58,.20), transparent 62%),
+    repeating-linear-gradient(92deg,
+      rgba(255,235,200,.014) 0 2px, transparent 2px 6px,
+      rgba(0,0,0,.05) 6px 9px, transparent 9px 15px),
+    repeating-linear-gradient(92deg,
+      rgba(0,0,0,.06) 0 40px, transparent 40px 90px, rgba(255,220,170,.012) 90px 120px),
+    linear-gradient(#1b1611, #120f0c 60%, #0d0b09);
+}
+
+.wrap{max-width:1060px;margin:0 auto;padding:0 30px 130px;}
+
+/* --- desk-level chrome ---------------------------------------------------- */
+
+.masthead{padding:86px 0 30px;text-align:center;}
+.masthead h1{
+  margin:0;font-size:40px;line-height:1.05;font-weight:600;letter-spacing:.02em;
+  color:#F6ECD7;
+}
+.masthead .kicker{
+  margin:0 0 16px;font:600 11.5px/1 var(--sans);letter-spacing:.36em;
+  text-transform:uppercase;color:var(--ochre);
+}
+.masthead p{
+  max-width:640px;margin:18px auto 0;font:400 15px/1.7 var(--serif);color:#A99C88;
+}
+.rule{height:1px;background:linear-gradient(90deg,transparent,rgba(200,160,106,.5),transparent);margin:44px 0 0;}
+
+.bay{padding:64px 0 8px;}
+.bay+.bay{border-top:1px solid rgba(200,160,106,.14);}
+.bay-head{display:flex;gap:16px;align-items:flex-start;}
+.idx{
+  flex:none;font:600 11.5px/1 var(--sans);letter-spacing:.16em;color:var(--ochre);
+  border:1px solid rgba(200,160,106,.42);padding:7px 8px 6px;border-radius:2px;
+}
+.bay-head h2{margin:0;font:600 22px/1.25 var(--serif);color:#F4EAD5;letter-spacing:.005em;}
+.role{margin:3px 0 0;font:400 11.5px/1.4 var(--sans);letter-spacing:.14em;
+  text-transform:uppercase;color:#9A8F7C;}
+
+.stage{position:relative;display:flex;justify-content:center;align-items:flex-start;
+  padding:40px 0 8px;}
+.stage--tall{padding-bottom:24px;}
+
+.cap{max-width:780px;margin:26px auto 0;font:400 13.5px/1.7 var(--sans);color:#9C917F;}
+.cap b{color:#DCCDAF;font-weight:600;}
+.cap code{font:12.5px/1.5 var(--mono);color:var(--ochre);
+  background:rgba(200,160,106,.09);padding:2px 5px;border-radius:2px;
+  box-decoration-break:clone;-webkit-box-decoration-break:clone;}
+
+footer{padding:20px 0 0;text-align:center;font:400 12.5px/1.8 var(--sans);color:#7E7566;}
+
+/* --- shared paper typography ---------------------------------------------- */
+
+.sheet{color:var(--ink);font-family:var(--serif);box-sizing:border-box;}
+.sheet h2,.sheet h3,.sheet h4{margin:0;font-weight:600;letter-spacing:.005em;}
+.sheet p{margin:0;}
+.sheet a{color:var(--ink);}
+.stamp{font:600 11px/1.3 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);}
+.stamp--red{color:var(--red);}
+.stamp--blue{color:var(--blue);}
+.src{font:400 11.5px/1.5 var(--sans);color:var(--faint);}
+.hair{height:1px;background:rgba(20,17,13,.35);}
+.hair--thick{height:2px;background:rgba(20,17,13,.7);}
+
+/* tilt is applied only AFTER every surface has rendered: paperweb measures the
+   element with getBoundingClientRect, which returns the ROTATED bounding box,
+   so a sheet rotated before its render gets an oversized, offset sheet. */
+.tilt{transform:rotate(0deg);}
+body.settled .tilt{transform:rotate(var(--r,0deg));}
+
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--red);outline-offset:3px;border-radius:1px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important;animation:none !important;}
+}
+
+/* --- props: pins, clips, tape, stains ------------------------------------- */
+
+.pin{position:absolute;z-index:6;filter:drop-shadow(0 4px 4px rgba(0,0,0,.55));}
+.staple{position:absolute;z-index:6;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45));}
+
+.tape{
+  position:absolute;z-index:6;height:30px;
+  background:
+    repeating-linear-gradient(96deg, rgba(255,255,255,.05) 0 3px, transparent 3px 9px),
+    linear-gradient(180deg, rgba(255,251,238,.34), rgba(236,227,204,.20));
+  box-shadow:0 2px 4px rgba(0,0,0,.30), inset 0 0 0 1px rgba(255,255,255,.13);
+  clip-path:polygon(0 8%,5% 0,13% 9%,24% 1%,36% 8%,48% 0,60% 9%,72% 1%,84% 8%,93% 0,100% 7%,
+                    100% 93%,92% 100%,81% 92%,69% 100%,56% 91%,45% 100%,33% 92%,21% 100%,9% 92%,0 100%);
+}
+
+
+.grease{position:absolute;inset:0;mix-blend-mode:multiply;pointer-events:none;z-index:4;}
+
+/* cork board */
+.cork{
+  position:relative;box-sizing:border-box;width:100%;
+  background-color:#96683b;
+  background-image:
+    radial-gradient(circle at 30% 40%, rgba(58,30,8,.30) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 65%, rgba(255,228,190,.13) 0 2px, transparent 3px),
+    radial-gradient(circle at 50% 20%, rgba(48,26,8,.22) 0 1.4px, transparent 2.4px),
+    radial-gradient(circle at 15% 80%, rgba(255,225,180,.08) 0 1.6px, transparent 2.6px);
+  background-size:19px 17px, 24px 29px, 13px 11px, 31px 23px;
+  box-shadow:inset 0 0 90px rgba(42,20,4,.62), inset 0 0 12px rgba(30,14,2,.7);
+  border-radius:2px;
+}
+.corkframe{
+  padding:15px;border-radius:5px;width:100%;box-sizing:border-box;
+  background:linear-gradient(160deg,#63452b,#3a2717 60%,#503722);
+  box-shadow:0 18px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,214,160,.18);
+}
+
+/* green leather blotter */
+.blotter{
+  position:relative;box-sizing:border-box;width:100%;padding:34px 36px 40px;
+  background:
+    radial-gradient(120% 90% at 30% 10%, rgba(255,255,255,.045), transparent 60%),
+    linear-gradient(#334136,#242e28 70%,#1d251f);
+  box-shadow:inset 0 0 70px rgba(0,0,0,.55), 0 20px 46px rgba(0,0,0,.55);
+  border-radius:2px;
+}
+.strap{position:absolute;width:78px;height:78px;background:linear-gradient(135deg,#7a5734,#3d2814);
+  box-shadow:inset 0 0 14px rgba(0,0,0,.45);}
+.strap.tl{top:0;left:0;clip-path:polygon(0 0,100% 0,0 100%);}
+.strap.tr{top:0;right:0;clip-path:polygon(100% 0,100% 100%,0 0);}
+.strap.bl{bottom:0;left:0;clip-path:polygon(0 0,0 100%,100% 100%);}
+.strap.br{bottom:0;right:0;clip-path:polygon(100% 0,100% 100%,0 100%);}
+
+/* ruled / squared overlays that live ON the paper */
+.rules{position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;
+  background:repeating-linear-gradient(to bottom, transparent 0 21px, rgba(46,71,86,.26) 21px 22px);}
+.rules--red-top{background:
+    linear-gradient(to bottom, transparent 0 40px, rgba(176,58,46,.45) 40px 41.5px, transparent 41.5px),
+    repeating-linear-gradient(to bottom, transparent 0 21px, rgba(46,71,86,.24) 21px 22px);}
+.margin-rule{position:absolute;top:0;bottom:0;width:1.5px;background:rgba(176,58,46,.38);
+  mix-blend-mode:multiply;pointer-events:none;}
+
+/* continuous-form sprocket strips */
+.sprockets{
+  position:absolute;top:0;bottom:0;width:26px;pointer-events:none;
+  background:radial-gradient(circle 4.6px at 50% 50%,
+    #100d0a 0 4.6px, rgba(0,0,0,.22) 4.6px 6.4px, transparent 6.6px) 0 8px/26px 24px repeat-y;
+}
+.sprockets.l{left:0;border-right:1px dashed rgba(20,17,13,.28);}
+.sprockets.r{right:0;border-left:1px dashed rgba(20,17,13,.28);}
+.perf{position:absolute;left:26px;right:26px;height:1px;pointer-events:none;
+  background:repeating-linear-gradient(90deg, rgba(20,17,13,.34) 0 4px, transparent 4px 9px);}
+
+/* stack-of-sheets edges, drawn rather than rendered (cheaper than more surfaces) */
+.edges{position:absolute;pointer-events:none;}
+.edges i{position:absolute;display:block;left:0;right:0;height:100%;
+  background:linear-gradient(#efe4cd,#d9caac);box-shadow:0 1px 0 rgba(0,0,0,.25);border-radius:1px;}
+
+/* ticker / roll cylinder shading */
+.tube-shade{position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(180deg,
+    rgba(30,20,8,.45) 0%, rgba(60,42,18,.14) 14%, rgba(255,248,230,.28) 34%,
+    rgba(90,66,30,.10) 62%, rgba(36,24,10,.42) 100%);
+  mix-blend-mode:multiply;}
+.tube-lit{position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(180deg, transparent 22%, rgba(255,250,235,.30) 33%, transparent 46%);}
+
+.band{
+  position:absolute;top:-4px;bottom:-4px;width:19px;border-radius:2px;z-index:6;
+  background:linear-gradient(90deg,#311c11,#4e2e1d 22%,#5b3826 46%,#472a19 70%,#2a1710);
+  box-shadow:0 0 0 .5px rgba(0,0,0,.4), 0 0 8px 4px rgba(0,0,0,.22), 4px 0 8px rgba(0,0,0,.35),
+             inset 0 8px 8px -8px rgba(255,228,205,.28), inset 0 -8px 8px -8px rgba(0,0,0,.45);
+  opacity:.96;
+}
+
+/* small print helpers */
+.mono{font-family:var(--mono);}
+.uc{text-transform:uppercase;letter-spacing:.14em;}
+
+/* --- component-specific --------------------------------------------------- */
+
+/* 01 leads board */
+.slip{position:absolute;padding:17px 17px 15px;}
+.slip h3{font-size:15.5px;line-height:1.25;margin-bottom:6px;}
+.slip p.body{font-size:12.5px;line-height:1.5;color:var(--ink-2);}
+.slip .src{margin-top:8px;}
+
+/* 02 spike */
+.spikebed{position:relative;width:700px;max-width:100%;height:340px;}
+.spiked{position:absolute;padding:16px 18px 22px;}
+.pierce{position:absolute;width:19px;height:10px;border-radius:50%;z-index:5;
+  background:radial-gradient(ellipse at 50% 45%, #17120d 0 55%, rgba(30,20,10,.45) 62%, transparent 78%);}
+
+/* 03 index cards */
+.icard{position:relative;padding:44px 20px 18px;}
+.icard ol{margin:0;padding-left:20px;font-size:13px;line-height:22px;}
+.icard li{margin:0;}
+
+/* 05 rolodex */
+.rolo{position:relative;padding:20px 22px 32px;border-radius:10px 10px 3px 3px;}
+
+/* 06 memo pad */
+.padbase{position:absolute;inset:0;}
+.padglue{position:absolute;left:0;right:0;top:0;height:20px;pointer-events:none;z-index:5;
+  background:linear-gradient(#c69a52,#9a7233);box-shadow:0 2px 4px rgba(0,0,0,.28);}
+
+/* 07 front page */
+.front{padding:30px 32px 34px;}
+.front .cols{display:flex;gap:20px;}
+.front .cols > div{flex:1 1 0;}
+
+/* 08 sticky notes */
+.sticky{position:absolute;padding:16px 16px 14px;}
+.sticky .shine{position:absolute;left:0;right:0;top:0;height:26px;pointer-events:none;
+  background:linear-gradient(rgba(255,255,255,.22),transparent);}
+
+/* 11 wire */
+.wire{position:relative;padding:26px 46px 30px;font-family:var(--mono);}
+.wire p{font-size:12.5px;line-height:1.75;letter-spacing:.01em;}
+
+/* 12 proof */
+.proof{position:relative;padding:28px 34px 30px;}
+.proof p{font-size:14px;line-height:1.75;text-align:justify;}
+
+/* 13 photo */
+.photo{padding:12px 12px 12px;}
+.photo figcaption{margin-top:9px;font:400 11.5px/1.45 var(--sans);color:var(--ink-soft);}
+.mount{position:absolute;width:22px;height:22px;z-index:5;
+  background:linear-gradient(135deg,rgba(58,44,26,.55),rgba(24,17,10,.75));}
+
+/* 14 section index */
+.index-list{margin:0;padding:0;list-style:none;}
+.index-list li{display:flex;align-items:baseline;gap:10px;padding:7px 0;
+  border-bottom:1px dotted rgba(20,17,13,.28);}
+.index-list a{text-decoration:none;font-size:15px;}
+.index-list a:hover{text-decoration:underline;}
+.index-list .pg{margin-left:auto;font:400 12px/1 var(--mono);color:var(--faint);}
+
+/* 17 docket */
+.docket{position:relative;padding:20px 22px 22px;}
+.docket nav ul{margin:0;padding:0;list-style:none;}
+.docket nav li{display:flex;align-items:center;gap:9px;padding:5px 0;}
+.docket nav a{text-decoration:none;font-size:14px;}
+.docket nav a:hover{text-decoration:underline;}
+.box{width:11px;height:11px;border:1px solid rgba(20,17,13,.55);flex:none;}
+
+/* 18 ticker tape */
+.tape-strip{padding:16px 26px;}
+.tape-strip .row{display:flex;gap:26px;justify-content:space-between;font-family:var(--mono);font-size:12.5px;}
+
+/* 19 message slip */
+.wywo{position:relative;padding:18px 20px 20px;}
+.wywo label{display:block;font:600 11px/1.6 var(--sans);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-soft);}
+.wywo input[type=text],.wywo textarea{
+  width:100%;box-sizing:border-box;background:transparent;border:0;
+  border-bottom:1px solid rgba(20,17,13,.4);color:var(--ink);
+  font:400 14px/1.7 var(--serif);padding:2px 0;resize:none;
+}
+.wywo .checks{display:flex;flex-wrap:wrap;gap:6px 18px;margin:12px 0 4px;}
+.wywo .checks span{display:flex;align-items:center;gap:7px;font:400 12.5px/1 var(--sans);color:var(--ink-2);}
+.wywo input[type=checkbox]{accent-color:#B03A2E;width:13px;height:13px;margin:0;}
+.wywo button{
+  margin-top:14px;font:600 11px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink);background:transparent;border:1px solid rgba(20,17,13,.5);
+  padding:9px 14px;cursor:pointer;
+}
+.wywo button:hover{background:rgba(20,17,13,.07);}
+
+/* 20 classifieds */
+.classifieds{padding:24px 28px 26px;}
+.classifieds .cols{display:flex;gap:22px;}
+.classifieds .cols > div{flex:1 1 0;}
+.classifieds .cols > div + div{border-left:1px solid rgba(20,17,13,.22);padding-left:22px;}
+.classifieds p{font-size:12px;line-height:1.55;margin-bottom:10px;color:var(--ink-2);}
+.classifieds b{display:block;font:600 11px/1.5 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink);}
+
+@media (max-width:820px){
+  .masthead h1{font-size:30px;}
+  .bay h2{font-size:19px;}
+}
+
+
+.rv{margin:22px 0 4px;padding:13px 15px;border:1px solid #34323a;border-radius:8px;
+    background:rgba(255,255,255,.025);display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;
+    font:13px/1.5 ui-sans-serif,system-ui,sans-serif}
+.rv-n{font:600 11px/1.5 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#6f6a63;
+      padding-top:7px;min-width:2.4em}
+.rv-btns{display:flex;gap:7px}
+.rv-btn{font:600 12px/1 ui-sans-serif,system-ui,sans-serif;padding:8px 15px;border-radius:6px;
+        cursor:pointer;color:#a8a29a;background:transparent;border:1px solid #45424d}
+.rv-btn:hover{border-color:#5e5a69;color:#d5d0c8}
+.rv-btn:focus-visible{outline:2px solid #c8a06a;outline-offset:2px}
+.rv-btn[aria-pressed="true"][data-v="yes"]{color:#9fd6a8;border-color:rgba(120,190,130,.6);
+        background:rgba(120,190,130,.14)}
+.rv-btn[aria-pressed="true"][data-v="no"]{color:#e0876a;border-color:rgba(210,120,100,.55);
+        background:rgba(210,120,100,.12)}
+.rv-c{flex:1 1 260px;min-width:0}
+.rv-c textarea{width:100%;min-height:38px;resize:vertical;padding:8px 10px;border-radius:6px;
+        border:1px solid #3d3a45;background:#141319;color:#e8e4dc;
+        font:13px/1.5 ui-sans-serif,system-ui,sans-serif}
+.rv-c textarea:focus{outline:2px solid #c8a06a;outline-offset:1px;border-color:#5e5a69}
+.rv-c textarea::placeholder{color:#5d5850}
+section:has(.rv-btn[aria-pressed="true"][data-v="no"]) .rv{border-color:rgba(210,120,100,.32)}
+section:has(.rv-btn[aria-pressed="true"][data-v="yes"]) .rv{border-color:rgba(120,190,130,.28)}
+
+#rvbar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;gap:12px;align-items:center;
+       flex-wrap:wrap;padding:12px clamp(12px,4vw,26px);background:rgba(11,10,13,.96);
+       border-top:1px solid #34323a;backdrop-filter:blur(8px);
+       font:12px/1.4 ui-monospace,Menlo,monospace;color:#a8a29a}
+#rvcount{font-weight:600;color:#e8e4dc;min-width:16ch}
+#rvbar button{font:600 12px/1 ui-sans-serif,system-ui,sans-serif;padding:9px 15px;border-radius:6px;
+       cursor:pointer;color:#cfcac2;background:rgba(255,255,255,.05);border:1px solid #34323a}
+#rvbar button:hover{background:rgba(255,255,255,.09)}
+#rvbar button:focus-visible{outline:2px solid #c8a06a;outline-offset:2px}
+#rvbar button.primary{color:#e5c79a;background:rgba(200,160,106,.16);border-color:rgba(200,160,106,.42)}
+#rvnote{margin-left:auto;color:#7d776f}
+#rvnote.bad{color:#e0876a}
+:host{padding-bottom:96px}
+@media (max-width:640px){#rvnote{margin-left:0;width:100%}}

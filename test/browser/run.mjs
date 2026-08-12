@@ -1132,6 +1132,140 @@ console.log('\nswitching preset at runtime');
     'page.seed must survive, or every card reshuffles on a theme change');
 }
 
+// --- blocks -----------------------------------------------------------------
+// The conversion from gallery to library is a mechanical transform over 52
+// components, so the thing worth asserting is that it lost nothing: every block
+// still mounts, still binds the same number of surfaces, and no longer carries
+// the gallery chrome.
+console.log('\nblock library');
+{
+  const summary = await page.evaluate(async () => {
+    const { manifest } = await import('/src/blocks/paper-block.js');
+    const base = await manifest();
+    const host = document.createElement('div');
+    host.style.cssText = 'width:520px';
+    document.body.appendChild(host);
+
+    const bad = [];
+    let mounted = 0, surfaces = 0;
+    for (const b of base.blocks) {
+      const el = document.createElement('paper-block');
+      el.setAttribute('type', b.id);
+      host.appendChild(el);
+      // Mounting is async: manifest fetch, stylesheet fetch, then scan().
+      for (let i = 0; i < 120 && !el.block; i++) await new Promise((r) => setTimeout(r, 25));
+      if (!el.block) { bad.push(`${b.id}: never mounted`); el.remove(); continue; }
+      mounted++;
+      const bound = el.shadowRoot.querySelectorAll('[data-paper]').length;
+      surfaces += bound;
+      if (bound !== b.surfaces) bad.push(`${b.id}: ${bound} surfaces, manifest says ${b.surfaces}`);
+      const html = el.shadowRoot.innerHTML;
+      for (const [name, re] of [['heading', /class="[^"]*\b(?:bay|demo|sec)-head\b/],
+        ['caption', /class="[^"]*\bcap\b/], ['index badge', /class="[^"]*\bidx\b/]]) {
+        if (re.test(html)) bad.push(`${b.id}: ${name} chrome survived`);
+      }
+      el.remove();
+    }
+    host.remove();
+    return { total: base.blocks.length, mounted, surfaces, bad };
+  });
+
+  check('every block in the manifest mounts',
+    summary.mounted === summary.total, `${summary.mounted}/${summary.total}`);
+  check('conversion kept every surface and dropped every bit of chrome',
+    summary.bad.length === 0, summary.bad.slice(0, 6).join('; '));
+  check('the library binds the surfaces the gallery had', summary.surfaces === 68,
+    `${summary.surfaces} surfaces (keep.html renders 68)`);
+}
+
+// --- block controls ----------------------------------------------------------
+// Every control must move the render. The stamp studio shipped with eight dead
+// sliders and no error, because nothing asserted that a control does anything;
+// this is that assertion, and it runs over the whole schema rather than a
+// sample of it.
+console.log('\nblock controls');
+{
+  const res = await page.evaluate(async () => {
+    const { manifest } = await import('/src/blocks/paper-block.js');
+    const { CONTROLS } = await import('/src/blocks/controls.js');
+    const base = await manifest();
+    const target = base.blocks.find((b) => b.hasInk) || base.blocks[0];
+
+    const host = document.createElement('div');
+    host.style.cssText = 'width:520px';
+    document.body.appendChild(host);
+    const el = document.createElement('paper-block');
+    el.setAttribute('type', target.id);
+    host.appendChild(el);
+    for (let i = 0; i < 160 && !el.block; i++) await new Promise((r) => setTimeout(r, 25));
+    if (!el.block) return { error: 'block never mounted' };
+
+    const settle = () => new Promise((r) => setTimeout(r, 260));
+    const sig = () => {
+      const c = el.shadowRoot.querySelector('canvas');
+      if (!c) return 'nocanvas';
+      const t = document.createElement('canvas');
+      t.width = t.height = 72;
+      t.getContext('2d').drawImage(c, 0, 0, 72, 72);
+      const d = t.getContext('2d').getImageData(0, 0, 72, 72).data;
+      let s = 0;
+      for (let i = 0; i < d.length; i++) s += d[i] * ((i % 11) + 1);
+      return s;
+    };
+
+    const VALUE = { stock: 'pronounced', paper: '#d8c49a', edge: 'torn',
+      width: '300', rotate: '7', seed: '77', folds: '3' };
+    await settle();
+    let prev = sig();
+    const dead = [], skipped = [];
+    for (const c of CONTROLS) {
+      if (c.needsContent && !target.hasInk) { skipped.push(c.name); continue; }
+      el.setAttribute(c.name, VALUE[c.name] ?? '0.9');
+      await settle();
+      const now = sig();
+      if (now === prev) dead.push(c.name);
+      prev = now;
+    }
+
+    // Honesty: an ink control on a block with no ink must be REPORTED, not
+    // silently accepted. Checked on a block that definitely has no ink.
+    const plain = base.blocks.find((b) => !b.hasInk);
+    const el2 = document.createElement('paper-block');
+    el2.setAttribute('type', plain.id);
+    host.appendChild(el2);
+    for (let i = 0; i < 160 && !el2.block; i++) await new Promise((r) => setTimeout(r, 25));
+    el2.setAttribute('fold-crack', '1');
+    await settle();
+    const reported = el2.unavailable;
+
+    // Slots: setting one must change the rendered text.
+    const withSlot = base.blocks.find((b) => b.slots.length);
+    const el3 = document.createElement('paper-block');
+    el3.setAttribute('type', withSlot.id);
+    host.appendChild(el3);
+    for (let i = 0; i < 160 && !el3.block; i++) await new Promise((r) => setTimeout(r, 25));
+    const slot = withSlot.slots[0];
+    const before = el3.shadowRoot.querySelectorAll(slot.tag)[slot.nth]?.textContent;
+    el3.setSlot(slot.name, 'A DELIBERATELY DISTINCT STRING');
+    await settle();
+    const after = el3.shadowRoot.querySelectorAll(slot.tag)[slot.nth]?.textContent;
+
+    host.remove();
+    return { id: target.id, dead, skipped, reported, plainId: plain.id,
+      slotBlock: withSlot.id, slotName: slot.name, before, after };
+  });
+
+  check('the control probe found a block to drive', !res.error, res.error || '');
+  check('every control in the schema changes the render', res.dead.length === 0,
+    `dead on ${res.id}: ${res.dead.join(', ')}`);
+  check('an ink control on an inkless block is reported, not silently accepted',
+    res.reported && res.reported.includes('fold-crack'),
+    `${res.plainId} reported ${JSON.stringify(res.reported)}`);
+  check('setting a slot changes the rendered text',
+    res.after === 'A DELIBERATELY DISTINCT STRING' && res.before !== res.after,
+    `${res.slotBlock}.${res.slotName}: "${res.before}" -> "${res.after}"`);
+}
+
 // --- console hygiene ---------------------------------------------------------
 console.log('\nconsole');
 // The deliberate 404 from the rasterize-failure test is expected; anything else

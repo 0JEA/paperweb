@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paperweb — block studio</title>
+<style>
+  :root {
+    --ground: #131217; --ground-2: #1b1a20; --ground-3: #222128;
+    --rule: #33313b; --accent: #c8a06a; --text: #e8e4dc; --dim: #8d8880;
+    --rail: 268px; --panel: 300px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--ground); color: var(--text); overflow: hidden;
+    font: 400 14px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+
+  /* --- frame ---------------------------------------------------------------- */
+  #app { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr) var(--panel);
+         grid-template-rows: auto minmax(0, 1fr); height: 100%; }
+  #bar { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+         padding: 10px 16px; border-bottom: 1px solid var(--rule); background: var(--ground-2); }
+  #bar h1 { font-size: 15px; margin: 0 14px 0 0; font-weight: 600; letter-spacing: -0.01em; }
+  #bar .sp { margin-left: auto; }
+  .btn { padding: 7px 13px; border-radius: 6px; cursor: pointer;
+         background: rgba(255,255,255,.05); border: 1px solid var(--rule); font-size: 13px; }
+  .btn:hover { background: rgba(255,255,255,.1); }
+  .btn.primary { color: #e5c79a; background: rgba(200,160,106,.16); border-color: rgba(200,160,106,.42); }
+  .btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
+  .pal-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  aside { overflow-y: auto; border-right: 1px solid var(--rule); background: var(--ground-2); }
+  #panel { border-right: 0; border-left: 1px solid var(--rule); }
+  .sec { padding: 12px 14px; border-bottom: 1px solid var(--rule); }
+  .sec h2 { font: 600 10.5px/1.4 ui-sans-serif, system-ui, sans-serif; text-transform: uppercase;
+            letter-spacing: .14em; color: var(--dim); margin: 0 0 10px; }
+
+  /* --- palette -------------------------------------------------------------- */
+  #search { width: 100%; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--rule);
+            background: #101014; }
+  #fams { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 9px; }
+  .fam { font-size: 11px; padding: 4px 9px; border-radius: 20px; cursor: pointer;
+         border: 1px solid var(--rule); background: transparent; color: var(--dim); }
+  .fam[aria-pressed="true"] { color: #e5c79a; border-color: rgba(200,160,106,.5);
+                              background: rgba(200,160,106,.14); }
+  .pal-item { display: flex; gap: 9px; align-items: baseline; width: 100%; text-align: left;
+              padding: 8px 14px; border: 0; border-bottom: 1px solid rgba(255,255,255,.04);
+              background: none; cursor: grab; }
+  .pal-item:hover { background: rgba(255,255,255,.05); }
+  .pal-item .n { font: 10px/1.4 ui-monospace, Menlo, monospace; color: #6f6a63; min-width: 5.6em; }
+  .pal-item .t { font-size: 13px; }
+  .pal-item .ink { font-size: 9px; color: var(--accent); letter-spacing: .08em; }
+  #palcount { font-size: 11px; color: var(--dim); padding: 8px 14px; }
+
+  /* --- canvas --------------------------------------------------------------- */
+  #canvasWrap { overflow: auto; padding: 26px clamp(14px, 3vw, 40px) 160px; }
+  #canvas { max-width: 1000px; margin: 0 auto; min-height: 100%;
+            display: flex; flex-direction: column; gap: 26px; }
+  #canvas.dark { --page: #17130f; }
+  #canvas.light { --page: #f2ece0; }
+  #canvasWrap { background: var(--page, #17130f); transition: background .18s; }
+  .slot-wrap { position: relative; border-radius: 8px; outline: 1px solid transparent; }
+  .slot-wrap.sel { outline: 1px solid rgba(200,160,106,.75); outline-offset: 7px; }
+  .slot-wrap.drop-before::before, .slot-wrap.drop-after::after {
+    content: ''; position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px;
+    background: var(--accent); }
+  .slot-wrap.drop-before::before { top: -14px; }
+  .slot-wrap.drop-after::after { bottom: -14px; }
+  .tools { position: absolute; top: -12px; right: 0; display: none; gap: 4px; z-index: 5; }
+  .slot-wrap.sel .tools { display: flex; }
+  .tools button { width: 26px; height: 26px; padding: 0; border-radius: 5px; cursor: pointer;
+                  background: var(--ground-3); border: 1px solid var(--rule); font-size: 13px;
+                  line-height: 1; }
+  .tools button:hover { background: #2e2c36; }
+  #empty { margin: auto; text-align: center; color: #6f6a63; font-size: 14px; padding: 80px 20px; }
+  #empty strong { color: var(--dim); display: block; font-size: 16px; margin-bottom: 6px; }
+  #canvasWrap.over { box-shadow: inset 0 0 0 2px var(--accent); }
+
+  /* --- controls ------------------------------------------------------------- */
+  .row { margin-bottom: 11px; }
+  .row .lab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .row label { font-size: 12.5px; color: #b6b0a7; }
+  .row output { font: 10.5px/1 ui-monospace, Menlo, monospace; color: var(--dim); }
+  .row input[type=range] { width: 100%; accent-color: var(--accent); margin: 3px 0 0; }
+  .row input[type=color] { width: 100%; height: 28px; padding: 0; border-radius: 5px;
+                           border: 1px solid var(--rule); background: none; cursor: pointer; }
+  .row select, .row input[type=number], .row input[type=text] {
+    width: 100%; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--rule);
+    background: #101014; }
+  .row.off { opacity: .4; }
+  .row.off input, .row.off select { pointer-events: none; }
+  .row .why { font-size: 11px; color: #7a746c; margin-top: 3px; }
+  .row .reset { border: 0; background: none; color: #6f6a63; cursor: pointer; font-size: 11px;
+                padding: 0 2px; }
+  .row .reset:hover { color: var(--accent); }
+  .row.set label { color: var(--text); }
+  .row.set label::after { content: ' •'; color: var(--accent); }
+  .slotrow textarea { width: 100%; min-height: 34px; resize: vertical; padding: 7px 9px;
+                      border-radius: 6px; border: 1px solid var(--rule); background: #101014; }
+  #none { padding: 24px 14px; color: #6f6a63; font-size: 13px; }
+  #info { font: 10.5px/1.6 ui-monospace, Menlo, monospace; color: #6f6a63; }
+
+  #out { position: fixed; inset: 8vh 8vw; z-index: 40; display: none; flex-direction: column;
+         background: var(--ground-2); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; }
+  #out.show { display: flex; }
+  #out textarea { flex: 1; width: 100%; margin: 12px 0; padding: 12px; border-radius: 6px;
+                  border: 1px solid var(--rule); background: #101014;
+                  font: 12px/1.55 ui-monospace, Menlo, monospace; }
+  #say { font-size: 12px; color: var(--accent); min-height: 1.3em; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="bar">
+    <h1>Block studio</h1>
+    <button class="btn" id="bg">Light page</button>
+    <button class="btn" id="demo">Load a sample layout</button>
+    <span class="sp"></span>
+    <span id="say"></span>
+    <button class="btn" id="clear">Clear</button>
+    <button class="btn primary" id="export">Export HTML</button>
+  </div>
+
+  <aside id="rail">
+    <div class="sec">
+      <h2>Blocks</h2>
+      <input id="search" type="search" placeholder="Search 52 blocks…" aria-label="Search blocks">
+      <div id="fams"></div>
+    </div>
+    <div id="palcount"></div>
+    <div id="pal"></div>
+  </aside>
+
+  <div id="canvasWrap">
+    <div id="canvas" class="dark">
+      <div id="empty"><strong>Drag a block in from the left</strong>
+        or click one to append it. Then edit it live on the right.</div>
+    </div>
+  </div>
+
+  <aside id="panel">
+    <div id="none">Nothing selected. Click a block on the canvas.</div>
+    <div id="ctl" hidden></div>
+  </aside>
+</div>
+
+<div id="out" role="dialog" aria-label="Exported HTML" aria-modal="true">
+  <strong>Paste this into your page</strong>
+  <textarea id="outText" readonly></textarea>
+  <div style="display:flex;gap:8px">
+    <button class="btn primary" id="outCopy">Copy</button>
+    <button class="btn" id="outClose">Close</button>
+  </div>
+</div>
+
+<script type="module">
+import { manifest } from '../src/blocks/paper-block.js';
+import { CONTROLS, toHex } from '../src/blocks/controls.js';
+import { presetNames } from '../src/index.js';
+
+const $ = (s) => document.querySelector(s);
+const say = (msg, bad = false) => {
+  const el = $('#say');
+  el.textContent = msg;
+  el.style.color = bad ? '#e0876a' : 'var(--accent)';
+  clearTimeout(say._t);
+  say._t = setTimeout(() => { el.textContent = ''; }, 3200);
+};
+
+const base = await manifest();
+const BLOCKS = base.blocks;
+
+// --- palette -------------------------------------------------------------------
+const fams = ['all', ...Object.keys(base.families)];
+let famFilter = 'all';
+let query = '';
+
+for (const f of fams) {
+  const b = document.createElement('button');
+  b.className = 'fam';
+  b.type = 'button';
+  b.textContent = f === 'all' ? 'All' : base.families[f].label;
+  b.setAttribute('aria-pressed', String(f === famFilter));
+  b.addEventListener('click', () => {
+    famFilter = f;
+    for (const o of $('#fams').children) o.setAttribute('aria-pressed', String(o === b));
+    renderPalette();
+  });
+  $('#fams').appendChild(b);
+}
+$('#search').addEventListener('input', (e) => { query = e.target.value.toLowerCase(); renderPalette(); });
+
+function visibleBlocks() {
+  return BLOCKS.filter((b) =>
+    (famFilter === 'all' || b.family === famFilter)
+    && (!query || b.name.toLowerCase().includes(query) || b.id.includes(query)));
+}
+
+function renderPalette() {
+  const list = visibleBlocks();
+  $('#palcount').textContent = `${list.length} of ${BLOCKS.length}`;
+  const pal = $('#pal');
+  pal.textContent = '';
+  for (const b of list) {
+    const item = document.createElement('button');
+    item.className = 'pal-item';
+    item.type = 'button';
+    item.draggable = true;
+    item.dataset.id = b.id;
+    item.innerHTML = `<span class="n"></span><span class="t"></span>`;
+    item.querySelector('.n').textContent = b.id;
+    item.querySelector('.t').textContent = b.name;
+    if (b.hasInk) {
+      const ink = document.createElement('span');
+      ink.className = 'ink';
+      ink.textContent = 'INK';
+      ink.title = 'Has content, so the ink effects work on this one';
+      item.appendChild(ink);
+    }
+    item.addEventListener('click', () => add(b.id));
+    item.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/pb-type', b.id);
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+    pal.appendChild(item);
+  }
+}
+renderPalette();
+
+// --- canvas ---------------------------------------------------------------------
+const canvas = $('#canvas');
+let selected = null;
+
+function add(type, before = null) {
+  const wrap = document.createElement('div');
+  wrap.className = 'slot-wrap';
+  wrap.draggable = false;
+
+  const el = document.createElement('paper-block');
+  el.setAttribute('type', type);
+
+  const tools = document.createElement('div');
+  tools.className = 'tools';
+  for (const [glyph, title, fn] of [
+    ['↑', 'Move up', () => { const p = wrap.previousElementSibling; if (p) canvas.insertBefore(wrap, p); }],
+    ['↓', 'Move down', () => { const n = wrap.nextElementSibling; if (n) canvas.insertBefore(n, wrap); }],
+    ['⧉', 'Duplicate', () => {
+      const copy = add(el.getAttribute('type'), wrap.nextElementSibling);
+      for (const a of el.attributes) if (a.name !== 'type') copy.setAttribute(a.name, a.value);
+      for (const s of el.querySelectorAll('[slot]')) copy.appendChild(s.cloneNode(true));
+    }],
+    ['✕', 'Remove', () => { wrap.remove(); if (selected === el) select(null); refreshEmpty(); }],
+  ]) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = glyph;
+    b.title = title;
+    b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+    tools.appendChild(b);
+  }
+
+  wrap.append(el, tools);
+  wrap.addEventListener('click', () => select(el));
+  canvas.insertBefore(wrap, before);
+  refreshEmpty();
+  select(el);
+  return el;
+}
+
+function refreshEmpty() {
+  const has = canvas.querySelector('.slot-wrap');
+  $('#empty').style.display = has ? 'none' : '';
+}
+
+// Drop from the palette, with an insertion line so it lands where you aim.
+const wrapEl = $('#canvasWrap');
+const clearMarks = () => canvas.querySelectorAll('.slot-wrap')
+  .forEach((w) => w.classList.remove('drop-before', 'drop-after'));
+
+wrapEl.addEventListener('dragover', (e) => {
+  if (!e.dataTransfer.types.includes('text/pb-type')) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  wrapEl.classList.add('over');
+  clearMarks();
+  const t = nearest(e.clientY);
+  if (t) t.wrap.classList.add(t.after ? 'drop-after' : 'drop-before');
+});
+wrapEl.addEventListener('dragleave', (e) => {
+  if (e.target === wrapEl) { wrapEl.classList.remove('over'); clearMarks(); }
+});
+wrapEl.addEventListener('drop', (e) => {
+  const type = e.dataTransfer.getData('text/pb-type');
+  if (!type) return;
+  e.preventDefault();
+  wrapEl.classList.remove('over');
+  clearMarks();
+  const t = nearest(e.clientY);
+  add(type, t ? (t.after ? t.wrap.nextElementSibling : t.wrap) : null);
+});
+
+/** Which existing block the pointer is nearest, and which side of it. */
+function nearest(y) {
+  const wraps = [...canvas.querySelectorAll('.slot-wrap')];
+  if (!wraps.length) return null;
+  let best = null, bestD = Infinity;
+  for (const wrap of wraps) {
+    const r = wrap.getBoundingClientRect();
+    const mid = r.top + r.height / 2;
+    const d = Math.abs(y - mid);
+    if (d < bestD) { bestD = d; best = { wrap, after: y > mid }; }
+  }
+  return best;
+}
+
+// --- the control panel, generated from the schema --------------------------------
+function select(el) {
+  selected = el;
+  for (const w of canvas.querySelectorAll('.slot-wrap')) {
+    w.classList.toggle('sel', w.contains(el));
+  }
+  $('#none').hidden = !!el;
+  $('#ctl').hidden = !el;
+  if (el) buildPanel(el);
+}
+
+function buildPanel(el) {
+  const ctl = $('#ctl');
+  ctl.textContent = '';
+  const block = BLOCKS.find((b) => b.id === el.getAttribute('type'));
+
+  // --- identity
+  const head = section('Block');
+  const info = document.createElement('div');
+  info.id = 'info';
+  info.textContent = `${block.id} · ${base.families[block.family].label} · `
+    + `${block.surfaces} surface${block.surfaces === 1 ? '' : 's'}`
+    + (block.hasInk ? ' · has ink' : ' · no ink');
+  head.appendChild(info);
+  ctl.appendChild(head);
+
+  // --- slots
+  if (block.slots.length) {
+    const s = section('Text');
+    for (const slot of block.slots) {
+      const row = document.createElement('div');
+      row.className = 'row slotrow';
+      const id = `slot-${slot.name}`;
+      row.innerHTML = `<div class="lab"><label for="${id}"></label></div>`;
+      row.querySelector('label').textContent = slot.label;
+      const ta = document.createElement('textarea');
+      ta.id = id;
+      ta.rows = slot.multiline ? 3 : 1;
+      ta.placeholder = 'as designed';
+      const existing = el.querySelector(`[slot="${slot.name}"]`);
+      if (existing) ta.value = existing.textContent;
+      ta.addEventListener('input', () => {
+        if (!ta.value.trim()) {
+          el.querySelector(`[slot="${slot.name}"]`)?.remove();
+          el.refresh();
+        } else {
+          el.setSlot(slot.name, ta.value);
+        }
+      });
+      row.appendChild(ta);
+      s.appendChild(row);
+    }
+    ctl.appendChild(s);
+  }
+
+  // --- the universal controls
+  const s = section('Controls');
+  const unavailable = new Set(el.unavailable);
+  for (const c of CONTROLS) {
+    // A control the block cannot honour is shown DISABLED with the reason,
+    // rather than hidden or, worse, accepted and silently ignored.
+    const dead = c.needsContent && !block.hasInk;
+    s.appendChild(controlRow(el, c, dead));
+  }
+  ctl.appendChild(s);
+  el.addEventListener('pb-unavailable', () => {}, { once: true });
+}
+
+function section(title) {
+  const d = document.createElement('div');
+  d.className = 'sec';
+  const h = document.createElement('h2');
+  h.textContent = title;
+  d.appendChild(h);
+  return d;
+}
+
+function controlRow(el, c, dead) {
+  const row = document.createElement('div');
+  row.className = 'row' + (dead ? ' off' : '');
+  const id = `c-${c.name}`;
+  const cur = el.getAttribute(c.name);
+  if (cur !== null) row.classList.add('set');
+
+  const lab = document.createElement('div');
+  lab.className = 'lab';
+  const label = document.createElement('label');
+  label.htmlFor = id;
+  label.textContent = c.label;
+  label.title = c.help || '';
+  const out = document.createElement('output');
+  lab.append(label, out);
+  if (cur !== null && !dead) {
+    const reset = document.createElement('button');
+    reset.className = 'reset';
+    reset.type = 'button';
+    reset.textContent = 'reset';
+    reset.title = 'Back to how the block was designed';
+    reset.addEventListener('click', () => { el.removeAttribute(c.name); buildPanel(el); });
+    lab.appendChild(reset);
+  }
+  row.appendChild(lab);
+
+  let input;
+  if (c.type === 'range' || c.type === 'length' || c.type === 'number') {
+    input = document.createElement('input');
+    input.type = c.type === 'number' ? 'number' : 'range';
+    input.min = c.min; input.max = c.max; input.step = c.step;
+    input.value = cur !== null ? cur : midpointFor(c, el);
+    const show = () => { out.textContent = cur === null && !input._touched
+      ? 'as designed' : `${(+input.value).toFixed(c.step < 1 ? 2 : 0)}${c.unit || ''}`; };
+    show();
+    input.addEventListener('input', () => {
+      input._touched = true;
+      el.setAttribute(c.name, input.value);
+      out.textContent = `${(+input.value).toFixed(c.step < 1 ? 2 : 0)}${c.unit || ''}`;
+      row.classList.add('set');
+      if (!row.querySelector('.reset')) buildPanel(el);
+    });
+  } else if (c.type === 'color') {
+    input = document.createElement('input');
+    input.type = 'color';
+    input.value = cur || '#f4ecdc';
+    out.textContent = cur ? cur : 'as designed';
+    input.addEventListener('input', () => {
+      el.setAttribute(c.name, input.value);
+      out.textContent = input.value;
+      if (!row.querySelector('.reset')) buildPanel(el);
+    });
+  } else if (c.type === 'enum' || c.type === 'preset') {
+    input = document.createElement('select');
+    const opts = c.type === 'preset' ? presetNames : c.options;
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = 'as designed';
+    input.appendChild(blank);
+    for (const o of opts) {
+      const op = document.createElement('option');
+      op.value = op.textContent = o;
+      input.appendChild(op);
+    }
+    input.value = cur || '';
+    input.addEventListener('change', () => {
+      if (!input.value) el.removeAttribute(c.name);
+      else el.setAttribute(c.name, input.value);
+      buildPanel(el);
+    });
+  }
+  input.id = id;
+  if (dead) {
+    input.disabled = true;
+    const why = document.createElement('div');
+    why.className = 'why';
+    why.textContent = 'needs ink: this block’s text is live DOM on top of the paper';
+    row.append(input, why);
+  } else {
+    row.appendChild(input);
+  }
+  return row;
+}
+
+/** A sensible starting position for a slider that has never been set. */
+function midpointFor(c, el) {
+  if (c.name === 'width') return el.getBoundingClientRect().width || 420;
+  if (c.name === 'seed') return 1;
+  if (c.name === 'rotate') return 0;
+  return (c.min + c.max) / 2;
+}
+
+// --- top bar ---------------------------------------------------------------------
+$('#bg').addEventListener('click', () => {
+  const light = canvas.classList.toggle('light');
+  canvas.classList.toggle('dark', !light);
+  $('#bg').textContent = light ? 'Dark page' : 'Light page';
+});
+
+$('#clear').addEventListener('click', () => {
+  if (!canvas.querySelector('.slot-wrap')) return;
+  if (!confirm('Remove every block from the canvas?')) return;
+  canvas.querySelectorAll('.slot-wrap').forEach((w) => w.remove());
+  select(null);
+  refreshEmpty();
+});
+
+$('#demo').addEventListener('click', () => {
+  const picks = ['broadsheet-01', 'desk-16', 'archive-02', 'broadsheet-09', 'archive-13'];
+  for (const id of picks) if (BLOCKS.some((b) => b.id === id)) add(id);
+  select(null);
+  say(`added ${picks.length} blocks`);
+});
+
+$('#export').addEventListener('click', () => {
+  const blocks = [...canvas.querySelectorAll('paper-block')];
+  if (!blocks.length) { say('nothing to export', true); return; }
+  const body = blocks.map((b) => b.toHTML()).join('\n\n');
+  $('#outText').value =
+`<!-- paperweb blocks -->
+<script type="module">
+  import 'PATH/TO/paperweb/src/blocks/paper-block.js';
+<\/script>
+
+${body}`;
+  $('#out').classList.add('show');
+  $('#outText').focus();
+});
+$('#outClose').addEventListener('click', () => $('#out').classList.remove('show'));
+$('#outCopy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('#outText').value); say('copied'); }
+  catch { $('#outText').select(); say('could not reach the clipboard; selected instead', true); }
+});
+addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') $('#out').classList.remove('show');
+  if (e.key === 'Delete' && selected && document.activeElement === document.body) {
+    selected.closest('.slot-wrap').remove();
+    select(null);
+    refreshEmpty();
+  }
+});
+
+refreshEmpty();
+</script>
+</body>
+</html>
