@@ -1,7 +1,7 @@
 # Paper blocks: a component library with universal controls
 
 **Date:** 2026-08-12
-**Status:** approved, implementing pass 1
+**Status:** built
 **Origin:** "is there a way to turn all of those into components and a set of
 universal controls for all of them? Some way so later its easy to drag and drop
 those in onto my site and edit them all live?"
@@ -50,9 +50,12 @@ to write data rather than markup.
 </paper-block>
 ```
 
-**Scope: twelve first.** Chosen for structural variety rather than beauty, so
-the schema meets every awkward case early. A schema mistake found late costs
-twelve conversions, not fifty-two.
+**Scope: twelve first, but all 52 shipped.** The plan was a curated dozen so a
+schema mistake would cost twelve conversions rather than fifty-two. In the event
+the conversion generalised: once the chrome strip was tag-agnostic and the
+parameter minimiser was asserting its round-trip, all 52 converted with no
+per-block work, so there was no reason to hold 40 of them back. The twelve below
+are still the ones the schema was checked against by hand.
 
 **Editability: named slots for real content only.** Headline, kicker, body,
 byline, date. Rules, folios and ornaments stay fixed: they carry the layout, and
@@ -152,6 +155,22 @@ sheet plus overlay, interactive, and full-bleed.
 | broadsheet-09 | Obituary, black-ruled | solid ink rules, the best fold-crack target |
 | product-06 | Card grid with hover lift | a CONTAINER of repeated blocks |
 | product-13 | Reader poll | interactive state, and more poll types were asked for |
+
+## What shipped
+
+- `tools/build-blocks.mjs` — the converter, asserting its postconditions.
+- `demo/blocks/manifest.json` + four family stylesheets — 52 blocks, 68 surfaces,
+  107 slots, 45 of 45 papered blocks reduced to a preset plus a small diff.
+- `src/blocks/controls.js` — the schema, single source of truth.
+- `src/blocks/paper-block.js` — the element.
+- `demo/studio.html` — palette, canvas, generated panel, drag and drop, export,
+  and layouts that survive a reload.
+
+Three controls were dead when first measured and all three were real bugs:
+`stock` was in the schema but never read; `stain` moved nothing on the 45 blocks
+that place no marks, so it now places two; `width` set a CSS width that
+fixed-size blocks ignored, so it applies `zoom` instead, which re-lays-out rather
+than rasterising and behaves identically on all 52.
 
 ## Verification
 
