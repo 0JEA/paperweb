@@ -27,7 +27,34 @@ export function serve(port = 0) {
     try {
       const url = new URL(req.url, 'http://localhost');
 
-      // The demo's keep/discard picker posts here; the result is written to
+      // The showcase pages' per-component review, one file per page.
+      if (req.method === 'POST' && url.pathname === '/api/review') {
+        const chunks = [];
+        let bytes = 0;
+        for await (const c of req) {
+          bytes += c.length;
+          if (bytes > 4 << 20) { res.writeHead(413).end('too large'); return; }
+          chunks.push(c);
+        }
+        let parsed;
+        try { parsed = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+        catch { res.writeHead(400).end('bad json'); return; }
+        // The page name becomes a filename, so it must not be able to escape.
+        const page = String(parsed.page || 'unknown').replace(/[^a-z0-9_-]/gi, '').slice(0, 40) || 'unknown';
+        const out = join(ROOT, 'demo', 'news', `review-${page}.json`);
+        const record = { savedAt: new Date().toISOString(), ...parsed, page };
+        await writeFile(out, `${JSON.stringify(record, null, 2)}\n`);
+        const c = record.components || [];
+        const yes = c.filter((x) => x.verdict === 'yes').length;
+        const no = c.filter((x) => x.verdict === 'no').length;
+        const notes = c.filter((x) => x.comment).length;
+        console.log(`review saved: ${page} -> ${yes} yes, ${no} no, ${notes} comments -> ${out}`);
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, path: out }));
+        return;
+      }
+
+      // The capability demo's keep/discard picker; result goes to
       // demo/selections.json so it can be read outside the browser.
       if (req.method === 'POST' && url.pathname === '/api/selections') {
         const chunks = [];
