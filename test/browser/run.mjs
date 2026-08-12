@@ -1266,6 +1266,44 @@ console.log('\nblock controls');
     `${res.slotBlock}.${res.slotName}: "${res.before}" -> "${res.after}"`);
 }
 
+// --- block geometry ------------------------------------------------------------
+// The blocks were authored at fixed pixel widths for a gallery. Dropping one
+// into a narrow column must not push a horizontal scrollbar onto the page,
+// which is the failure mode that makes a component library unusable.
+console.log('\nblock geometry');
+{
+  const res = await page.evaluate(async () => {
+    const { manifest } = await import('/src/blocks/paper-block.js');
+    const base = await manifest();
+    const host = document.createElement('div');
+    host.style.cssText = 'overflow:auto;margin:0';
+    document.body.appendChild(host);
+
+    // A spread across the four families rather than one convenient block.
+    const picks = ['archive-02', 'broadsheet-01', 'desk-16', 'product-09']
+      .filter((id) => base.blocks.some((b) => b.id === id));
+    const out = [];
+    for (const width of [280, 520, 900]) {
+      host.style.width = `${width}px`;
+      for (const id of picks) {
+        const el = document.createElement('paper-block');
+        el.setAttribute('type', id);
+        el.setAttribute('width', String(width - 20));
+        host.appendChild(el);
+        for (let i = 0; i < 160 && !el.block; i++) await new Promise((r) => setTimeout(r, 25));
+        await new Promise((r) => setTimeout(r, 200));
+        const over = host.scrollWidth - host.clientWidth;
+        if (over > 2) out.push(`${id} at ${width}px overflows by ${over}px`);
+        el.remove();
+      }
+    }
+    host.remove();
+    return out;
+  });
+  check('blocks do not overflow the column they are dropped into',
+    res.length === 0, res.slice(0, 4).join('; '));
+}
+
 // --- console hygiene ---------------------------------------------------------
 console.log('\nconsole');
 // The deliberate 404 from the rasterize-failure test is expected; anything else

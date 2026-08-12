@@ -271,6 +271,38 @@ practical guide to the API. Recipes worth knowing that came out of building them
 - **A surface inside `display: none` measures zero and renders nothing**, and
   stays that way. Bind it with `{ lazy: false }` when the container first opens.
 
+## Blocks
+
+The 52 approved showcase components are also a component library. One custom
+element reads a manifest, so a block is data rather than a bespoke class:
+
+```html
+<script type="module">import 'paperweb/src/blocks/paper-block.js';<\/script>
+
+<paper-block type="desk-16" stock="worn" age="0.6" fold-crack="1" width="320">
+  <span slot="headline">Council votes to keep the mural</span>
+</paper-block>
+```
+
+Fifteen controls apply to every block: `stock`, `paper`, `duotone`, `age`,
+`relief`, `folds`, `edge`, `lift`, `stain`, `bleed`, `show-through`,
+`fold-crack`, `width`, `rotate`, `seed`. Anything that does not apply to all 52
+is a per-block fixture, not a control. An unset control leaves the block exactly
+as authored, so the defaults are always the hand-tuned ones.
+
+`age` and `relief` are COMPOUND: one control moving several parameters along a
+curve, because "make it older" is the actual request and nobody thinks in
+`pit_density`. Individual parameters remain reachable underneath.
+
+Three controls need ink to act on (`bleed`, `show-through`, `fold-crack`). On a
+`content: 'behind'` block the text is live DOM on top of the canvas, so there is
+nothing for them to touch; the element reports them through `.unavailable` and
+the studio greys them out rather than accepting them silently.
+
+`demo/studio.html` is the studio: search and drag from a palette of all 52, edit
+with the generated control panel, and export the markup. Layouts persist locally.
+`node tools/build-blocks.mjs` regenerates the manifest from the showcase.
+
 ## Tools
 
 ```

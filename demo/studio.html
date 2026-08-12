@@ -32,6 +32,14 @@
   .btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
   .pal-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+  /* Below ~1080px the three rails stop fitting. The canvas is the point, so the
+     panels stack under it rather than squeezing it to nothing. */
+  @media (max-width: 1080px) {
+    #app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; }
+    #rail, #panel { max-height: 40vh; border: 0; border-bottom: 1px solid var(--rule); }
+    #panel { border-top: 1px solid var(--rule); border-bottom: 0; }
+  }
+
   aside { overflow-y: auto; border-right: 1px solid var(--rule); background: var(--ground-2); }
   #panel { border-right: 0; border-left: 1px solid var(--rule); }
   .sec { padding: 12px 14px; border-bottom: 1px solid var(--rule); }
@@ -50,7 +58,8 @@
               padding: 8px 14px; border: 0; border-bottom: 1px solid rgba(255,255,255,.04);
               background: none; cursor: grab; }
   .pal-item:hover { background: rgba(255,255,255,.05); }
-  .pal-item .n { font: 10px/1.4 ui-monospace, Menlo, monospace; color: #6f6a63; min-width: 5.6em; }
+  .pal-item .n { font: 10px/1.4 ui-monospace, Menlo, monospace; color: #6f6a63;
+               min-width: 6.6em; white-space: nowrap; }
   .pal-item .t { font-size: 13px; }
   .pal-item .ink { font-size: 9px; color: var(--accent); letter-spacing: .08em; }
   #palcount { font-size: 11px; color: var(--dim); padding: 8px 14px; }
@@ -118,6 +127,15 @@
     <h1>Block studio</h1>
     <button class="btn" id="bg">Light page</button>
     <button class="btn" id="demo">Load a sample layout</button>
+    <label style="font-size:12px;color:var(--dim)">Page
+      <select id="pagew" style="margin-left:6px;padding:6px 8px;border-radius:6px;
+              border:1px solid var(--rule);background:#101014">
+        <option value="1000">Wide</option>
+        <option value="720">Article</option>
+        <option value="520">Narrow</option>
+        <option value="360">Phone</option>
+      </select>
+    </label>
     <span class="sp"></span>
     <span id="say"></span>
     <button class="btn" id="clear">Clear</button>
@@ -502,8 +520,15 @@ $('#clear').addEventListener('click', () => {
 
 $('#demo').addEventListener('click', () => {
   const picks = ['broadsheet-01', 'desk-16', 'archive-02', 'broadsheet-09', 'archive-13'];
-  for (const id of picks) if (BLOCKS.some((b) => b.id === id)) add(id);
-  select(null);
+  let first = null;
+  for (const id of picks) {
+    if (!BLOCKS.some((b) => b.id === id)) continue;
+    const el = add(id);
+    if (!first) first = el;          // `first = first || add(id)` skips the rest
+  }
+  // Select the first one so the control panel is populated rather than empty:
+  // the panel IS the feature, and an empty one reads as broken.
+  if (first) select(first);
   say(`added ${picks.length} blocks`);
 });
 
@@ -511,10 +536,13 @@ $('#export').addEventListener('click', () => {
   const blocks = [...canvas.querySelectorAll('paper-block')];
   if (!blocks.length) { say('nothing to export', true); return; }
   const body = blocks.map((b) => b.toHTML()).join('\n\n');
+  // A path that resolves from where this page is served, so pasting it into a
+  // sibling page works immediately rather than after a find-and-replace.
+  const src = new URL('../src/blocks/paper-block.js', location.href).pathname;
   $('#outText').value =
 `<!-- paperweb blocks -->
 <script type="module">
-  import 'PATH/TO/paperweb/src/blocks/paper-block.js';
+  import '${src}';
 <\/script>
 
 ${body}`;
@@ -535,7 +563,65 @@ addEventListener('keydown', (e) => {
   }
 });
 
+// --- persistence -----------------------------------------------------------------
+// A local tool that loses your layout on reload is a toy. Saved on every change,
+// restored on load, and versioned so a schema change can invalidate it rather
+// than restoring something that no longer means the same thing.
+const STORE = 'paperweb-studio-v1';
+
+function serialise() {
+  return [...canvas.querySelectorAll('paper-block')].map((el) => ({
+    type: el.getAttribute('type'),
+    attrs: Object.fromEntries([...el.attributes]
+      .filter((a) => a.name !== 'type').map((a) => [a.name, a.value])),
+    slots: Object.fromEntries([...el.querySelectorAll('[slot]')]
+      .map((n) => [n.getAttribute('slot'), n.textContent])),
+  }));
+}
+
+let saveTimer = null;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORE, JSON.stringify({
+        page: $('#pagew').value, light: canvas.classList.contains('light'), blocks: serialise(),
+      }));
+    } catch { /* private mode; the canvas still works */ }
+  }, 400);
+}
+
+function restore() {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch { return false; }
+  if (!saved || !saved.blocks?.length) return false;
+  for (const rec of saved.blocks) {
+    if (!BLOCKS.some((b) => b.id === rec.type)) continue;   // manifest changed under us
+    const el = add(rec.type);
+    for (const [k, v] of Object.entries(rec.attrs || {})) el.setAttribute(k, v);
+    for (const [name, text] of Object.entries(rec.slots || {})) el.setSlot(name, text);
+  }
+  if (saved.page) { $('#pagew').value = saved.page; applyPageWidth(); }
+  if (saved.light) $('#bg').click();
+  select(null);
+  return true;
+}
+
+// Any attribute change on any block is a layout change worth keeping.
+new MutationObserver(save).observe(canvas, {
+  subtree: true, childList: true, attributes: true, characterData: true,
+});
+
+// --- page width ------------------------------------------------------------------
+function applyPageWidth() {
+  canvas.style.maxWidth = `${$('#pagew').value}px`;
+  save();
+}
+$('#pagew').addEventListener('change', applyPageWidth);
+applyPageWidth();
+
 refreshEmpty();
+if (!restore()) say('drag a block in, or load the sample layout');
 </script>
 </body>
 </html>
